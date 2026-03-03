@@ -1,15 +1,34 @@
+"""
+LP Agent Service - Slack /lp-request endpoint (v1)
+
+What this does:
+- Exposes POST /slack/commands for Slack slash command /lp-request
+- Verifies Slack request signatures (Signing Secret)
+- Parses optional key=value arguments from the command text
+- Generates request_id (LP-YYYYMMDD-HHMM)
+- Immediately ACKs Slack with an ephemeral response (<3s)
+- Posts a visible “LP request started” message in the same channel (background task)
+
+Required env vars (Render -> Environment):
+- SLACK_SIGNING_SECRET
+- SLACK_BOT_TOKEN
+
+Optional env vars:
+- SLACK_DEFAULT_CHANNEL   (fallback channel if Slack doesn't send channel_id; usually not needed)
+"""
+
 import os
 import time
 import hmac
 import hashlib
-import json
 import re
 from datetime import datetime
 from typing import Dict, Optional
 
 import httpx
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import PlainTextResponse, JSONResponse
+
 
 app = FastAPI()
 
@@ -18,50 +37,58 @@ SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
 SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")  # optional
 
 
+# ----------------------------
+# Slack signature verification
+# ----------------------------
 def verify_slack_signature(raw_body: bytes, timestamp: str, signature: str) -> None:
     """
-    Verifies Slack request signature.
-    Slack docs: signing secret verification with v0 format.
+    Verify Slack request signature using signing secret.
+
+    Slack docs:
+    https://api.slack.com/authentication/verifying-requests-from-slack
     """
     if not SLACK_SIGNING_SECRET:
         raise HTTPException(status_code=500, detail="Missing SLACK_SIGNING_SECRET")
 
-    # Prevent replay attacks (5 min window)
+    # Prevent replay attacks (5-minute window)
     now = int(time.time())
     try:
         ts = int(timestamp)
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid Slack timestamp")
+        raise HTTPException(status_code=400, detail="Invalid X-Slack-Request-Timestamp")
 
     if abs(now - ts) > 60 * 5:
         raise HTTPException(status_code=400, detail="Stale Slack request (possible replay)")
 
     basestring = b"v0:" + timestamp.encode("utf-8") + b":" + raw_body
-    my_sig = "v0=" + hmac.new(
+    expected = "v0=" + hmac.new(
         SLACK_SIGNING_SECRET.encode("utf-8"),
         basestring,
         hashlib.sha256,
     ).hexdigest()
 
-    if not hmac.compare_digest(my_sig, signature or ""):
+    if not hmac.compare_digest(expected, signature or ""):
         raise HTTPException(status_code=401, detail="Invalid Slack signature")
 
 
+# ----------------------------
+# Helpers
+# ----------------------------
 def generate_request_id() -> str:
-    # LP-YYYYMMDD-HHMM (local server time; good enough for v1)
+    # LP-YYYYMMDD-HHMM (server-local time; fine for v1)
     return datetime.now().strftime("LP-%Y%m%d-%H%M")
 
 
 def parse_command_text(text: str) -> Dict[str, str]:
     """
-    Very simple parser for slash command text.
+    Parses slash command text.
 
-    Supports:
-      search_term="datahub architecture" cta="Demo" intent=commercial
-    or:
-      datahub architecture
+    Supported examples:
+      /lp-request search_term="datahub architecture" cta="Demo" intent=commercial
+      /lp-request search_term=datahub-architecture cta=Demo
+      /lp-request datahub architecture      (fallback => search_term)
 
-    Returns dict with keys like search_term, primary_cta, intent, etc.
+    Returns keys in lowercase.
     """
     text = (text or "").strip()
     if not text:
@@ -71,13 +98,13 @@ def parse_command_text(text: str) -> Dict[str, str]:
     pattern = r'(\w+)=(".*?"|\'.*?\'|[^\s]+)'
     matches = re.findall(pattern, text)
     if matches:
-        out = {}
+        out: Dict[str, str] = {}
         for k, v in matches:
             v = v.strip().strip('"').strip("'")
             out[k.lower()] = v
         return out
 
-    # fallback: treat entire text as search term
+    # fallback: treat whole string as search_term
     return {"search_term": text}
 
 
@@ -98,30 +125,33 @@ async def slack_post_message(channel: str, text: str, thread_ts: Optional[str] =
 
     data = resp.json()
     if not data.get("ok"):
-        raise HTTPException(status_code=500, detail=f"Slack postMessage failed: {data}")
+        # Raise a 500 so Render logs show the Slack error payload
+        raise HTTPException(status_code=500, detail=f"Slack chat.postMessage failed: {data}")
 
 
+# ----------------------------
+# Routes
+# ----------------------------
 @app.get("/health")
 async def health():
     return {"ok": True}
 
 
 @app.post("/slack/commands")
-async def slack_commands(request: Request):
+async def slack_commands(request: Request, background_tasks: BackgroundTasks):
     raw_body = await request.body()
 
-    # Slack signature headers
     timestamp = request.headers.get("X-Slack-Request-Timestamp", "")
     signature = request.headers.get("X-Slack-Signature", "")
     verify_slack_signature(raw_body, timestamp, signature)
 
-    # Slack slash commands are sent as application/x-www-form-urlencoded
+    # Slack slash commands send x-www-form-urlencoded
     form = await request.form()
-    command = form.get("command")           # e.g. /lp-request
-    text = form.get("text")                # whatever user typed after command
-    channel_id = form.get("channel_id")    # where command was used
-    user_id = form.get("user_id")
-    response_url = form.get("response_url")  # can be used later, but not needed for v1
+    command = form.get("command")               # "/lp-request"
+    text = form.get("text")                     # user args after command
+    channel_id = form.get("channel_id")         # where command was run
+    user_id = form.get("user_id")               # requesting user
+    channel_name = form.get("channel_name")     # may be "directmessage" or channel name
 
     if command != "/lp-request":
         return PlainTextResponse("Unsupported command", status_code=200)
@@ -129,37 +159,34 @@ async def slack_commands(request: Request):
     fields = parse_command_text(text)
     search_term = fields.get("search_term")
     primary_cta = fields.get("cta") or fields.get("primary_cta")
+    intent = fields.get("intent")
 
     request_id = generate_request_id()
 
-    # Immediate ephemeral-ish response (visible to user who ran the command)
-    # Note: Slack slash commands expect a response within 3 seconds.
+    # Ack quickly (Slack expects < 3 seconds)
     ack_text = (
-        f"✅ Got it! Request received.\n"
+        f"✅ Got it! LP request received.\n"
         f"- Request ID: {request_id}\n"
         f"- Search term: {search_term or '(not provided)'}\n"
-        f"- Primary CTA: {primary_cta or '(not provided)'}\n\n"
-        f"I’ll post progress updates in this channel."
+        f"- Primary CTA: {primary_cta or '(not provided)'}\n"
+        f"{('- Intent: ' + intent) if intent else ''}\n\n"
+        f"I’ll post updates in <#{channel_id}>."
+        if channel_id
+        else "I’ll post updates in the channel."
     )
 
-    # Post a visible message to the channel (so the whole team sees it)
-    channel_to_use = channel_id if channel_id else SLACK_DEFAULT_CHANNEL
+    # Post a visible message to the channel in the background
+    channel_to_use = channel_id or SLACK_DEFAULT_CHANNEL
     if channel_to_use:
-        # Post as a new message (top-level). Later we can thread everything off this ts.
-        post_text = (
-            f"🚀 LP request started\n"
+        visible_msg = (
+            f"🚀 *LP request started*\n"
             f"*Request ID:* {request_id}\n"
             f"*Search term:* {search_term or 'TBD'}\n"
             f"*Primary CTA:* {primary_cta or 'TBD'}\n"
+            f"*Intent:* {intent or 'TBD'}\n"
             f"*Requester:* <@{user_id}>\n\n"
-            f"Next: I’ll confirm missing fields (if any), then generate the Build Kit."
+            f"Next: I’ll confirm any missing fields, then generate the Build Kit."
         )
-        # Fire-and-forget in v1 (still awaited, but fast)
-        await slack_post_message(channel_to_use, post_text)
+        background_tasks.add_task(slack_post_message, channel_to_use, visible_msg)
 
-    return JSONResponse(
-        {
-            "response_type": "ephemeral",
-            "text": ack_text,
-        }
-    )
+    return JSONResponse({"response_type": "ephemeral", "text": ack_text})
