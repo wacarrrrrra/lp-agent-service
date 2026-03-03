@@ -1,42 +1,26 @@
-"""
-LP Agent Service - Slack slash command endpoint
-
-Routes:
-- GET  /health
-- POST /slack/commands  (Slash command)
-- POST /slack/events    (Event API URL verification)
-
-Env vars (Render -> Environment):
-- SLACK_SIGNING_SECRET   (required)
-- SLACK_BOT_TOKEN        (required)  Bot User OAuth Token (xoxb-...)
-- SLACK_COMMAND_NAME     (optional)  e.g. "/sem-lp-request" (default)
-- SLACK_DEFAULT_CHANNEL  (optional)  fallback channel_id if Slack doesn’t send one
-"""
-
 import os
 import time
 import hmac
 import hashlib
+import json
 import logging
-import re
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Optional, Dict, Any
 
 import httpx
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
-# ----------------------------
-# App + Logging
-# ----------------------------
 app = FastAPI()
-
 logger = logging.getLogger("uvicorn.error")
 
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET", "")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
-SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")
-SLACK_COMMAND_NAME = os.getenv("SLACK_COMMAND_NAME", "/sem-lp-request")  # change if needed
+SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")  # channel ID (C123...), optional
+
+# Claude (Anthropic) - optional for step 2
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
 
 
 # ----------------------------
@@ -56,7 +40,7 @@ def verify_slack_signature(raw_body: bytes, timestamp: str, signature: str) -> N
     if abs(now - ts) > 60 * 5:
         raise HTTPException(status_code=400, detail="Stale Slack request (possible replay)")
 
-    basestring = b"v0:" + timestamp.encode("utf-8") + b":" + raw_body
+    basestring = f"v0:{timestamp}:".encode("utf-8") + raw_body
     expected = "v0=" + hmac.new(
         SLACK_SIGNING_SECRET.encode("utf-8"),
         basestring,
@@ -67,56 +51,228 @@ def verify_slack_signature(raw_body: bytes, timestamp: str, signature: str) -> N
         raise HTTPException(status_code=401, detail="Invalid Slack signature")
 
 
-# ----------------------------
-# Helpers
-# ----------------------------
 def generate_request_id() -> str:
-    # LP-YYYYMMDD-HHMM (server local time)
+    # LP-YYYYMMDD-HHMM
     return datetime.now().strftime("LP-%Y%m%d-%H%M")
 
 
-def parse_command_text(text: str) -> Dict[str, str]:
-    """
-    Supports:
-      /sem-lp-request search_term="datahub architecture" cta="Demo" intent=commercial
-      /sem-lp-request search_term=datahub-architecture cta=Demo
-      /sem-lp-request datahub architecture   (fallback => search_term)
-    """
-    text = (text or "").strip()
-    if not text:
-        return {}
-
-    pattern = r'(\w+)=(".*?"|\'.*?\'|[^\s]+)'
-    matches = re.findall(pattern, text)
-    if matches:
-        out: Dict[str, str] = {}
-        for k, v in matches:
-            v = v.strip().strip('"').strip("'")
-            out[k.lower()] = v
-        return out
-
-    return {"search_term": text}
+def slugify(text: str, max_len: int = 50) -> str:
+    t = (text or "").strip().lower()
+    # replace spaces with hyphens
+    t = "-".join(t.split())
+    # remove non-alnum / hyphen
+    cleaned = []
+    for ch in t:
+        if ch.isalnum() or ch == "-":
+            cleaned.append(ch)
+    out = "".join(cleaned)
+    return out[:max_len] if len(out) > max_len else out
 
 
-async def slack_post_message(channel: str, text: str, thread_ts: Optional[str] = None) -> None:
+async def slack_api(method: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     if not SLACK_BOT_TOKEN:
         raise HTTPException(status_code=500, detail="Missing SLACK_BOT_TOKEN")
 
-    payload = {"channel": channel, "text": text}
-    if thread_ts:
-        payload["thread_ts"] = thread_ts
-
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.post(
-            "https://slack.com/api/chat.postMessage",
-            headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
-            json=payload,
-        )
-
+    url = f"https://slack.com/api/{method}"
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(url, headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"}, json=payload)
     data = resp.json()
     if not data.get("ok"):
-        logger.error("Slack chat.postMessage failed: %s", data)
-        raise HTTPException(status_code=500, detail=f"Slack chat.postMessage failed: {data}")
+        raise HTTPException(status_code=500, detail=f"Slack API {method} failed: {data}")
+    return data
+
+
+async def post_message(channel: str, text: str, thread_ts: Optional[str] = None) -> str:
+    payload: Dict[str, Any] = {"channel": channel, "text": text}
+    if thread_ts:
+        payload["thread_ts"] = thread_ts
+    data = await slack_api("chat.postMessage", payload)
+    return data.get("ts")
+
+
+def build_modal_view(initial_search_term: str = "") -> Dict[str, Any]:
+    # Slack Block Kit modal
+    return {
+        "type": "modal",
+        "callback_id": "lp_request_modal",
+        "title": {"type": "plain_text", "text": "SEM LP Request"},
+        "submit": {"type": "plain_text", "text": "Create"},
+        "close": {"type": "plain_text", "text": "Cancel"},
+        "blocks": [
+            {
+                "type": "input",
+                "block_id": "search_term_block",
+                "label": {"type": "plain_text", "text": "Search term (exact)"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "search_term",
+                    "initial_value": initial_search_term or "",
+                    "placeholder": {"type": "plain_text", "text": "e.g., datahub architecture"},
+                },
+            },
+            {
+                "type": "input",
+                "block_id": "primary_cta_block",
+                "label": {"type": "plain_text", "text": "Primary CTA"},
+                "element": {
+                    "type": "static_select",
+                    "action_id": "primary_cta",
+                    "options": [
+                        {"text": {"type": "plain_text", "text": "Demo"}, "value": "Demo"},
+                        {"text": {"type": "plain_text", "text": "Free Trial"}, "value": "Free Trial"},
+                        {"text": {"type": "plain_text", "text": "Product Tour"}, "value": "Product Tour"},
+                        {"text": {"type": "plain_text", "text": "Bi-weekly Demo"}, "value": "Bi-weekly Demo"},
+                    ],
+                },
+            },
+            {
+                "type": "input",
+                "optional": True,
+                "block_id": "intent_block",
+                "label": {"type": "plain_text", "text": "Intent (optional)"},
+                "element": {
+                    "type": "static_select",
+                    "action_id": "intent",
+                    "options": [
+                        {"text": {"type": "plain_text", "text": "Commercial"}, "value": "Commercial"},
+                        {"text": {"type": "plain_text", "text": "OSS / Developer"}, "value": "OSS"},
+                        {"text": {"type": "plain_text", "text": "Enterprise"}, "value": "Enterprise"},
+                    ],
+                },
+            },
+            {
+                "type": "input",
+                "optional": True,
+                "block_id": "persona_block",
+                "label": {"type": "plain_text", "text": "Audience persona (optional)"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "audience_persona",
+                    "placeholder": {"type": "plain_text", "text": "e.g., Platform Engineer"},
+                },
+            },
+            {
+                "type": "input",
+                "optional": True,
+                "block_id": "offer_block",
+                "label": {"type": "plain_text", "text": "Offer (optional)"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "offer",
+                    "multiline": True,
+                    "placeholder": {"type": "plain_text", "text": "e.g., Interactive Product Tour..."},
+                },
+            },
+            {
+                "type": "input",
+                "optional": True,
+                "block_id": "must_include_block",
+                "label": {"type": "plain_text", "text": "Must include (optional)"},
+                "element": {"type": "plain_text_input", "action_id": "must_include", "multiline": True},
+            },
+            {
+                "type": "input",
+                "optional": True,
+                "block_id": "must_not_say_block",
+                "label": {"type": "plain_text", "text": "Must not say (optional)"},
+                "element": {"type": "plain_text_input", "action_id": "must_not_say", "multiline": True},
+            },
+        ],
+    }
+
+
+def extract_modal_values(view_state: Dict[str, Any]) -> Dict[str, Any]:
+    values = view_state.get("values", {})
+
+    def get_input(block_id: str, action_id: str) -> Optional[str]:
+        block = values.get(block_id, {})
+        action = block.get(action_id, {})
+        # text input uses "value", selects use "selected_option"
+        if "value" in action:
+            return action.get("value")
+        selected = action.get("selected_option")
+        if selected:
+            return selected.get("value")
+        return None
+
+    return {
+        "search_term": get_input("search_term_block", "search_term"),
+        "primary_cta": get_input("primary_cta_block", "primary_cta"),
+        "intent": get_input("intent_block", "intent"),
+        "audience_persona": get_input("persona_block", "audience_persona"),
+        "offer": get_input("offer_block", "offer"),
+        "must_include": get_input("must_include_block", "must_include"),
+        "must_not_say": get_input("must_not_say_block", "must_not_say"),
+    }
+
+
+async def call_claude(prompt: str) -> str:
+    """
+    Minimal Anthropic Messages API call via HTTP.
+    If you want, we can swap to the official SDK later.
+    """
+    if not ANTHROPIC_API_KEY:
+        return "⚠️ Claude integration not configured (missing ANTHROPIC_API_KEY)."
+
+    headers = {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+
+    body = {
+        "model": CLAUDE_MODEL,
+        "max_tokens": 900,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+
+    async with httpx.AsyncClient(timeout=45) as client:
+        resp = await client.post("https://api.anthropic.com/v1/messages", headers=headers, json=body)
+        resp.raise_for_status()
+        data = resp.json()
+
+    # content is list of blocks; extract text
+    parts = data.get("content", [])
+    text_out = ""
+    for p in parts:
+        if p.get("type") == "text":
+            text_out += p.get("text", "")
+    return text_out.strip() or "(No text returned from Claude.)"
+
+
+def build_claude_prompt(fields: Dict[str, Any], request_id: str) -> str:
+    # You can evolve this into your full Build Kit spec.
+    return f"""
+You are the SEM Landing Page Agent.
+
+Create a technically credible landing page outline + first-draft copy for:
+Search term: "{fields.get("search_term")}"
+Primary CTA: "{fields.get("primary_cta")}"
+Intent: "{fields.get("intent")}"
+Audience persona: "{fields.get("audience_persona")}"
+Offer: "{fields.get("offer")}"
+Must include: "{fields.get("must_include")}"
+Must not say: "{fields.get("must_not_say")}"
+
+Requirements:
+- Title tag includes the search term verbatim.
+- H1 includes the search term verbatim.
+- Search term appears within the first 100 words and at least one H2.
+- CTA above the fold and repeated.
+- Scannable formatting.
+- 3–6 FAQs.
+- Provide a visual plan (diagram/screenshot/table) with placement notes.
+
+Output sections:
+1) Recommended angle (2 sentences)
+2) SEO: title tag, meta description, slug
+3) Page outline (H1 + H2s with bullets)
+4) Draft copy for hero + 3 key sections
+5) FAQs
+6) Visual plan
+
+Request ID: {request_id}
+""".strip()
 
 
 # ----------------------------
@@ -127,79 +283,130 @@ async def health():
     return {"ok": True}
 
 
-@app.post("/slack/events")
-async def slack_events(request: Request):
-    body = await request.json()
-
-    # Slack URL verification challenge
-    if body.get("type") == "url_verification":
-        return JSONResponse({"challenge": body.get("challenge")})
-
-    # For later: handle events
-    return JSONResponse({"ok": True})
-
-
 @app.post("/slack/commands")
-async def slack_commands(request: Request, background_tasks: BackgroundTasks):
+async def slack_commands(request: Request):
+    """
+    Slash command endpoint: opens a modal.
+    """
     raw_body = await request.body()
-
-    # Helpful logs while debugging
-    logger.info("🔥 SLACK HIT /slack/commands")
-    logger.info("Headers (subset): ts=%s sig=%s content-type=%s",
-                request.headers.get("X-Slack-Request-Timestamp"),
-                request.headers.get("X-Slack-Signature"),
-                request.headers.get("content-type"))
-
-    # Verify Slack signature
-    timestamp = request.headers.get("X-Slack-Request-Timestamp", "")
-    signature = request.headers.get("X-Slack-Signature", "")
-    verify_slack_signature(raw_body, timestamp, signature)
-
-    # Parse form data
-    form = await request.form()
-    command = form.get("command")           # e.g. "/sem-lp-request"
-    text = form.get("text") or ""
-    channel_id = form.get("channel_id")
-    user_id = form.get("user_id")
-
-    logger.info("Command=%s Text=%s Channel=%s User=%s", command, text, channel_id, user_id)
-
-    # Accept either configured command OR legacy "/lp-request"
-    if command not in {SLACK_COMMAND_NAME, "/lp-request"}:
-        return JSONResponse({
-            "response_type": "ephemeral",
-            "text": f"Unsupported command: {command}. Expected {SLACK_COMMAND_NAME}."
-        })
-
-    fields = parse_command_text(text)
-    search_term = fields.get("search_term")
-    primary_cta = fields.get("cta") or fields.get("primary_cta")
-    intent = fields.get("intent")
-
-    request_id = generate_request_id()
-
-    # ACK immediately (Slack requires <3 seconds)
-    ack_text = (
-        f"✅ *LP request received*\n"
-        f"*Request ID:* {request_id}\n"
-        f"*Search term:* {search_term or 'TBD'}\n"
-        f"*Primary CTA:* {primary_cta or 'TBD'}\n"
-        f"{('*Intent:* ' + intent) if intent else ''}\n\n"
-        f"I’ll post updates here shortly."
+    verify_slack_signature(
+        raw_body,
+        request.headers.get("X-Slack-Request-Timestamp", ""),
+        request.headers.get("X-Slack-Signature", ""),
     )
 
-    # Post a visible message asynchronously
-    channel_to_use = channel_id or SLACK_DEFAULT_CHANNEL
-    if channel_to_use:
-        visible_msg = (
+    form = await request.form()
+    command = form.get("command")
+    trigger_id = form.get("trigger_id")
+    text = (form.get("text") or "").strip()
+
+    if command != "/sem-lp-request":
+        # Return 200 so Slack doesn't show an error
+        return PlainTextResponse("Unsupported command.", status_code=200)
+
+    # Open modal
+    view = build_modal_view(initial_search_term=text)
+    await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
+
+    # Must respond quickly to Slack
+    return PlainTextResponse("", status_code=200)
+
+
+@app.post("/slack/interactions")
+async def slack_interactions(request: Request, background_tasks: BackgroundTasks):
+    """
+    Handles modal submissions.
+    Slack sends payload as application/x-www-form-urlencoded with a 'payload' field (JSON string).
+    """
+    raw_body = await request.body()
+    verify_slack_signature(
+        raw_body,
+        request.headers.get("X-Slack-Request-Timestamp", ""),
+        request.headers.get("X-Slack-Signature", ""),
+    )
+
+    form = await request.form()
+    payload = json.loads(form.get("payload", "{}"))
+
+    payload_type = payload.get("type")
+
+    # Modal submit
+    if payload_type == "view_submission":
+        view = payload.get("view", {})
+        callback_id = view.get("callback_id")
+
+        if callback_id != "lp_request_modal":
+            return JSONResponse({"response_action": "clear"})
+
+        fields = extract_modal_values(view.get("state", {}))
+
+        # Validate required fields
+        if not fields.get("search_term") or not fields.get("primary_cta"):
+            # Tell Slack to show inline errors
+            errors = {}
+            if not fields.get("search_term"):
+                errors["search_term_block"] = "Search term is required."
+            if not fields.get("primary_cta"):
+                errors["primary_cta_block"] = "Primary CTA is required."
+            return JSONResponse({"response_action": "errors", "errors": errors})
+
+        request_id = generate_request_id()
+        slug = slugify(fields["search_term"])
+
+        user = payload.get("user", {})
+        user_id = user.get("id")
+
+        # Where to post
+        # Prefer the channel the user ran the command from (stored in private_metadata if you want),
+        # but for v1: use the conversation from the "view" if available, else fallback.
+        channel_id = payload.get("view", {}).get("private_metadata") or SLACK_DEFAULT_CHANNEL
+
+        # NOTE: If you want the exact channel the slash command ran in, you can:
+        # - In /slack/commands, set view["private_metadata"] = channel_id
+        # We'll add that enhancement next if you want. For now fallback is OK.
+
+        if not channel_id:
+            # If no channel, we can DM the user instead (not implemented here)
+            return JSONResponse({"response_action": "clear"})
+
+        # Post starter message in channel and capture thread_ts
+        starter = (
             f"🚀 *LP request started*\n"
             f"*Request ID:* {request_id}\n"
-            f"*Search term:* {search_term or 'TBD'}\n"
-            f"*Primary CTA:* {primary_cta or 'TBD'}\n"
-            f"*Intent:* {intent or 'TBD'}\n"
-            f"*Requester:* <@{user_id}>\n\n"
-            f"Next: I’ll confirm any missing fields, then generate the Build Kit."
+            f"*Search term:* {fields['search_term']}\n"
+            f"*Primary CTA:* {fields['primary_cta']}\n"
+            f"*Intent:* {fields.get('intent') or '—'}\n"
+            f"*Persona:* {fields.get('audience_persona') or '—'}\n"
+            f"*Requester:* <@{user_id}>\n"
         )
-        background_tasks.add_task(slack_post_message, channel_to_use, visible_msg)
 
-    return JSONResponse({"response_type": "ephemeral", "text": ack_text})
+        # Post and then do Claude in-thread
+        async def run_workflow():
+            thread_ts = await post_message(channel_id, starter)
+
+            await post_message(
+                channel_id,
+                f"🧠 Drafting outline + copy with Claude… (request: {request_id})",
+                thread_ts=thread_ts,
+            )
+
+            prompt = build_claude_prompt(fields, request_id)
+            claude_text = await call_claude(prompt)
+
+            # Keep Slack message size reasonable; if long, truncate
+            max_len = 3500
+            if len(claude_text) > max_len:
+                claude_text = claude_text[:max_len] + "\n\n…(truncated)"
+
+            await post_message(
+                channel_id,
+                f"✅ *Claude draft ready* for *{request_id}*\n```{claude_text}```",
+                thread_ts=thread_ts,
+            )
+
+        background_tasks.add_task(run_workflow)
+
+        # Clear the modal
+        return JSONResponse({"response_action": "clear"})
+
+    return JSONResponse({"ok": True})
