@@ -305,7 +305,9 @@ async def slack_commands(request: Request):
         return PlainTextResponse("Unsupported command.", status_code=200)
 
     # Open modal
+    channel_id = form.get("channel_id") or ""
     view = build_modal_view(initial_search_term=text)
+    view["private_metadata"] = channel_id
     await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
 
     # Must respond quickly to Slack
@@ -360,7 +362,7 @@ async def slack_interactions(request: Request, background_tasks: BackgroundTasks
         # Prefer the channel the user ran the command from (stored in private_metadata if you want),
         # but for v1: use the conversation from the "view" if available, else fallback.
         channel_id = payload.get("view", {}).get("private_metadata") or SLACK_DEFAULT_CHANNEL
-
+        
         # NOTE: If you want the exact channel the slash command ran in, you can:
         # - In /slack/commands, set view["private_metadata"] = channel_id
         # We'll add that enhancement next if you want. For now fallback is OK.
