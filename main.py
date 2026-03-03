@@ -137,8 +137,26 @@ async def health():
     return {"ok": True}
 
 
-@app.post("/slack/commands")
+@app.api_route("/slack/commands", methods=["GET", "POST", "HEAD"])
 async def slack_commands(request: Request, background_tasks: BackgroundTasks):
+
+    # Slack validation probe
+    if request.method in ["GET", "HEAD"]:
+        return {"status": "ok"}
+
+    body = await request.body()
+    logger.info("🔥 SLACK HIT /slack/commands")
+    logger.info("Method: %s", request.method)
+
+    form = await request.form()
+    command = form.get("command")
+    text = form.get("text")
+
+    return {
+        "response_type": "ephemeral",
+        "text": f"Received command: {command} with text: {text}"
+    }
+
     from fastapi import FastAPI, Request
 import logging
 
