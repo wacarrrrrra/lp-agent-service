@@ -164,6 +164,21 @@ app = FastAPI()
 
 logger = logging.getLogger("uvicorn.error")
 
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+@app.post("/slack/events")
+async def slack_events(request: Request):
+    body = await request.json()
+
+    # 🔐 Slack URL verification
+    if body.get("type") == "url_verification":
+        return JSONResponse({"challenge": body.get("challenge")})
+
+    # Handle real events here later
+    return JSONResponse({"ok": True})
+
 @app.post("/slack/commands")
 async def slack_commands(request: Request):
 
