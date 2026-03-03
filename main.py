@@ -1,52 +1,48 @@
 """
-LP Agent Service - Slack /lp-request endpoint (v1)
+LP Agent Service - Slack slash command endpoint
 
-What this does:
-- Exposes POST /slack/commands for Slack slash command /lp-request
-- Verifies Slack request signatures (Signing Secret)
-- Parses optional key=value arguments from the command text
-- Generates request_id (LP-YYYYMMDD-HHMM)
-- Immediately ACKs Slack with an ephemeral response (<3s)
-- Posts a visible “LP request started” message in the same channel (background task)
+Routes:
+- GET  /health
+- POST /slack/commands  (Slash command)
+- POST /slack/events    (Event API URL verification)
 
-Required env vars (Render -> Environment):
-- SLACK_SIGNING_SECRET
-- SLACK_BOT_TOKEN
-
-Optional env vars:
-- SLACK_DEFAULT_CHANNEL   (fallback channel if Slack doesn't send channel_id; usually not needed)
+Env vars (Render -> Environment):
+- SLACK_SIGNING_SECRET   (required)
+- SLACK_BOT_TOKEN        (required)  Bot User OAuth Token (xoxb-...)
+- SLACK_COMMAND_NAME     (optional)  e.g. "/sem-lp-request" (default)
+- SLACK_DEFAULT_CHANNEL  (optional)  fallback channel_id if Slack doesn’t send one
 """
 
 import os
 import time
 import hmac
 import hashlib
+import logging
 import re
 from datetime import datetime
 from typing import Dict, Optional
 
 import httpx
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
-from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.responses import JSONResponse
 
-
+# ----------------------------
+# App + Logging
+# ----------------------------
 app = FastAPI()
+
+logger = logging.getLogger("uvicorn.error")
 
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET", "")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
-SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")  # optional
+SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")
+SLACK_COMMAND_NAME = os.getenv("SLACK_COMMAND_NAME", "/sem-lp-request")  # change if needed
 
 
 # ----------------------------
 # Slack signature verification
 # ----------------------------
 def verify_slack_signature(raw_body: bytes, timestamp: str, signature: str) -> None:
-    """
-    Verify Slack request signature using signing secret.
-
-    Slack docs:
-    https://api.slack.com/authentication/verifying-requests-from-slack
-    """
     if not SLACK_SIGNING_SECRET:
         raise HTTPException(status_code=500, detail="Missing SLACK_SIGNING_SECRET")
 
@@ -75,26 +71,21 @@ def verify_slack_signature(raw_body: bytes, timestamp: str, signature: str) -> N
 # Helpers
 # ----------------------------
 def generate_request_id() -> str:
-    # LP-YYYYMMDD-HHMM (server-local time; fine for v1)
+    # LP-YYYYMMDD-HHMM (server local time)
     return datetime.now().strftime("LP-%Y%m%d-%H%M")
 
 
 def parse_command_text(text: str) -> Dict[str, str]:
     """
-    Parses slash command text.
-
-    Supported examples:
-      /lp-request search_term="datahub architecture" cta="Demo" intent=commercial
-      /lp-request search_term=datahub-architecture cta=Demo
-      /lp-request datahub architecture      (fallback => search_term)
-
-    Returns keys in lowercase.
+    Supports:
+      /sem-lp-request search_term="datahub architecture" cta="Demo" intent=commercial
+      /sem-lp-request search_term=datahub-architecture cta=Demo
+      /sem-lp-request datahub architecture   (fallback => search_term)
     """
     text = (text or "").strip()
     if not text:
         return {}
 
-    # key="value" OR key=value tokens
     pattern = r'(\w+)=(".*?"|\'.*?\'|[^\s]+)'
     matches = re.findall(pattern, text)
     if matches:
@@ -104,7 +95,6 @@ def parse_command_text(text: str) -> Dict[str, str]:
             out[k.lower()] = v
         return out
 
-    # fallback: treat whole string as search_term
     return {"search_term": text}
 
 
@@ -125,7 +115,7 @@ async def slack_post_message(channel: str, text: str, thread_ts: Optional[str] =
 
     data = resp.json()
     if not data.get("ok"):
-        # Raise a 500 so Render logs show the Slack error payload
+        logger.error("Slack chat.postMessage failed: %s", data)
         raise HTTPException(status_code=500, detail=f"Slack chat.postMessage failed: {data}")
 
 
@@ -137,83 +127,49 @@ async def health():
     return {"ok": True}
 
 
-@app.api_route("/slack/commands", methods=["GET", "POST", "HEAD"])
-async def slack_commands(request: Request, background_tasks: BackgroundTasks):
-
-    # Slack validation probe
-    if request.method in ["GET", "HEAD"]:
-        return {"status": "ok"}
-
-    body = await request.body()
-    logger.info("🔥 SLACK HIT /slack/commands")
-    logger.info("Method: %s", request.method)
-
-    form = await request.form()
-    command = form.get("command")
-    text = form.get("text")
-
-    return {
-        "response_type": "ephemeral",
-        "text": f"Received command: {command} with text: {text}"
-    }
-
-    from fastapi import FastAPI, Request
-import logging
-
-app = FastAPI()
-
-logger = logging.getLogger("uvicorn.error")
-
-
-from fastapi import Request
-from fastapi.responses import JSONResponse
-
 @app.post("/slack/events")
 async def slack_events(request: Request):
     body = await request.json()
 
-    # 🔐 Slack URL verification
+    # Slack URL verification challenge
     if body.get("type") == "url_verification":
         return JSONResponse({"challenge": body.get("challenge")})
 
-    # Handle real events here later
+    # For later: handle events
     return JSONResponse({"ok": True})
 
+
 @app.post("/slack/commands")
-async def slack_commands(request: Request):
-
-    # 👇 ADD THIS BLOCK RIGHT HERE
-    body = await request.body()
-    logger.info("🔥 SLACK HIT /slack/commands")
-    logger.info("Method: %s", request.method)
-    logger.info("Headers: %s", dict(request.headers))
-    logger.info("Body length: %s", len(body))
-
-    # then your existing logic continues below...
-    form = await request.form()
-    command = form.get("command")
-    text = form.get("text")
-
-    return {
-        "response_type": "ephemeral",
-        "text": f"Received command: {command} with text: {text}"
-    }
+async def slack_commands(request: Request, background_tasks: BackgroundTasks):
     raw_body = await request.body()
 
+    # Helpful logs while debugging
+    logger.info("🔥 SLACK HIT /slack/commands")
+    logger.info("Headers (subset): ts=%s sig=%s content-type=%s",
+                request.headers.get("X-Slack-Request-Timestamp"),
+                request.headers.get("X-Slack-Signature"),
+                request.headers.get("content-type"))
+
+    # Verify Slack signature
     timestamp = request.headers.get("X-Slack-Request-Timestamp", "")
     signature = request.headers.get("X-Slack-Signature", "")
     verify_slack_signature(raw_body, timestamp, signature)
 
-    # Slack slash commands send x-www-form-urlencoded
+    # Parse form data
     form = await request.form()
-    command = form.get("command")               # "/lp-request"
-    text = form.get("text")                     # user args after command
-    channel_id = form.get("channel_id")         # where command was run
-    user_id = form.get("user_id")               # requesting user
-    channel_name = form.get("channel_name")     # may be "directmessage" or channel name
+    command = form.get("command")           # e.g. "/sem-lp-request"
+    text = form.get("text") or ""
+    channel_id = form.get("channel_id")
+    user_id = form.get("user_id")
 
-    if command != "/lp-request":
-        return PlainTextResponse("Unsupported command", status_code=200)
+    logger.info("Command=%s Text=%s Channel=%s User=%s", command, text, channel_id, user_id)
+
+    # Accept either configured command OR legacy "/lp-request"
+    if command not in {SLACK_COMMAND_NAME, "/lp-request"}:
+        return JSONResponse({
+            "response_type": "ephemeral",
+            "text": f"Unsupported command: {command}. Expected {SLACK_COMMAND_NAME}."
+        })
 
     fields = parse_command_text(text)
     search_term = fields.get("search_term")
@@ -222,19 +178,17 @@ async def slack_commands(request: Request):
 
     request_id = generate_request_id()
 
-    # Ack quickly (Slack expects < 3 seconds)
+    # ACK immediately (Slack requires <3 seconds)
     ack_text = (
-        f"✅ Got it! LP request received.\n"
-        f"- Request ID: {request_id}\n"
-        f"- Search term: {search_term or '(not provided)'}\n"
-        f"- Primary CTA: {primary_cta or '(not provided)'}\n"
-        f"{('- Intent: ' + intent) if intent else ''}\n\n"
-        f"I’ll post updates in <#{channel_id}>."
-        if channel_id
-        else "I’ll post updates in the channel."
+        f"✅ *LP request received*\n"
+        f"*Request ID:* {request_id}\n"
+        f"*Search term:* {search_term or 'TBD'}\n"
+        f"*Primary CTA:* {primary_cta or 'TBD'}\n"
+        f"{('*Intent:* ' + intent) if intent else ''}\n\n"
+        f"I’ll post updates here shortly."
     )
 
-    # Post a visible message to the channel in the background
+    # Post a visible message asynchronously
     channel_to_use = channel_id or SLACK_DEFAULT_CHANNEL
     if channel_to_use:
         visible_msg = (
