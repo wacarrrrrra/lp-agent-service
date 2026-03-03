@@ -139,6 +139,32 @@ async def health():
 
 @app.post("/slack/commands")
 async def slack_commands(request: Request, background_tasks: BackgroundTasks):
+    from fastapi import FastAPI, Request
+import logging
+
+app = FastAPI()
+
+logger = logging.getLogger("uvicorn.error")
+
+@app.post("/slack/commands")
+async def slack_commands(request: Request):
+
+    # 👇 ADD THIS BLOCK RIGHT HERE
+    body = await request.body()
+    logger.info("🔥 SLACK HIT /slack/commands")
+    logger.info("Method: %s", request.method)
+    logger.info("Headers: %s", dict(request.headers))
+    logger.info("Body length: %s", len(body))
+
+    # then your existing logic continues below...
+    form = await request.form()
+    command = form.get("command")
+    text = form.get("text")
+
+    return {
+        "response_type": "ephemeral",
+        "text": f"Received command: {command} with text: {text}"
+    }
     raw_body = await request.body()
 
     timestamp = request.headers.get("X-Slack-Request-Timestamp", "")
