@@ -24,7 +24,9 @@ logger = logging.getLogger("uvicorn.error")
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET", "")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
 SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")  # channel ID like C123..., optional
+QUEUE_CHANNEL_ID = os.getenv("QUEUE_CHANNEL_ID", "")  # e.g. C0AHY0FAN4C (private #sem-lp-requests)
 
+# Optional (kept for later)
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
 
@@ -104,6 +106,15 @@ async def post_message(channel: str, text: str, thread_ts: Optional[str] = None)
         payload["thread_ts"] = thread_ts
     data = await slack_api("chat.postMessage", payload)
     return data.get("ts")
+
+
+def make_queue_message(req: dict) -> str:
+    return (
+        "*LP_REQUEST NEW*\n"
+        "```json\n"
+        + json.dumps(req, ensure_ascii=False)
+        + "\n```"
+    )
 
 
 def build_modal_view(initial_search_term: str = "", channel_id: str = "") -> Dict[str, Any]:
@@ -222,68 +233,6 @@ def extract_modal_values(view_state: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-async def call_claude(prompt: str) -> str:
-    if not ANTHROPIC_API_KEY:
-        return "⚠️ Claude integration not configured (missing ANTHROPIC_API_KEY)."
-
-    headers = {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    body = {
-        "model": CLAUDE_MODEL,
-        "max_tokens": 900,
-        "messages": [{"role": "user", "content": prompt}],
-    }
-
-    async with httpx.AsyncClient(timeout=45) as client:
-        resp = await client.post("https://api.anthropic.com/v1/messages", headers=headers, json=body)
-        resp.raise_for_status()
-        data = resp.json()
-
-    parts = data.get("content", [])
-    out = ""
-    for p in parts:
-        if p.get("type") == "text":
-            out += p.get("text", "")
-    return out.strip() or "(No text returned from Claude.)"
-
-
-def build_claude_prompt(fields: Dict[str, Any], request_id: str) -> str:
-    return f"""
-You are the SEM Landing Page Agent.
-
-Create a technically credible landing page outline + first-draft copy for:
-Search term: "{fields.get("search_term")}"
-Primary CTA: "{fields.get("primary_cta")}"
-Intent: "{fields.get("intent")}"
-Audience persona: "{fields.get("audience_persona")}"
-Offer: "{fields.get("offer")}"
-Must include: "{fields.get("must_include")}"
-Must not say: "{fields.get("must_not_say")}"
-
-Requirements:
-- Title tag includes the search term verbatim.
-- H1 includes the search term verbatim.
-- Search term appears within the first 100 words and at least one H2.
-- CTA above the fold and repeated.
-- Scannable formatting.
-- 3–6 FAQs.
-- Provide a visual plan (diagram/screenshot/table) with placement notes.
-
-Output sections:
-1) Recommended angle (2 sentences)
-2) SEO: title tag, meta description, slug
-3) Page outline (H1 + H2s with bullets)
-4) Draft copy for hero + 3 key sections
-5) FAQs
-6) Visual plan
-
-Request ID: {request_id}
-""".strip()
-
-
 # ----------------------------
 # Routes
 # ----------------------------
@@ -294,9 +243,10 @@ async def health():
 
 @app.post("/slack/events")
 async def slack_events(request: Request):
-    # Only needed if you enable Event Subscriptions
+    """
+    Optional: only needed if you enable Event Subscriptions.
+    """
     raw_body = await request.body()
-    # Slack events are signed too
     verify_slack_signature(
         raw_body,
         request.headers.get("X-Slack-Request-Timestamp", ""),
@@ -317,8 +267,6 @@ async def slack_commands(request: Request):
     Slash Command Request URL must point here.
     """
     raw_body = await request.body()
-
-    # Log basics for debugging (safe; does not log tokens)
     logger.info("SLASH /slack/commands hit. bytes=%s", len(raw_body))
 
     verify_slack_signature(
@@ -340,9 +288,6 @@ async def slack_commands(request: Request):
         return PlainTextResponse("Missing trigger_id.", status_code=200)
 
     view = build_modal_view(initial_search_term=text, channel_id=channel_id)
-
-    # IMPORTANT: views.open must succeed quickly. If your Render instance cold-starts,
-    # Slack might still be OK, but this is the correct approach.
     await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
 
     return PlainTextResponse("", status_code=200)
@@ -357,99 +302,102 @@ async def slack_interactions(request: Request):
     raw_body = await request.body()
     logger.info("INTERACTIONS /slack/interactions hit. bytes=%s", len(raw_body))
 
-    try:
-        verify_slack_signature(
-            raw_body,
-            request.headers.get("X-Slack-Request-Timestamp", ""),
-            request.headers.get("X-Slack-Signature", ""),
-        )
-    except Exception as e:
-        logger.exception("Signature verification failed: %s", e)
-        # Slack will show "can't connect" if this isn't 200.
-        # But we *should* return a clear error so you can see it in logs.
-        raise
+    verify_slack_signature(
+        raw_body,
+        request.headers.get("X-Slack-Request-Timestamp", ""),
+        request.headers.get("X-Slack-Signature", ""),
+    )
 
     form = await request.form()
     payload_raw = form.get("payload")
     if not payload_raw:
-        # Slack expects 200. Return ok so UI doesn't freak out.
         return JSONResponse({"ok": True})
 
     payload = json.loads(payload_raw)
     payload_type = payload.get("type")
 
-    if payload_type == "view_submission":
-        view = payload.get("view", {})
-        if view.get("callback_id") != "lp_request_modal":
-            return JSONResponse({"response_action": "clear"})
+    if payload_type != "view_submission":
+        return JSONResponse({"ok": True})
 
-        fields = extract_modal_values(view.get("state", {}))
-
-        # Required fields validation (inline modal errors)
-        errors = {}
-        if not fields.get("search_term"):
-            errors["search_term_block"] = "Search term is required."
-        if not fields.get("primary_cta"):
-            errors["primary_cta_block"] = "Primary CTA is required."
-        if errors:
-            return JSONResponse({"response_action": "errors", "errors": errors})
-
-        request_id = generate_request_id()
-        _slug = slugify(fields["search_term"])
-
-        user_id = (payload.get("user") or {}).get("id") or "unknown"
-
-        # Post to the channel where the command ran (stored in private_metadata)
-        channel_id = (view.get("private_metadata") or "").strip() or SLACK_DEFAULT_CHANNEL
-        if not channel_id:
-            # If you want, you could DM the user here instead.
-            return JSONResponse({"response_action": "clear"})
-
-        starter = (
-            f"🚀 *LP request started*\n"
-            f"*Request ID:* {request_id}\n"
-            f"*Search term:* {fields['search_term']}\n"
-            f"*Primary CTA:* {fields['primary_cta']}\n"
-            f"*Intent:* {fields.get('intent') or '—'}\n"
-            f"*Persona:* {fields.get('audience_persona') or '—'}\n"
-            f"*Requester:* <@{user_id}>"
-        )
-
-        async def run_workflow():
-            thread_ts = None
-            try:
-                thread_ts = await post_message(channel_id, starter)
-
-                await post_message(
-                    channel_id,
-                    f"🧠 Drafting outline + copy with Claude… (request: {request_id})",
-                    thread_ts=thread_ts,
-                )
-
-                prompt = build_claude_prompt(fields, request_id)
-                claude_text = await call_claude(prompt)
-
-                max_len = 3500
-                if len(claude_text) > max_len:
-                    claude_text = claude_text[:max_len] + "\n\n…(truncated)"
-
-                await post_message(
-                    channel_id,
-                    f"✅ *Claude draft ready* for *{request_id}*\n```{claude_text}```",
-                    thread_ts=thread_ts,
-                )
-            except Exception as e:
-                logger.exception("Workflow failed: %s", e)
-                if thread_ts:
-                    try:
-                        await post_message(channel_id, f"❌ Workflow failed for {request_id}: `{e}`", thread_ts=thread_ts)
-                    except Exception:
-                        pass
-
-        # IMPORTANT: do not block Slack; run async task
-        asyncio.create_task(run_workflow())
-
-        # Immediately close modal (Slack requires <3s response)
+    view = payload.get("view", {})
+    if view.get("callback_id") != "lp_request_modal":
         return JSONResponse({"response_action": "clear"})
 
-    return JSONResponse({"ok": True})
+    fields = extract_modal_values(view.get("state", {}))
+
+    # Required fields validation (inline modal errors)
+    errors = {}
+    if not fields.get("search_term"):
+        errors["search_term_block"] = "Search term is required."
+    if not fields.get("primary_cta"):
+        errors["primary_cta_block"] = "Primary CTA is required."
+    if errors:
+        return JSONResponse({"response_action": "errors", "errors": errors})
+
+    request_id = generate_request_id()
+    _slug = slugify(fields["search_term"])
+
+    user_id = (payload.get("user") or {}).get("id") or "unknown"
+
+    # Origin channel is stored in modal private_metadata
+    origin_channel_id = (view.get("private_metadata") or "").strip() or SLACK_DEFAULT_CHANNEL
+    if not origin_channel_id:
+        return JSONResponse({"response_action": "clear"})
+
+    starter = (
+        f"🚀 *LP request started*\n"
+        f"*Request ID:* {request_id}\n"
+        f"*Search term:* {fields['search_term']}\n"
+        f"*Primary CTA:* {fields['primary_cta']}\n"
+        f"*Intent:* {fields.get('intent') or '—'}\n"
+        f"*Persona:* {fields.get('audience_persona') or '—'}\n"
+        f"*Requester:* <@{user_id}>"
+    )
+
+    async def run_queue_publish():
+        thread_ts = None
+        try:
+            # Post in origin channel and capture thread ts
+            thread_ts = await post_message(origin_channel_id, starter)
+
+            # Queue payload
+            req_obj = {
+                "request_id": request_id,
+                "search_term": fields["search_term"],
+                "primary_cta": fields["primary_cta"],
+                "intent": fields.get("intent") or "",
+                "audience_persona": fields.get("audience_persona") or "",
+                "offer": fields.get("offer") or "",
+                "must_include": fields.get("must_include") or "",
+                "must_not_say": fields.get("must_not_say") or "",
+                "requester_user_id": user_id,
+                "origin_channel_id": origin_channel_id,
+                "origin_thread_ts": thread_ts,
+                "created_at": datetime.now().isoformat(timespec="seconds"),
+            }
+
+            queue_channel = QUEUE_CHANNEL_ID or origin_channel_id
+            queue_ts = await post_message(queue_channel, make_queue_message(req_obj))
+
+            # Confirm queued in origin thread
+            await post_message(
+                origin_channel_id,
+                f"✅ Queued *{request_id}* in <#{queue_channel}>.\n"
+                f"Local runner will pick it up and reply in this thread.\n"
+                f"(Queue message ts: `{queue_ts}`)",
+                thread_ts=thread_ts,
+            )
+
+        except Exception as e:
+            logger.exception("Queue publish failed: %s", e)
+            if thread_ts:
+                try:
+                    await post_message(origin_channel_id, f"❌ Queueing failed for {request_id}: `{e}`", thread_ts=thread_ts)
+                except Exception:
+                    pass
+
+    # Do not block Slack modal submission response (<3s)
+    asyncio.create_task(run_queue_publish())
+
+    # Close modal immediately
+    return JSONResponse({"response_action": "clear"})
