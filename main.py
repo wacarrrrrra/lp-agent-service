@@ -4,12 +4,11 @@ import hmac
 import hashlib
 import json
 import logging
-import asyncio
 from datetime import datetime
 from typing import Optional, Dict, Any
 
 import httpx
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 # ----------------------------
@@ -23,12 +22,8 @@ logger = logging.getLogger("uvicorn.error")
 # ----------------------------
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET", "")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
-SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")  # channel ID like C123..., optional
-QUEUE_CHANNEL_ID = os.getenv("QUEUE_CHANNEL_ID", "")  # e.g. C0AHY0FAN4C (private #sem-lp-requests)
-
-# Optional (kept for later)
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
+# IMPORTANT: channel ID like C0AHY0FAN4C (not "#sem-lp-requests")
+SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "").strip()
 
 SLACK_API_BASE = "https://slack.com/api"
 
@@ -37,6 +32,9 @@ SLACK_API_BASE = "https://slack.com/api"
 # Slack signature verification
 # ----------------------------
 def verify_slack_signature(raw_body: bytes, timestamp: str, signature: str) -> None:
+    """
+    https://api.slack.com/authentication/verifying-requests-from-slack
+    """
     if not SLACK_SIGNING_SECRET:
         raise HTTPException(status_code=500, detail="Missing SLACK_SIGNING_SECRET")
 
@@ -60,6 +58,7 @@ def verify_slack_signature(raw_body: bytes, timestamp: str, signature: str) -> N
         hashlib.sha256,
     ).hexdigest()
 
+    # Use compare_digest to avoid timing attacks
     if not hmac.compare_digest(expected, signature):
         raise HTTPException(status_code=401, detail="Invalid Slack signature")
 
@@ -68,6 +67,7 @@ def verify_slack_signature(raw_body: bytes, timestamp: str, signature: str) -> N
 # Helpers
 # ----------------------------
 def generate_request_id() -> str:
+    # LP-YYYYMMDD-HHMM
     return datetime.now().strftime("LP-%Y%m%d-%H%M")
 
 
@@ -108,17 +108,14 @@ async def post_message(channel: str, text: str, thread_ts: Optional[str] = None)
     return data.get("ts")
 
 
-def make_queue_message(req: dict) -> str:
-    return (
-        "*LP_REQUEST NEW*\n"
-        "```json\n"
-        + json.dumps(req, ensure_ascii=False)
-        + "\n```"
-    )
-
-
 def build_modal_view(initial_search_term: str = "", channel_id: str = "") -> Dict[str, Any]:
-    # store channel_id in private_metadata so modal submit knows where to post
+    """
+    Required:
+      - Search term
+      - Primary CTA
+      - Intent (Commercial | Educational | Transactional)
+      - Primary Audience (Economic Buyer | Platform Engineer)
+    """
     return {
         "type": "modal",
         "callback_id": "lp_request_modal",
@@ -145,6 +142,7 @@ def build_modal_view(initial_search_term: str = "", channel_id: str = "") -> Dic
                 "element": {
                     "type": "static_select",
                     "action_id": "primary_cta",
+                    "placeholder": {"type": "plain_text", "text": "Select a CTA"},
                     "options": [
                         {"text": {"type": "plain_text", "text": "Demo"}, "value": "Demo"},
                         {"text": {"type": "plain_text", "text": "Free Trial"}, "value": "Free Trial"},
@@ -155,28 +153,31 @@ def build_modal_view(initial_search_term: str = "", channel_id: str = "") -> Dic
             },
             {
                 "type": "input",
-                "optional": True,
                 "block_id": "intent_block",
-                "label": {"type": "plain_text", "text": "Intent (optional)"},
+                "label": {"type": "plain_text", "text": "Intent"},
                 "element": {
                     "type": "static_select",
                     "action_id": "intent",
+                    "placeholder": {"type": "plain_text", "text": "Select intent"},
                     "options": [
                         {"text": {"type": "plain_text", "text": "Commercial"}, "value": "Commercial"},
-                        {"text": {"type": "plain_text", "text": "OSS / Developer"}, "value": "OSS"},
-                        {"text": {"type": "plain_text", "text": "Enterprise"}, "value": "Enterprise"},
+                        {"text": {"type": "plain_text", "text": "Educational"}, "value": "Educational"},
+                        {"text": {"type": "plain_text", "text": "Transactional"}, "value": "Transactional"},
                     ],
                 },
             },
             {
                 "type": "input",
-                "optional": True,
-                "block_id": "persona_block",
-                "label": {"type": "plain_text", "text": "Audience persona (optional)"},
+                "block_id": "primary_audience_block",
+                "label": {"type": "plain_text", "text": "Primary Audience"},
                 "element": {
-                    "type": "plain_text_input",
-                    "action_id": "audience_persona",
-                    "placeholder": {"type": "plain_text", "text": "e.g., Platform Engineer"},
+                    "type": "static_select",
+                    "action_id": "primary_audience",
+                    "placeholder": {"type": "plain_text", "text": "Select audience"},
+                    "options": [
+                        {"text": {"type": "plain_text", "text": "Economic Buyer"}, "value": "Economic Buyer"},
+                        {"text": {"type": "plain_text", "text": "Platform Engineer"}, "value": "Platform Engineer"},
+                    ],
                 },
             },
             {
@@ -226,11 +227,123 @@ def extract_modal_values(view_state: Dict[str, Any]) -> Dict[str, Any]:
         "search_term": get_value("search_term_block", "search_term"),
         "primary_cta": get_value("primary_cta_block", "primary_cta"),
         "intent": get_value("intent_block", "intent"),
-        "audience_persona": get_value("persona_block", "audience_persona"),
+        "primary_audience": get_value("primary_audience_block", "primary_audience"),
         "offer": get_value("offer_block", "offer"),
         "must_include": get_value("must_include_block", "must_include"),
         "must_not_say": get_value("must_not_say_block", "must_not_say"),
     }
+
+
+def render_basic_html(fields: Dict[str, Any], request_id: str) -> str:
+    """
+    Placeholder HTML generator (no Claude/API needed).
+    Replace later with a full template renderer or Claude output.
+    """
+    term = fields["search_term"]
+    cta = fields["primary_cta"]
+    intent = fields["intent"]
+    audience = fields["primary_audience"]
+    slug = slugify(term)
+
+    title_tag = f"{term} | DataHub"
+    meta_desc = f"Learn how DataHub supports {term}. Explore key capabilities, outcomes, and next steps. {cta} available."
+
+    html = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{title_tag}</title>
+  <meta name="description" content="{meta_desc}" />
+</head>
+<body>
+  <!-- Request: {request_id} -->
+  <header>
+    <p><strong>Keyword:</strong> {term}</p>
+    <p><strong>Intent:</strong> {intent} | <strong>Primary Audience:</strong> {audience}</p>
+    <a href="#cta">{cta}</a>
+  </header>
+
+  <main>
+    <section id="hero">
+      <h1>{term}</h1>
+      <p>
+        {term} — built for {audience}. (This is a starter skeleton; swap in brand + final copy.)
+      </p>
+      <a id="cta" href="#cta">{cta}</a>
+    </section>
+
+    <section>
+      <h2>Why {term} matters</h2>
+      <ul>
+        <li>Add 3–5 benefit bullets</li>
+        <li>Keep claims conservative until validated</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>{term} capabilities</h2>
+      <ul>
+        <li>Capability 1</li>
+        <li>Capability 2</li>
+        <li>Capability 3</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>FAQs about {term}</h2>
+      <details><summary>FAQ 1</summary><p>Answer…</p></details>
+      <details><summary>FAQ 2</summary><p>Answer…</p></details>
+      <details><summary>FAQ 3</summary><p>Answer…</p></details>
+    </section>
+
+    <section>
+      <h2>Next step</h2>
+      <p>Repeat CTA and reinforce what happens after click.</p>
+      <a href="#cta">{cta}</a>
+    </section>
+  </main>
+
+  <footer>
+    <p>Slug suggestion: <code>{slug}</code></p>
+  </footer>
+</body>
+</html>"""
+    return html
+
+
+async def generate_build_kit_and_post(channel_id: str, starter_text: str, fields: Dict[str, Any], request_id: str) -> None:
+    """
+    Background workflow: post starter message, then post HTML skeleton in-thread.
+    """
+    thread_ts = await post_message(channel_id, starter_text)
+
+    await post_message(
+        channel_id,
+        f"🛠️ Building initial HTML skeleton (no Claude API key yet). Next we can swap this for Claude-rendered HTML.",
+        thread_ts=thread_ts,
+    )
+
+    html = render_basic_html(fields, request_id)
+
+    # Keep message size safe
+    max_len = 3500
+    if len(html) > max_len:
+        html = html[:max_len] + "\n...(truncated)"
+
+    await post_message(
+        channel_id,
+        f"✅ *Starter HTML* for *{request_id}*:\n```{html}```",
+        thread_ts=thread_ts,
+    )
+
+    await post_message(
+        channel_id,
+        "Next step options:\n"
+        "1) Add your brand guide + sample HTML and we’ll upgrade this into the real template.\n"
+        "2) When you have Claude API access, we’ll have Claude render the full HTML into the thread (or Drive).",
+        thread_ts=thread_ts,
+    )
 
 
 # ----------------------------
@@ -239,25 +352,6 @@ def extract_modal_values(view_state: Dict[str, Any]) -> Dict[str, Any]:
 @app.get("/health")
 async def health():
     return {"ok": True}
-
-
-@app.post("/slack/events")
-async def slack_events(request: Request):
-    """
-    Optional: only needed if you enable Event Subscriptions.
-    """
-    raw_body = await request.body()
-    verify_slack_signature(
-        raw_body,
-        request.headers.get("X-Slack-Request-Timestamp", ""),
-        request.headers.get("X-Slack-Signature", ""),
-    )
-    body = json.loads(raw_body.decode("utf-8") or "{}")
-
-    if body.get("type") == "url_verification":
-        return JSONResponse({"challenge": body.get("challenge")})
-
-    return JSONResponse({"ok": True})
 
 
 @app.post("/slack/commands")
@@ -279,7 +373,7 @@ async def slack_commands(request: Request):
     command = form.get("command")
     trigger_id = form.get("trigger_id")
     text = (form.get("text") or "").strip()
-    channel_id = form.get("channel_id") or ""
+    channel_id = (form.get("channel_id") or "").strip()
 
     if command != "/sem-lp-request":
         return PlainTextResponse("Unsupported command.", status_code=200)
@@ -294,110 +388,82 @@ async def slack_commands(request: Request):
 
 
 @app.post("/slack/interactions")
-async def slack_interactions(request: Request):
+async def slack_interactions(request: Request, background_tasks: BackgroundTasks):
     """
     Modal submissions & interactive events.
     Interactivity Request URL must point here.
+
+    IMPORTANT: Must return within ~3 seconds. Do not do network calls before responding.
     """
     raw_body = await request.body()
     logger.info("INTERACTIONS /slack/interactions hit. bytes=%s", len(raw_body))
 
-    verify_slack_signature(
-        raw_body,
-        request.headers.get("X-Slack-Request-Timestamp", ""),
-        request.headers.get("X-Slack-Signature", ""),
-    )
+    try:
+        verify_slack_signature(
+            raw_body,
+            request.headers.get("X-Slack-Request-Timestamp", ""),
+            request.headers.get("X-Slack-Signature", ""),
+        )
 
-    form = await request.form()
-    payload_raw = form.get("payload")
-    if not payload_raw:
-        return JSONResponse({"ok": True})
+        form = await request.form()
+        payload_raw = form.get("payload")
+        if not payload_raw:
+            return JSONResponse({"ok": True})
 
-    payload = json.loads(payload_raw)
-    payload_type = payload.get("type")
+        payload = json.loads(payload_raw)
+        payload_type = payload.get("type")
 
-    if payload_type != "view_submission":
-        return JSONResponse({"ok": True})
+        if payload_type == "view_submission":
+            view = payload.get("view", {})
+            if view.get("callback_id") != "lp_request_modal":
+                return JSONResponse({"response_action": "clear"})
 
-    view = payload.get("view", {})
-    if view.get("callback_id") != "lp_request_modal":
-        return JSONResponse({"response_action": "clear"})
+            fields = extract_modal_values(view.get("state", {}))
 
-    fields = extract_modal_values(view.get("state", {}))
+            # Required fields validation (inline modal errors)
+            errors = {}
+            if not fields.get("search_term"):
+                errors["search_term_block"] = "Search term is required."
+            if not fields.get("primary_cta"):
+                errors["primary_cta_block"] = "Primary CTA is required."
+            if not fields.get("intent"):
+                errors["intent_block"] = "Intent is required."
+            if not fields.get("primary_audience"):
+                errors["primary_audience_block"] = "Primary Audience is required."
 
-    # Required fields validation (inline modal errors)
-    errors = {}
-    if not fields.get("search_term"):
-        errors["search_term_block"] = "Search term is required."
-    if not fields.get("primary_cta"):
-        errors["primary_cta_block"] = "Primary CTA is required."
-    if errors:
-        return JSONResponse({"response_action": "errors", "errors": errors})
+            if errors:
+                return JSONResponse({"response_action": "errors", "errors": errors})
 
-    request_id = generate_request_id()
-    _slug = slugify(fields["search_term"])
+            request_id = generate_request_id()
+            user_id = (payload.get("user") or {}).get("id") or "unknown"
 
-    user_id = (payload.get("user") or {}).get("id") or "unknown"
+            # Post to the channel where the command ran (stored in private_metadata),
+            # fallback to SLACK_DEFAULT_CHANNEL
+            channel_id = (view.get("private_metadata") or "").strip() or SLACK_DEFAULT_CHANNEL
+            if not channel_id:
+                # no channel available; close modal gracefully
+                logger.warning("No channel_id available (private_metadata empty and no SLACK_DEFAULT_CHANNEL).")
+                return JSONResponse({"response_action": "clear"})
 
-    # Origin channel is stored in modal private_metadata
-    origin_channel_id = (view.get("private_metadata") or "").strip() or SLACK_DEFAULT_CHANNEL
-    if not origin_channel_id:
-        return JSONResponse({"response_action": "clear"})
-
-    starter = (
-        f"🚀 *LP request started*\n"
-        f"*Request ID:* {request_id}\n"
-        f"*Search term:* {fields['search_term']}\n"
-        f"*Primary CTA:* {fields['primary_cta']}\n"
-        f"*Intent:* {fields.get('intent') or '—'}\n"
-        f"*Persona:* {fields.get('audience_persona') or '—'}\n"
-        f"*Requester:* <@{user_id}>"
-    )
-
-    async def run_queue_publish():
-        thread_ts = None
-        try:
-            # Post in origin channel and capture thread ts
-            thread_ts = await post_message(origin_channel_id, starter)
-
-            # Queue payload
-            req_obj = {
-                "request_id": request_id,
-                "search_term": fields["search_term"],
-                "primary_cta": fields["primary_cta"],
-                "intent": fields.get("intent") or "",
-                "audience_persona": fields.get("audience_persona") or "",
-                "offer": fields.get("offer") or "",
-                "must_include": fields.get("must_include") or "",
-                "must_not_say": fields.get("must_not_say") or "",
-                "requester_user_id": user_id,
-                "origin_channel_id": origin_channel_id,
-                "origin_thread_ts": thread_ts,
-                "created_at": datetime.now().isoformat(timespec="seconds"),
-            }
-
-            queue_channel = QUEUE_CHANNEL_ID or origin_channel_id
-            queue_ts = await post_message(queue_channel, make_queue_message(req_obj))
-
-            # Confirm queued in origin thread
-            await post_message(
-                origin_channel_id,
-                f"✅ Queued *{request_id}* in <#{queue_channel}>.\n"
-                f"Local runner will pick it up and reply in this thread.\n"
-                f"(Queue message ts: `{queue_ts}`)",
-                thread_ts=thread_ts,
+            starter = (
+                f"🚀 *LP request started*\n"
+                f"*Request ID:* {request_id}\n"
+                f"*Search term:* {fields['search_term']}\n"
+                f"*Primary CTA:* {fields['primary_cta']}\n"
+                f"*Intent:* {fields['intent']}\n"
+                f"*Primary Audience:* {fields['primary_audience']}\n"
+                f"*Requester:* <@{user_id}>"
             )
 
-        except Exception as e:
-            logger.exception("Queue publish failed: %s", e)
-            if thread_ts:
-                try:
-                    await post_message(origin_channel_id, f"❌ Queueing failed for {request_id}: `{e}`", thread_ts=thread_ts)
-                except Exception:
-                    pass
+            # Background workflow: do Slack API calls after we respond to Slack
+            background_tasks.add_task(generate_build_kit_and_post, channel_id, starter, fields, request_id)
 
-    # Do not block Slack modal submission response (<3s)
-    asyncio.create_task(run_queue_publish())
+            # Immediately clear modal
+            return JSONResponse({"response_action": "clear"})
 
-    # Close modal immediately
-    return JSONResponse({"response_action": "clear"})
+        return JSONResponse({"ok": True})
+
+    except Exception as e:
+        # KEY: still return 200 so Slack doesn't show "trouble connecting"
+        logger.exception("Error handling /slack/interactions: %s", e)
+        return JSONResponse({"response_action": "clear"})
