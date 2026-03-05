@@ -1,0 +1,3026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="DataHub Cloud Data Observability Platform - Automated monitoring, AI-powered anomaly detection, and instant root cause analysis. Catch data issues before dashboards break.">
+    <title>Data Observability Platform | DataHub Cloud</title>
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Simple Icons CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-icons-font@v6/font/simple-icons.min.css">
+    
+    <style>
+        /* ============================================
+           CSS Variables - DataHub Brand Colors
+           ============================================ */
+        :root {
+            /* Primary Brand Blue */
+            --dh-blue: #17a3ff;
+            --dh-blue-light: #4db8ff;
+            --dh-blue-dark: #0d8ce6;
+            --dh-blue-glow: rgba(23, 163, 255, 0.4);
+            
+            /* Accent Colors */
+            --dh-yellow: #f1ba2f;
+            --dh-yellow-light: #f5cb5c;
+            --dh-purple: #622069;
+            --dh-red: #e63946;
+            
+            /* Secondary Colors */
+            --dh-cyan: #13C2C2;
+            --dh-green: #52C41A;
+            --dh-orange: #FA8C16;
+            
+            /* Neutrals */
+            --dh-black: #000000;
+            --dh-dark: #141414;
+            --dh-gray-900: #1F1F1F;
+            --dh-gray-800: #262626;
+            --dh-gray-700: #434343;
+            --dh-gray-600: #595959;
+            --dh-gray-500: #8C8C8C;
+            --dh-gray-400: #BFBFBF;
+            --dh-gray-300: #D9D9D9;
+            --dh-gray-200: #F0F0F0;
+            --dh-gray-100: #FAFAFA;
+            --dh-white: #FFFFFF;
+            
+            /* Typography */
+            --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+            --shadow-blue: 0 4px 14px rgba(23, 163, 255, 0.35);
+            
+            /* Transitions */
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ============================================
+           Reset & Base Styles
+           ============================================ */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--dh-gray-700);
+            background-color: var(--dh-white);
+            overflow-x: hidden;
+        }
+
+        img { max-width: 100%; height: auto; display: block; }
+        a { text-decoration: none; color: inherit; }
+
+        /* ============================================
+           Utility Classes
+           ============================================ */
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+        .container-narrow { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+        .text-center { text-align: center; }
+        .text-blue { color: var(--dh-blue); }
+
+        /* ============================================
+           Typography
+           ============================================ */
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 700;
+            line-height: 1.15;
+            color: var(--dh-black);
+        }
+
+        h1 { font-size: clamp(2.5rem, 6vw, 4rem); letter-spacing: -0.03em; }
+        h2 { font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.02em; }
+        h3 { font-size: clamp(1.25rem, 2.5vw, 1.5rem); }
+        h4 { font-size: 1.125rem; }
+        p { color: var(--dh-gray-600); }
+
+        .lead {
+            font-size: clamp(1.125rem, 2vw, 1.25rem);
+            line-height: 1.7;
+            color: var(--dh-gray-600);
+        }
+
+        /* Gradient text for emphasis */
+        .gradient-text {
+            background: linear-gradient(135deg, var(--dh-blue) 0%, var(--dh-cyan) 50%, var(--dh-blue-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ============================================
+           Scroll-triggered Animations
+           ============================================ */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reveal-left {
+            opacity: 0;
+            transform: translateX(-40px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .reveal-left.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .reveal-right {
+            opacity: 0;
+            transform: translateX(40px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .reveal-right.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .reveal-scale {
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .reveal-scale.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Staggered delays */
+        .delay-1 { transition-delay: 0.1s; }
+        .delay-2 { transition-delay: 0.2s; }
+        .delay-3 { transition-delay: 0.3s; }
+        .delay-4 { transition-delay: 0.4s; }
+        .delay-5 { transition-delay: 0.5s; }
+
+        /* ============================================
+           Buttons
+           ============================================ */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px 32px;
+            font-family: var(--font-primary);
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all var(--transition-base);
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: var(--dh-black);
+            color: var(--dh-white);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        }
+
+        .btn-primary:hover {
+            background: var(--dh-gray-800);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        /* Blue button with yellow hover */
+        .btn-blue {
+            background: var(--dh-blue);
+            color: var(--dh-white);
+            box-shadow: var(--shadow-blue);
+        }
+
+        .btn-blue:hover {
+            background: var(--dh-yellow);
+            color: var(--dh-black);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(241, 186, 47, 0.5);
+        }
+
+        /* Slack/Purple button */
+        .btn-slack {
+            background: var(--dh-purple);
+            color: var(--dh-white);
+            box-shadow: 0 4px 14px rgba(98, 32, 105, 0.3);
+        }
+
+        .btn-slack:hover {
+            background: #7a2985;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(98, 32, 105, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--dh-white);
+            color: var(--dh-black);
+            border: 1px solid var(--dh-gray-300);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--dh-blue);
+            color: var(--dh-blue);
+            transform: translateY(-2px);
+        }
+
+        .btn-outline-white {
+            background: transparent;
+            color: var(--dh-white);
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .btn-outline-white:hover {
+            background: var(--dh-white);
+            color: var(--dh-black);
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        /* Pulsing CTA animation */
+        .btn-pulse {
+            animation: pulse-glow-blue 2s infinite;
+        }
+
+        @keyframes pulse-glow-blue {
+            0%, 100% { box-shadow: 0 4px 14px rgba(23, 163, 255, 0.4); }
+            50% { box-shadow: 0 4px 30px rgba(23, 163, 255, 0.6); }
+        }
+
+        /* ============================================
+           Header
+           ============================================ */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid transparent;
+            transition: all var(--transition-base);
+        }
+
+        .header.scrolled {
+            background: rgba(255, 255, 255, 0.98);
+            border-bottom-color: var(--dh-gray-200);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 72px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--dh-black);
+            letter-spacing: -0.02em;
+        }
+
+        .nav {
+            display: none;
+        }
+
+        @media (min-width: 1024px) {
+            .nav {
+                display: flex;
+                align-items: center;
+                gap: 36px;
+            }
+        }
+
+        .nav-link {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--dh-gray-700);
+            position: relative;
+            padding: 4px 0;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--dh-blue);
+            transition: width var(--transition-fast);
+        }
+
+        .nav-link:hover {
+            color: var(--dh-blue);
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .header-cta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-cta .btn {
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+
+        .mobile-menu-btn {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        @media (min-width: 1024px) {
+            .mobile-menu-btn { display: none; }
+        }
+
+        .mobile-menu-btn span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: var(--dh-black);
+            transition: all var(--transition-fast);
+        }
+
+        /* ============================================
+           Hero Section
+           ============================================ */
+        .hero {
+            padding: 160px 0 100px;
+            background: linear-gradient(180deg, #f0f9ff 0%, var(--dh-white) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated background pattern */
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .hero-bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(23, 163, 255, 0.08) 0%, transparent 70%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .hero-bg-circle:nth-child(1) {
+            width: 600px;
+            height: 600px;
+            top: -200px;
+            right: -100px;
+            animation-delay: 0s;
+        }
+
+        .hero-bg-circle:nth-child(2) {
+            width: 400px;
+            height: 400px;
+            bottom: -100px;
+            left: -100px;
+            animation-delay: -5s;
+        }
+
+        .hero-bg-circle:nth-child(3) {
+            width: 300px;
+            height: 300px;
+            top: 30%;
+            left: 20%;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.05); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+
+        /* Grid lines */
+        .hero-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(23, 163, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(23, 163, 255, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+        }
+
+        .hero-content {
+            max-width: 850px;
+            margin: 0 auto;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Badge */
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: var(--dh-white);
+            border: 1px solid var(--dh-gray-200);
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dh-gray-700);
+            margin-bottom: 28px;
+            box-shadow: var(--shadow-md);
+            animation: fadeInDown 0.6s ease;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero-badge-live {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--dh-blue);
+        }
+
+        .hero-badge-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--dh-blue);
+            border-radius: 50%;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .hero h1 {
+            margin-bottom: 24px;
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero .lead {
+            max-width: 680px;
+            margin: 0 auto 36px;
+            animation: fadeInUp 0.8s ease 0.4s both;
+        }
+
+        .hero .btn-group {
+            justify-content: center;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.8s ease 0.6s both;
+        }
+
+        /* Social proof */
+        .hero-social-proof {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            font-size: 14px;
+            color: var(--dh-gray-500);
+            animation: fadeInUp 0.8s ease 0.8s both;
+        }
+
+        .hero-avatars {
+            display: flex;
+        }
+
+        .hero-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--dh-blue) 0%, var(--dh-cyan) 100%);
+            border: 2px solid var(--dh-white);
+            margin-right: -10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--dh-white);
+        }
+
+        .hero-avatar:last-child {
+            margin-right: 0;
+        }
+
+        /* Dashboard preview */
+        .hero-visual {
+            margin-top: 64px;
+            position: relative;
+            animation: fadeInUp 1s ease 0.8s both;
+        }
+
+        .hero-dashboard {
+            background: var(--dh-gray-900);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-dashboard::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: var(--dh-gray-800);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .hero-dashboard-dots {
+            position: absolute;
+            top: 14px;
+            left: 16px;
+            display: flex;
+            gap: 8px;
+            z-index: 1;
+        }
+
+        .hero-dashboard-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .hero-dashboard-dot:nth-child(1) { background: #FF5F56; }
+        .hero-dashboard-dot:nth-child(2) { background: #FFBD2E; }
+        .hero-dashboard-dot:nth-child(3) { background: #27C93F; }
+
+        .hero-dashboard-content {
+            margin-top: 32px;
+            background: linear-gradient(135deg, var(--dh-gray-800) 0%, var(--dh-gray-900) 100%);
+            border-radius: 8px;
+            padding: 24px;
+            min-height: 300px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .hero-dashboard-content {
+                grid-template-columns: 1fr;
+                min-height: 200px;
+            }
+        }
+
+        .dashboard-metric {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .dashboard-metric-label {
+            font-size: 12px;
+            color: var(--dh-gray-400);
+            margin-bottom: 8px;
+        }
+
+        .dashboard-metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dh-white);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dashboard-metric-value.positive {
+            color: var(--dh-blue);
+        }
+
+        .dashboard-metric-value.negative {
+            color: var(--dh-red);
+        }
+
+        .dashboard-metric-change {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .dashboard-metric-change.up {
+            background: rgba(23, 163, 255, 0.2);
+            color: var(--dh-blue);
+        }
+
+        .dashboard-metric-change.down {
+            background: rgba(230, 57, 70, 0.2);
+            color: var(--dh-red);
+        }
+
+        /* Floating notification cards */
+        .floating-card {
+            position: absolute;
+            background: var(--dh-white);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: float-card 3s ease-in-out infinite;
+            z-index: 10;
+        }
+
+        @keyframes float-card {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .floating-card-1 {
+            top: 20%;
+            left: -60px;
+            animation-delay: 0s;
+        }
+
+        .floating-card-2 {
+            top: 40%;
+            right: -60px;
+            animation-delay: -1.5s;
+        }
+
+        @media (max-width: 1024px) {
+            .floating-card { display: none; }
+        }
+
+        .floating-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .floating-card-icon.success {
+            background: rgba(23, 163, 255, 0.1);
+            color: var(--dh-blue);
+        }
+
+        .floating-card-icon.alert {
+            background: rgba(241, 186, 47, 0.1);
+            color: var(--dh-yellow);
+        }
+
+        .floating-card-text {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--dh-gray-800);
+        }
+
+        .floating-card-time {
+            font-size: 11px;
+            color: var(--dh-gray-500);
+        }
+
+        /* ============================================
+           Logo Cloud
+           ============================================ */
+        .logo-cloud {
+            padding: 64px 0;
+            background: var(--dh-white);
+            border-bottom: 1px solid var(--dh-gray-200);
+        }
+
+        .logo-cloud-title {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dh-gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 32px;
+        }
+
+        .logo-marquee {
+            overflow: hidden;
+            position: relative;
+        }
+
+        .logo-marquee::before,
+        .logo-marquee::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .logo-marquee::before {
+            left: 0;
+            background: linear-gradient(90deg, var(--dh-white), transparent);
+        }
+
+        .logo-marquee::after {
+            right: 0;
+            background: linear-gradient(90deg, transparent, var(--dh-white));
+        }
+
+        .logo-track {
+            display: flex;
+            gap: 64px;
+            animation: scroll-logos 30s linear infinite;
+        }
+
+        @keyframes scroll-logos {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+
+        .logo-item {
+            flex-shrink: 0;
+            height: 28px;
+            opacity: 0.6;
+            filter: grayscale(100%);
+            transition: all var(--transition-base);
+            display: flex;
+            align-items: center;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dh-gray-600);
+            white-space: nowrap;
+        }
+
+        .logo-item:hover {
+            opacity: 1;
+            filter: grayscale(0%);
+            color: var(--dh-blue);
+        }
+
+        /* ============================================
+           Pain Points Section
+           ============================================ */
+        .pain-points {
+            padding: 100px 0;
+            background: var(--dh-gray-100);
+        }
+
+        .pain-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .pain-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pain-card {
+            background: var(--dh-white);
+            border-radius: 16px;
+            padding: 32px;
+            border: 1px solid var(--dh-gray-200);
+            transition: all var(--transition-base);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pain-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--dh-red);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform var(--transition-base);
+        }
+
+        .pain-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .pain-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .pain-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(230, 57, 70, 0.1);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .pain-icon svg {
+            width: 28px;
+            height: 28px;
+            color: var(--dh-red);
+        }
+
+        .pain-card h4 {
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+
+        .pain-card p {
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        /* Cost calculator */
+        .cost-calculator {
+            margin-top: 64px;
+            background: var(--dh-white);
+            border-radius: 20px;
+            padding: 48px;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+        }
+
+        .cost-calculator h3 {
+            margin-bottom: 12px;
+        }
+
+        .cost-calculator > p {
+            margin-bottom: 32px;
+        }
+
+        .cost-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 48px;
+            flex-wrap: wrap;
+        }
+
+        .cost-item {
+            text-align: center;
+        }
+
+        .cost-value {
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .cost-value.negative {
+            color: var(--dh-red);
+        }
+
+        .cost-value.positive {
+            color: var(--dh-blue);
+        }
+
+        .cost-label {
+            font-size: 14px;
+            color: var(--dh-gray-600);
+        }
+
+        .cost-vs {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dh-gray-400);
+        }
+
+        /* ============================================
+           Features Section with Tabs
+           ============================================ */
+        .features {
+            padding: 100px 0;
+        }
+
+        .section-header {
+            max-width: 700px;
+            margin: 0 auto 64px;
+            text-align: center;
+        }
+
+        .section-header h2 {
+            margin-bottom: 16px;
+        }
+
+        .section-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: rgba(23, 163, 255, 0.1);
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--dh-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+        }
+
+        /* Feature tabs */
+        .feature-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 48px;
+            flex-wrap: wrap;
+        }
+
+        .feature-tab {
+            padding: 12px 24px;
+            background: var(--dh-gray-100);
+            border: none;
+            border-radius: 100px;
+            font-family: var(--font-primary);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--dh-gray-600);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .feature-tab:hover {
+            background: var(--dh-gray-200);
+            color: var(--dh-black);
+        }
+
+        .feature-tab.active {
+            background: var(--dh-blue);
+            color: var(--dh-white);
+        }
+
+        .feature-content {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 64px;
+            align-items: center;
+        }
+
+        .feature-content.active {
+            display: grid;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .feature-content.active {
+                grid-template-columns: 1fr;
+                gap: 32px;
+            }
+        }
+
+        .feature-text h3 {
+            margin-bottom: 16px;
+            font-size: 1.75rem;
+        }
+
+        .feature-text p {
+            margin-bottom: 24px;
+            font-size: 16px;
+            line-height: 1.7;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 15px;
+            color: var(--dh-gray-700);
+        }
+
+        .feature-list-icon {
+            width: 20px;
+            height: 20px;
+            background: rgba(23, 163, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .feature-list-icon svg {
+            width: 12px;
+            height: 12px;
+            color: var(--dh-blue);
+        }
+
+        .feature-visual {
+            background: var(--dh-gray-100);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            aspect-ratio: 4/3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border: 1px solid var(--dh-gray-200);
+        }
+
+        .feature-visual-placeholder {
+            font-size: 14px;
+            color: var(--dh-gray-500);
+        }
+
+        /* ============================================
+           How It Works
+           ============================================ */
+        .how-it-works {
+            padding: 100px 0;
+            background: var(--dh-black);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .how-it-works::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 0%, rgba(23, 163, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(241, 186, 47, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .how-it-works .section-header h2 {
+            color: var(--dh-white);
+        }
+
+        .how-it-works .section-header p {
+            color: var(--dh-gray-400);
+        }
+
+        .steps-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .steps-line {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--dh-blue), var(--dh-blue), transparent);
+            opacity: 0.3;
+        }
+
+        @media (max-width: 768px) {
+            .steps-line { display: none; }
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+        }
+
+        @media (max-width: 768px) {
+            .steps-grid {
+                grid-template-columns: 1fr;
+                gap: 48px;
+            }
+        }
+
+        .step-card {
+            text-align: center;
+            position: relative;
+        }
+
+        .step-number {
+            width: 48px;
+            height: 48px;
+            background: var(--dh-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dh-white);
+            margin: 0 auto 24px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .step-card h4 {
+            color: var(--dh-white);
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+
+        .step-card p {
+            color: var(--dh-gray-400);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* ============================================
+           Use Cases - With Simple Icons
+           ============================================ */
+        .use-cases {
+            padding: 100px 0;
+            background: var(--dh-gray-100);
+        }
+
+        .use-cases-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .use-cases-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .use-case-card {
+            background: var(--dh-white);
+            border-radius: 20px;
+            padding: 40px 32px;
+            border: 1px solid var(--dh-gray-200);
+            transition: all var(--transition-base);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .use-case-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--dh-blue);
+            transform: scaleX(0);
+            transition: transform var(--transition-base);
+        }
+
+        .use-case-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .use-case-card:hover::after {
+            transform: scaleX(1);
+        }
+
+        /* Red card accent */
+        .use-case-card.card-red::after {
+            background: var(--dh-red);
+        }
+
+        /* Blue card accent */
+        .use-case-card.card-blue::after {
+            background: var(--dh-blue);
+        }
+
+        /* Yellow card accent */
+        .use-case-card.card-yellow::after {
+            background: var(--dh-yellow);
+        }
+
+        /* Simple Icons styling */
+        .use-case-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            font-size: 36px;
+        }
+
+        .use-case-icon.icon-red {
+            background: rgba(230, 57, 70, 0.1);
+            color: var(--dh-red);
+        }
+
+        .use-case-icon.icon-blue {
+            background: rgba(23, 163, 255, 0.1);
+            color: var(--dh-blue);
+        }
+
+        .use-case-icon.icon-yellow {
+            background: rgba(241, 186, 47, 0.15);
+            color: var(--dh-yellow);
+        }
+
+        .use-case-role {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .use-case-role.role-red {
+            color: var(--dh-red);
+        }
+
+        .use-case-role.role-blue {
+            color: var(--dh-blue);
+        }
+
+        .use-case-role.role-yellow {
+            color: #c99a1d;
+        }
+
+        .use-case-card h4 {
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+
+        .use-case-card p {
+            font-size: 15px;
+            line-height: 1.7;
+            margin-bottom: 24px;
+        }
+
+        .use-case-stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--dh-gray-100);
+            border-radius: 10px;
+        }
+
+        .use-case-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .use-case-stat-value.stat-red {
+            color: var(--dh-red);
+        }
+
+        .use-case-stat-value.stat-blue {
+            color: var(--dh-blue);
+        }
+
+        .use-case-stat-value.stat-yellow {
+            color: #c99a1d;
+        }
+
+        .use-case-stat-label {
+            font-size: 13px;
+            color: var(--dh-gray-600);
+        }
+
+        /* ============================================
+           Stats
+           ============================================ */
+        .stats {
+            padding: 80px 0;
+            background: var(--dh-white);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 24px;
+        }
+
+        .stat-number {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 800;
+            color: var(--dh-blue);
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .stat-number .counter {
+            display: inline-block;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--dh-gray-600);
+            font-weight: 500;
+        }
+
+        /* ============================================
+           Testimonials
+           ============================================ */
+        .testimonials {
+            padding: 100px 0;
+            background: linear-gradient(180deg, var(--dh-gray-100) 0%, var(--dh-white) 100%);
+        }
+
+        .testimonial-main {
+            background: var(--dh-white);
+            border-radius: 24px;
+            padding: 64px;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 48px;
+        }
+
+        .testimonial-main::before {
+            content: '"';
+            position: absolute;
+            top: 20px;
+            left: 40px;
+            font-size: 200px;
+            font-weight: 700;
+            color: var(--dh-gray-100);
+            line-height: 1;
+            font-family: Georgia, serif;
+        }
+
+        @media (max-width: 768px) {
+            .testimonial-main {
+                padding: 40px 24px;
+            }
+        }
+
+        .testimonial-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .testimonial-logo {
+            margin-bottom: 32px;
+        }
+
+        .testimonial-logo-placeholder {
+            display: inline-block;
+            padding: 8px 16px;
+            background: var(--dh-gray-200);
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--dh-gray-600);
+        }
+
+        .testimonial-quote {
+            font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+            line-height: 1.6;
+            color: var(--dh-gray-800);
+            margin-bottom: 40px;
+            max-width: 800px;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .testimonial-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--dh-blue) 0%, var(--dh-cyan) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dh-white);
+        }
+
+        .testimonial-info h5 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .testimonial-info p {
+            font-size: 14px;
+            color: var(--dh-gray-500);
+        }
+
+        /* Result highlight */
+        .testimonial-result {
+            margin-top: 32px;
+            padding: 24px;
+            background: rgba(23, 163, 255, 0.08);
+            border-radius: 12px;
+            border-left: 4px solid var(--dh-blue);
+        }
+
+        .testimonial-result-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--dh-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .testimonial-result-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--dh-black);
+        }
+
+        .testimonial-cta {
+            margin-top: 24px;
+        }
+
+        .testimonial-cta a {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dh-blue);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: gap var(--transition-fast);
+        }
+
+        .testimonial-cta a:hover {
+            gap: 12px;
+        }
+
+        /* Mini testimonials */
+        .testimonials-mini {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .testimonials-mini {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .testimonial-mini {
+            background: var(--dh-white);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--dh-gray-200);
+        }
+
+        .testimonial-mini-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .testimonial-mini-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--dh-purple) 0%, var(--dh-blue) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dh-white);
+        }
+
+        .testimonial-mini-info h6 {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .testimonial-mini-info p {
+            font-size: 12px;
+            color: var(--dh-gray-500);
+        }
+
+        .testimonial-mini-quote {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--dh-gray-700);
+            font-style: italic;
+        }
+
+        /* ============================================
+           FAQ Section
+           ============================================ */
+        .faq {
+            padding: 100px 0;
+            background: var(--dh-white);
+        }
+
+        .faq-grid {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: var(--dh-gray-100);
+            border-radius: 16px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: all var(--transition-base);
+        }
+
+        .faq-item:hover {
+            background: var(--dh-gray-200);
+        }
+
+        .faq-item.active {
+            background: var(--dh-white);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .faq-question {
+            width: 100%;
+            padding: 24px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            font-family: var(--font-primary);
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--dh-black);
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .faq-icon {
+            width: 28px;
+            height: 28px;
+            background: var(--dh-gray-200);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all var(--transition-base);
+        }
+
+        .faq-item.active .faq-icon {
+            background: var(--dh-blue);
+            transform: rotate(180deg);
+        }
+
+        .faq-icon svg {
+            width: 14px;
+            height: 14px;
+            color: var(--dh-gray-600);
+            transition: color var(--transition-fast);
+        }
+
+        .faq-item.active .faq-icon svg {
+            color: var(--dh-white);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height var(--transition-slow);
+        }
+
+        .faq-item.active .faq-answer {
+            max-height: 500px;
+        }
+
+        .faq-answer-inner {
+            padding: 0 28px 28px;
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--dh-gray-600);
+        }
+
+        /* ============================================
+           Final CTA
+           ============================================ */
+        .cta {
+            padding: 120px 0;
+            background: var(--dh-black);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 30% 20%, rgba(23, 163, 255, 0.2) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(241, 186, 47, 0.15) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .cta-content {
+            max-width: 750px;
+            margin: 0 auto;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta h2 {
+            color: var(--dh-white);
+            margin-bottom: 20px;
+        }
+
+        .cta > .cta-content > p {
+            color: var(--dh-gray-400);
+            font-size: 18px;
+            margin-bottom: 40px;
+        }
+
+        .cta .btn-group {
+            justify-content: center;
+            margin-bottom: 32px;
+        }
+
+        /* Trust signals */
+        .cta-trust {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+
+        .cta-trust-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--dh-gray-400);
+        }
+
+        .cta-trust-item svg {
+            width: 18px;
+            height: 18px;
+            color: var(--dh-blue);
+        }
+
+        /* Urgency banner */
+        .cta-urgency {
+            margin-top: 48px;
+            padding: 20px 32px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .cta-urgency-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(23, 163, 255, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cta-urgency-icon svg {
+            width: 20px;
+            height: 20px;
+            color: var(--dh-blue);
+        }
+
+        .cta-urgency-text {
+            font-size: 14px;
+            color: var(--dh-gray-300);
+        }
+
+        .cta-urgency-text strong {
+            color: var(--dh-white);
+        }
+
+        /* ============================================
+           Footer
+           ============================================ */
+        .footer {
+            padding: 64px 0 32px;
+            background: var(--dh-gray-900);
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr repeat(3, 1fr);
+            gap: 48px;
+            margin-bottom: 48px;
+        }
+
+        @media (max-width: 768px) {
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 32px;
+            }
+
+            .footer-brand {
+                grid-column: span 2;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-brand {
+                grid-column: span 1;
+            }
+        }
+
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .footer-logo-icon {
+            width: 28px;
+            height: 28px;
+        }
+
+        .footer-logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--dh-white);
+        }
+
+        .footer-brand p {
+            font-size: 14px;
+            color: var(--dh-gray-500);
+            max-width: 280px;
+        }
+
+        .footer-column h5 {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--dh-gray-300);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 20px;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a {
+            font-size: 14px;
+            color: var(--dh-gray-500);
+            transition: color var(--transition-fast);
+        }
+
+        .footer-links a:hover {
+            color: var(--dh-white);
+        }
+
+        .footer-bottom {
+            padding-top: 32px;
+            border-top: 1px solid var(--dh-gray-800);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .footer-copyright {
+            font-size: 13px;
+            color: var(--dh-gray-500);
+        }
+
+        .footer-legal {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-legal a {
+            font-size: 13px;
+            color: var(--dh-gray-500);
+        }
+
+        .footer-legal a:hover {
+            color: var(--dh-white);
+        }
+
+        /* ============================================
+           Mobile Sticky CTA
+           ============================================ */
+        .mobile-sticky-cta {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid var(--dh-gray-200);
+            z-index: 999;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-sticky-cta {
+                display: block;
+            }
+
+            body {
+                padding-bottom: 88px;
+            }
+        }
+
+        .mobile-sticky-cta .btn {
+            width: 100%;
+        }
+
+        /* ============================================
+           Scroll Progress Indicator
+           ============================================ */
+        .scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background: var(--dh-blue);
+            z-index: 1001;
+            transition: width 50ms linear;
+        }
+
+        /* ============================================
+           Cursor Glow (Desktop)
+           ============================================ */
+        .cursor-glow {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(23, 163, 255, 0.06) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            transform: translate(-50%, -50%);
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+
+        @media (min-width: 1024px) {
+            .cursor-glow {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Scroll Progress -->
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Cursor Glow Effect -->
+    <div class="cursor-glow" id="cursorGlow"></div>
+
+    <!-- Header -->
+    <header class="header" id="header">
+        <div class="container">
+            <div class="header-inner">
+                <a href="https://datahub.com" class="logo" aria-label="DataHub Home">
+                    <!-- DataHub Logo -->
+                    <svg class="logo-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="45" stroke="#17a3ff" stroke-width="8" fill="none"/>
+                        <circle cx="50" cy="50" r="20" fill="#17a3ff"/>
+                        <circle cx="50" cy="15" r="8" fill="#17a3ff"/>
+                        <circle cx="50" cy="85" r="8" fill="#17a3ff"/>
+                        <circle cx="15" cy="50" r="8" fill="#17a3ff"/>
+                        <circle cx="85" cy="50" r="8" fill="#17a3ff"/>
+                    </svg>
+                    <span class="logo-text">DataHub</span>
+                </a>
+
+                <nav class="nav" aria-label="Main navigation">
+                    <a href="https://datahub.com/products/" class="nav-link">Product</a>
+                    <a href="https://datahub.com/products/data-observability/" class="nav-link">Observability</a>
+                    <a href="https://datahub.com/resources/" class="nav-link">Resources</a>
+                    <a href="https://docs.datahub.com" class="nav-link">Docs</a>
+                    <a href="https://datahub.com/company/" class="nav-link">Company</a>
+                </nav>
+
+                <div class="header-cta">
+                    <a href="https://datahub.com/slack/" class="btn btn-slack">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
+                        </svg>
+                        Slack Community
+                    </a>
+                    <a href="https://datahub.com/get-datahub-cloud/" class="btn btn-primary">Get DataHub Cloud</a>
+                </div>
+
+                <button class="mobile-menu-btn" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-bg">
+                <div class="hero-bg-circle"></div>
+                <div class="hero-bg-circle"></div>
+                <div class="hero-bg-circle"></div>
+            </div>
+            <div class="hero-grid"></div>
+
+            <div class="container">
+                <div class="hero-content">
+                    <div class="hero-badge">
+                        <span class="hero-badge-live">
+                            <span class="hero-badge-dot"></span>
+                            Live Platform
+                        </span>
+                        <span>|</span>
+                        <span>Data Observability</span>
+                    </div>
+
+                    <h1>Stop Firefighting.<br><span class="gradient-text">Start Preventing.</span></h1>
+                    
+                    <p class="lead">Your data engineers spend 40% of their time debugging issues. DataHub Cloud delivers automated monitoring, AI-powered anomaly detection, and instant root cause analysis. Catch issues before dashboards break.</p>
+
+                    <div class="btn-group">
+                        <a href="https://datahub.com/get-datahub-cloud/" class="btn btn-blue btn-pulse">
+                            Get DataHub Cloud
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                        <a href="https://datahub.com/product-tour/" class="btn btn-secondary">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                            Watch Product Tour
+                        </a>
+                    </div>
+
+                    <!-- Social proof -->
+                    <div class="hero-social-proof">
+                        <div class="hero-avatars">
+                            <div class="hero-avatar">N</div>
+                            <div class="hero-avatar">V</div>
+                            <div class="hero-avatar">S</div>
+                            <div class="hero-avatar">+</div>
+                        </div>
+                        <span>Trusted by 3,000+ data teams at Netflix, Visa, Slack & more</span>
+                    </div>
+                </div>
+
+                <!-- Dashboard Preview -->
+                <div class="hero-visual">
+                    <!-- Floating notification cards -->
+                    <div class="floating-card floating-card-1">
+                        <div class="floating-card-icon success">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="floating-card-text">Anomaly detected & resolved</div>
+                            <div class="floating-card-time">2 minutes ago</div>
+                        </div>
+                    </div>
+
+                    <div class="floating-card floating-card-2">
+                        <div class="floating-card-icon alert">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                <line x1="12" y1="9" x2="12" y2="13"/>
+                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="floating-card-text">Schema change detected</div>
+                            <div class="floating-card-time">Just now</div>
+                        </div>
+                    </div>
+
+                    <div class="hero-dashboard">
+                        <div class="hero-dashboard-dots">
+                            <div class="hero-dashboard-dot"></div>
+                            <div class="hero-dashboard-dot"></div>
+                            <div class="hero-dashboard-dot"></div>
+                        </div>
+                        <div class="hero-dashboard-content">
+                            <div class="dashboard-metric">
+                                <div class="dashboard-metric-label">Data Quality Score</div>
+                                <div class="dashboard-metric-value positive">
+                                    98.7%
+                                    <span class="dashboard-metric-change up">↑ 2.3%</span>
+                                </div>
+                            </div>
+                            <div class="dashboard-metric">
+                                <div class="dashboard-metric-label">Active Monitors</div>
+                                <div class="dashboard-metric-value">
+                                    1,247
+                                </div>
+                            </div>
+                            <div class="dashboard-metric">
+                                <div class="dashboard-metric-label">Incidents Resolved</div>
+                                <div class="dashboard-metric-value positive">
+                                    142
+                                    <span class="dashboard-metric-change up">This week</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Logo Cloud -->
+        <section class="logo-cloud">
+            <div class="container">
+                <p class="logo-cloud-title">Trusted by industry leaders</p>
+            </div>
+            <div class="logo-marquee">
+                <div class="logo-track">
+                    <div class="logo-item">Netflix</div>
+                    <div class="logo-item">Visa</div>
+                    <div class="logo-item">Slack</div>
+                    <div class="logo-item">Notion</div>
+                    <div class="logo-item">Chime</div>
+                    <div class="logo-item">Pinterest</div>
+                    <div class="logo-item">Airtel</div>
+                    <div class="logo-item">MYOB</div>
+                    <div class="logo-item">Foursquare</div>
+                    <div class="logo-item">Etsy</div>
+                    <div class="logo-item">DoorDash</div>
+                    <div class="logo-item">Twilio</div>
+                    <!-- Duplicate for seamless loop -->
+                    <div class="logo-item">Netflix</div>
+                    <div class="logo-item">Visa</div>
+                    <div class="logo-item">Slack</div>
+                    <div class="logo-item">Notion</div>
+                    <div class="logo-item">Chime</div>
+                    <div class="logo-item">Pinterest</div>
+                    <div class="logo-item">Airtel</div>
+                    <div class="logo-item">MYOB</div>
+                    <div class="logo-item">Foursquare</div>
+                    <div class="logo-item">Etsy</div>
+                    <div class="logo-item">DoorDash</div>
+                    <div class="logo-item">Twilio</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pain Points Section -->
+        <section class="pain-points">
+            <div class="container">
+                <div class="section-header reveal">
+                    <span class="section-badge">The Problem</span>
+                    <h2>Data Issues Cost More Than You Think</h2>
+                    <p class="lead">Every data incident erodes trust, wastes engineering time, and impacts business decisions.</p>
+                </div>
+
+                <div class="pain-grid">
+                    <div class="pain-card reveal delay-1">
+                        <div class="pain-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                        </div>
+                        <h4>40% of Time Lost</h4>
+                        <p>Data engineers spend nearly half their time debugging and firefighting data quality issues instead of building.</p>
+                    </div>
+
+                    <div class="pain-card reveal delay-2">
+                        <div class="pain-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                <line x1="12" y1="9" x2="12" y2="13"/>
+                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                        </div>
+                        <h4>Broken Dashboards</h4>
+                        <p>Executives discover data issues through wrong numbers in board meetings. Trust in data erodes with every incident.</p>
+                    </div>
+
+                    <div class="pain-card reveal delay-3">
+                        <div class="pain-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="1" x2="12" y2="23"/>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                            </svg>
+                        </div>
+                        <h4>$15M+ Annual Cost</h4>
+                        <p>The average enterprise loses over $15 million annually to poor data quality. Most issues are preventable.</p>
+                    </div>
+                </div>
+
+                <!-- Cost Calculator -->
+                <div class="cost-calculator reveal">
+                    <h3>The True Cost of Reactive Data Management</h3>
+                    <p>See how much your team could save with proactive observability.</p>
+                    <div class="cost-display">
+                        <div class="cost-item">
+                            <div class="cost-value negative">$2.4M</div>
+                            <div class="cost-label">Annual cost of data incidents</div>
+                        </div>
+                        <div class="cost-vs">→</div>
+                        <div class="cost-item">
+                            <div class="cost-value positive">83%</div>
+                            <div class="cost-label">Reduction with DataHub</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section with Tabs -->
+        <section class="features" id="features">
+            <div class="container">
+                <div class="section-header reveal">
+                    <span class="section-badge">Capabilities</span>
+                    <h2>From Firefighting to Prevention</h2>
+                    <p class="lead">Everything you need to monitor, detect, and resolve data quality issues at scale.</p>
+                </div>
+
+                <div class="feature-tabs reveal">
+                    <button class="feature-tab active" data-tab="monitoring">Proactive Monitoring</button>
+                    <button class="feature-tab" data-tab="anomaly">AI Detection</button>
+                    <button class="feature-tab" data-tab="lineage">Impact Analysis</button>
+                    <button class="feature-tab" data-tab="incidents">Incident Management</button>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="feature-content active" data-content="monitoring">
+                    <div class="feature-text">
+                        <h3>Proactive Data Quality Monitoring</h3>
+                        <p>Define schema, freshness, volume, and custom quality checks that run automatically across hundreds of columns. Smart alerts fire to owners when data deviates from expected patterns.</p>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="feature-list-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                                One-click bulk monitor creation for thousands of tables
+                            </li>
+                            <li>
+                                <span class="feature-list-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                                Complete lineage with suggested resolution actions
+                            </li>
+                            <li>
+                                <span class="feature-list-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                                Data Contracts enforce SLAs automatically
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="feature-visual">
+                        <div class="feature-visual-placeholder">Data Quality Monitoring Dashboard</div>
+                    </div>
+                </div>
+
+                <div class="feature-content" data-content="anomaly">
+                    <div class="feature-text">
+                        <h3>AI-Powered Anomaly Detection</h3>
+                        <p>ML-powered detection spots unexpected patterns in data volume, distribution, and quality metrics that rule-based checks miss. Models learn your data patterns and adapt over time.</p>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="feature-list-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                                Smart Assertions learn and adapt automatically
+                            </li>
+                            <li>
+                                <span class="feature-list-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                                Reduces false positives by 90%+
+                            </li>
+                            <li>
+                                <span class="feature-list-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                                Catches issues rule-based systems miss
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="feature-visual">
+                        <div class="feature-visual-placeholder">AI Anomaly Detection Interface</div>
+                    </div>
+                </div>
+
+                <div class="feature-content" data-content="lineage">
+                    <div class="feature-text">
+                        <h3>Column-Level Impact Analysis</h3>
+                        <p>Know exactly what breaks when upstream data changes. Column-level lineage traces data flow from source to dashboard. Blast radius analysis shows affected models, reports, and teams instantly.</p>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="feature-list-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                                Trace incidents from dashboards to source tables
+                            </li>
+                            <li>
+                                <span class="feature-list-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                                See affected teams before changes merge
+                            </li>
+                            <li>
+                                <span class="feature-list-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                                Coordinate proactively with stakeholders
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="feature-visual">
+                        <div class="feature-visual-placeholder">Column-Level Lineage View</div>
+                    </div>
+                </div>
+
+                <div class="feature-content" data-content="incidents">
+                    <div class="feature-text">
+                        <h3>End-to-End Incident Management</h3>
+                        <p>Built-in workflows manage incidents from detection to resolution. Historical patterns, schema changes, and quality trends surface root causes in minutes instead of hours.</p>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="feature-list-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                                4 severity levels for smart prioritization
+                            </li>
+                            <li>
+                                <span class="feature-list-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                                Auto-route to dataset owners and experts
+                            </li>
+                            <li>
+                                <span class="feature-list-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                                Slack & email integration for real-time alerts
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="feature-visual">
+                        <div class="feature-visual-placeholder">Incident Management Workflow</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section class="how-it-works">
+            <div class="container">
+                <div class="section-header reveal">
+                    <span class="section-badge" style="background: rgba(255,255,255,0.1); color: var(--dh-blue);">How It Works</span>
+                    <h2>Get Started in Minutes, Not Months</h2>
+                    <p class="lead">Four simple steps to transform your data quality operations.</p>
+                </div>
+
+                <div class="steps-container">
+                    <div class="steps-line"></div>
+                    <div class="steps-grid">
+                        <div class="step-card reveal delay-1">
+                            <div class="step-number">1</div>
+                            <h4>Connect Your Stack</h4>
+                            <p>100+ pre-built integrations with Snowflake, Databricks, BigQuery, dbt, Airflow, and more. No code required.</p>
+                        </div>
+                        <div class="step-card reveal delay-2">
+                            <div class="step-number">2</div>
+                            <h4>Auto-Discover Assets</h4>
+                            <p>DataHub automatically catalogs your tables, columns, and lineage. ML suggests monitors based on data patterns.</p>
+                        </div>
+                        <div class="step-card reveal delay-3">
+                            <div class="step-number">3</div>
+                            <h4>Enable Monitoring</h4>
+                            <p>One-click bulk creation of freshness, volume, and schema monitors. Set thresholds or let AI learn them.</p>
+                        </div>
+                        <div class="step-card reveal delay-4">
+                            <div class="step-number">4</div>
+                            <h4>Resolve Proactively</h4>
+                            <p>Get alerted before issues impact users. Root cause analysis and lineage help you fix problems in minutes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Use Cases - With Simple Icons in Red, Blue, Yellow -->
+        <section class="use-cases" id="use-cases">
+            <div class="container">
+                <div class="section-header reveal">
+                    <span class="section-badge">Who It's For</span>
+                    <h2>Built for Every Data Role</h2>
+                    <p class="lead">Purpose-built workflows for your entire data organization.</p>
+                </div>
+
+                <div class="use-cases-grid">
+                    <!-- Data Analysts - Red -->
+                    <div class="use-case-card card-red reveal delay-1">
+                        <div class="use-case-icon icon-red">
+                            <!-- Apache Superset / Analytics icon -->
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="36" height="36">
+                                <path d="M4 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5zm10 0a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V5zM4 15a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4zm10 0a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4z"/>
+                            </svg>
+                        </div>
+                        <div class="use-case-role role-red">Data Analysts</div>
+                        <h4>Trust Dashboards Instantly</h4>
+                        <p>Freshness monitors and certification badges identify which datasets are production-ready. No more Slack pings to verify data.</p>
+                        <div class="use-case-stat">
+                            <div class="use-case-stat-value stat-red">80%</div>
+                            <div class="use-case-stat-label">Less time verifying data</div>
+                        </div>
+                    </div>
+
+                    <!-- Data Engineers - Blue -->
+                    <div class="use-case-card card-blue reveal delay-2">
+                        <div class="use-case-icon icon-blue">
+                            <!-- Code/Engineering icon -->
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="36" height="36">
+                                <path d="M8.293 6.293a1 1 0 0 1 1.414 0l5 5a1 1 0 0 1 0 1.414l-5 5a1 1 0 0 1-1.414-1.414L12.586 12 8.293 7.707a1 1 0 0 1 0-1.414zM14 17a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2h-4z"/>
+                            </svg>
+                        </div>
+                        <div class="use-case-role role-blue">Data Engineers</div>
+                        <h4>Zero Breaking Changes</h4>
+                        <p>See downstream impact across the entire pipeline. Alerts notify affected teams before changes merge so you coordinate proactively.</p>
+                        <div class="use-case-stat">
+                            <div class="use-case-stat-value stat-blue">0</div>
+                            <div class="use-case-stat-label">Breaking changes per week</div>
+                        </div>
+                    </div>
+
+                    <!-- Data Scientists - Yellow -->
+                    <div class="use-case-card card-yellow reveal delay-3">
+                        <div class="use-case-icon icon-yellow">
+                            <!-- Science/ML icon -->
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="36" height="36">
+                                <path d="M9.5 2A1.5 1.5 0 0 0 8 3.5V8a5 5 0 0 0-3 4.584V18.5A3.5 3.5 0 0 0 8.5 22h7a3.5 3.5 0 0 0 3.5-3.5v-5.916A5 5 0 0 0 16 8V3.5A1.5 1.5 0 0 0 14.5 2h-5zM10 4h4v4.416a3 3 0 0 1 2 2.829V18.5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 6 18.5v-7.255a3 3 0 0 1 2-2.83V4h2z"/>
+                                <circle cx="12" cy="15" r="2"/>
+                            </svg>
+                        </div>
+                        <div class="use-case-role role-yellow">Data Scientists</div>
+                        <h4>Verify Provenance Fast</h4>
+                        <p>Column-level lineage connects model and feature pipelines to source data. Verify provenance in seconds, not hours.</p>
+                        <div class="use-case-stat">
+                            <div class="use-case-stat-value stat-yellow">95%</div>
+                            <div class="use-case-stat-label">Faster data validation</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section class="stats">
+            <div class="container">
+                <div class="stats-grid reveal">
+                    <div class="stat-item">
+                        <div class="stat-number"><span class="counter" data-target="3000">0</span>+</div>
+                        <div class="stat-label">Data Teams</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number"><span class="counter" data-target="100">0</span>+</div>
+                        <div class="stat-label">Integrations</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number"><span class="counter" data-target="83">0</span>%</div>
+                        <div class="stat-label">Fewer Incidents</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">SOC 2</div>
+                        <div class="stat-label">Type II Certified</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials -->
+        <section class="testimonials" id="testimonials">
+            <div class="container">
+                <div class="section-header reveal">
+                    <span class="section-badge">Customer Stories</span>
+                    <h2>Trusted by Industry Leaders</h2>
+                </div>
+
+                <div class="testimonial-main reveal">
+                    <div class="testimonial-content">
+                        <div class="testimonial-logo">
+                            <span class="testimonial-logo-placeholder">MYOB</span>
+                        </div>
+                        <blockquote class="testimonial-quote">
+                            "Before bringing DataHub on board, our data teams would see multiple breaking changes per week. Since integrating DataHub into our workflow, DataHub has helped us significantly reduce the number of breaking changes, to the extent that they are no longer a burden on all teams."
+                        </blockquote>
+                        <div class="testimonial-author">
+                            <div class="testimonial-avatar">AN</div>
+                            <div class="testimonial-info">
+                                <h5>Asad Naveed</h5>
+                                <p>Engineering Manager, MYOB</p>
+                            </div>
+                        </div>
+
+                        <div class="testimonial-result">
+                            <div class="testimonial-result-label">Key Result</div>
+                            <div class="testimonial-result-value">Breaking changes reduced from multiple/week → zero</div>
+                        </div>
+
+                        <div class="testimonial-cta">
+                            <a href="https://datahub.com/customer-stories/myob/">
+                                Read the full case study
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonials-mini reveal">
+                    <div class="testimonial-mini">
+                        <div class="testimonial-mini-header">
+                            <div class="testimonial-mini-avatar">DT</div>
+                            <div class="testimonial-mini-info">
+                                <h6>Deutsche Telekom</h6>
+                                <p>Data Platform Lead</p>
+                            </div>
+                        </div>
+                        <p class="testimonial-mini-quote">"DataHub simplified discovery and resolved pipeline issues faster than any tool we've used."</p>
+                    </div>
+
+                    <div class="testimonial-mini">
+                        <div class="testimonial-mini-header">
+                            <div class="testimonial-mini-avatar">NT</div>
+                            <div class="testimonial-mini-info">
+                                <h6>Notion</h6>
+                                <p>Data Engineering Manager</p>
+                            </div>
+                        </div>
+                        <p class="testimonial-mini-quote">"We scaled metadata management while improving impact analysis and GDPR compliance."</p>
+                    </div>
+
+                    <div class="testimonial-mini">
+                        <div class="testimonial-mini-header">
+                            <div class="testimonial-mini-avatar">CH</div>
+                            <div class="testimonial-mini-info">
+                                <h6>Chime</h6>
+                                <p>Staff Data Engineer</p>
+                            </div>
+                        </div>
+                        <p class="testimonial-mini-quote">"DataHub Cloud unified producers and consumers with shared ownership and proactive quality monitoring."</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section class="faq" id="faq">
+            <div class="container">
+                <div class="section-header reveal">
+                    <span class="section-badge">FAQ</span>
+                    <h2>Common Questions</h2>
+                </div>
+
+                <div class="faq-grid reveal">
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            How quickly can we get started?
+                            <span class="faq-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-answer">
+                            <div class="faq-answer-inner">
+                                Most teams are up and running within hours, not weeks. With 100+ pre-built integrations, you can connect your data stack with a few clicks. DataHub auto-discovers your assets and suggests monitors based on your data patterns—no manual configuration required.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            How does DataHub prevent alert fatigue?
+                            <span class="faq-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-answer">
+                            <div class="faq-answer-inner">
+                                Smart Assertions use ML to learn your data patterns and adapt automatically. Subscribe to specific datasets and assertion types that matter to you. The Data Health Dashboard provides filtered views by priority and ownership—so you focus on what matters.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            What integrations are supported?
+                            <span class="faq-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-answer">
+                            <div class="faq-answer-inner">
+                                DataHub integrates with 100+ data tools including Snowflake, Databricks, BigQuery, Redshift, dbt, Airflow, Spark, Kafka, Looker, Tableau, and more. Native connectors capture lineage, execution status, and metadata automatically.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            Is DataHub secure and compliant?
+                            <span class="faq-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-answer">
+                            <div class="faq-answer-inner">
+                                Yes. DataHub Cloud is SOC 2 Type II certified with enterprise-grade security. We offer role-based access controls, SSO integration, audit logging, and support for multi-cloud deployment. Your data never leaves your infrastructure—we only process metadata.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            How is DataHub different from other observability tools?
+                            <span class="faq-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-answer">
+                            <div class="faq-answer-inner">
+                                DataHub unifies discovery, observability, and governance in one platform. Quality signals appear in discovery so analysts assess reliability when selecting datasets. Lineage connects incidents to governance policies. You get one source of truth instead of fragmented tools.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final CTA -->
+        <section class="cta">
+            <div class="cta-bg"></div>
+            <div class="container">
+                <div class="cta-content">
+                    <h2>Ready to Stop Firefighting?</h2>
+                    <p>Join 3,000+ data teams who've transformed their data quality operations with DataHub Cloud.</p>
+
+                    <div class="btn-group">
+                        <a href="https://datahub.com/get-datahub-cloud/" class="btn btn-blue btn-pulse">
+                            Get DataHub Cloud
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                        <a href="https://datahub.com/demos/bi-weekly-demo/" class="btn btn-outline-white">
+                            Book a Demo
+                        </a>
+                    </div>
+
+                    <div class="cta-trust">
+                        <div class="cta-trust-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                            <span>No credit card required</span>
+                        </div>
+                        <div class="cta-trust-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                            <span>Full access to all features</span>
+                        </div>
+                        <div class="cta-trust-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                            <span>Setup in under an hour</span>
+                        </div>
+                    </div>
+
+                    <!-- Urgency element -->
+                    <div class="cta-urgency">
+                        <div class="cta-urgency-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                        </div>
+                        <div class="cta-urgency-text">
+                            <strong>Live group demo every Thursday</strong> — See DataHub in action with Q&A
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <svg class="footer-logo-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="50" cy="50" r="45" stroke="#17a3ff" stroke-width="8" fill="none"/>
+                            <circle cx="50" cy="50" r="20" fill="#17a3ff"/>
+                            <circle cx="50" cy="15" r="8" fill="#17a3ff"/>
+                            <circle cx="50" cy="85" r="8" fill="#17a3ff"/>
+                            <circle cx="15" cy="50" r="8" fill="#17a3ff"/>
+                            <circle cx="85" cy="50" r="8" fill="#17a3ff"/>
+                        </svg>
+                        <span class="footer-logo-text">DataHub</span>
+                    </div>
+                    <p>DataHub enables AI & data to work together, bringing order to data chaos.</p>
+                </div>
+
+                <div class="footer-column">
+                    <h5>Product</h5>
+                    <ul class="footer-links">
+                        <li><a href="https://datahub.com/products/">Overview</a></li>
+                        <li><a href="https://datahub.com/products/data-discovery/">Discovery</a></li>
+                        <li><a href="https://datahub.com/products/data-observability/">Observability</a></li>
+                        <li><a href="https://datahub.com/products/data-governance/">Governance</a></li>
+                        <li><a href="https://datahub.com/products/data-lineage/">Lineage</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-column">
+                    <h5>Resources</h5>
+                    <ul class="footer-links">
+                        <li><a href="https://datahub.com/resources/?2004611554=dh-stories">Customer Stories</a></li>
+                        <li><a href="https://datahub.com/blog/">Blog</a></li>
+                        <li><a href="https://docs.datahub.com">Documentation</a></li>
+                        <li><a href="https://datahub.com/resources/?2004611554=dh-webinars">Webinars</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-column">
+                    <h5>Company</h5>
+                    <ul class="footer-links">
+                        <li><a href="https://datahub.com/company/">About Us</a></li>
+                        <li><a href="https://datahub.com/datahub-careers/">Careers</a></li>
+                        <li><a href="https://datahub.com/news/">News</a></li>
+                        <li><a href="https://datahub.com/slack/">Community</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p class="footer-copyright">© 2026 Acryl Data, Inc.</p>
+                <div class="footer-legal">
+                    <a href="https://datahub.com/privacy-policy/">Privacy Policy</a>
+                    <a href="https://datahub.com/terms-of-service/">Terms of Service</a>
+                    <a href="https://datahub.com/security/">Security</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Mobile Sticky CTA -->
+    <div class="mobile-sticky-cta">
+        <a href="https://datahub.com/get-datahub-cloud/" class="btn btn-blue">Get DataHub Cloud — No Credit Card</a>
+    </div>
+
+    <!-- Optimized JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Scroll Progress Indicator
+            const scrollProgress = document.getElementById('scrollProgress');
+            let ticking = false;
+
+            function updateScrollProgress() {
+                const scrollTop = window.scrollY;
+                const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const progress = (scrollTop / docHeight) * 100;
+                scrollProgress.style.width = progress + '%';
+                ticking = false;
+            }
+
+            window.addEventListener('scroll', function() {
+                if (!ticking) {
+                    requestAnimationFrame(updateScrollProgress);
+                    ticking = true;
+                }
+            }, { passive: true });
+
+            // Header Scroll Effect
+            const header = document.getElementById('header');
+            let headerTicking = false;
+
+            function updateHeader() {
+                const currentScroll = window.scrollY;
+                header.classList.toggle('scrolled', currentScroll > 50);
+                headerTicking = false;
+            }
+
+            window.addEventListener('scroll', function() {
+                if (!headerTicking) {
+                    requestAnimationFrame(updateHeader);
+                    headerTicking = true;
+                }
+            }, { passive: true });
+
+            // Cursor Glow Effect (Desktop only)
+            if (window.innerWidth >= 1024) {
+                const cursorGlow = document.getElementById('cursorGlow');
+                let mouseX = 0, mouseY = 0;
+                let glowX = 0, glowY = 0;
+
+                document.addEventListener('mousemove', (e) => {
+                    mouseX = e.clientX;
+                    mouseY = e.clientY;
+                }, { passive: true });
+
+                function animateGlow() {
+                    glowX += (mouseX - glowX) * 0.1;
+                    glowY += (mouseY - glowY) * 0.1;
+                    cursorGlow.style.left = glowX + 'px';
+                    cursorGlow.style.top = glowY + 'px';
+                    requestAnimationFrame(animateGlow);
+                }
+                animateGlow();
+            }
+
+            // Intersection Observer for Reveal Animations
+            const revealElements = document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale');
+            
+            const revealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        revealObserver.unobserve(entry.target);
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+
+            revealElements.forEach(el => revealObserver.observe(el));
+
+            // Feature Tabs
+            const featureTabs = document.querySelectorAll('.feature-tab');
+            const featureContents = document.querySelectorAll('.feature-content');
+
+            featureTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const targetTab = tab.dataset.tab;
+
+                    featureTabs.forEach(t => t.classList.remove('active'));
+                    featureContents.forEach(c => c.classList.remove('active'));
+
+                    tab.classList.add('active');
+                    document.querySelector(`[data-content="${targetTab}"]`).classList.add('active');
+                });
+            });
+
+            // FAQ Accordion
+            const faqItems = document.querySelectorAll('.faq-item');
+
+            faqItems.forEach(item => {
+                const question = item.querySelector('.faq-question');
+                question.addEventListener('click', () => {
+                    const isActive = item.classList.contains('active');
+                    
+                    // Close all
+                    faqItems.forEach(i => {
+                        i.classList.remove('active');
+                        i.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+                    });
+
+                    // Open clicked if it wasn't active
+                    if (!isActive) {
+                        item.classList.add('active');
+                        question.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            });
+
+            // Counter Animation
+            const counters = document.querySelectorAll('.counter');
+            let counterObserved = false;
+
+            const counterObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !counterObserved) {
+                        counterObserved = true;
+                        counters.forEach(counter => {
+                            const target = parseInt(counter.dataset.target);
+                            const duration = 2000;
+                            const startTime = performance.now();
+
+                            function updateCounter(currentTime) {
+                                const elapsed = currentTime - startTime;
+                                const progress = Math.min(elapsed / duration, 1);
+                                
+                                // Ease out quad
+                                const easeProgress = 1 - (1 - progress) * (1 - progress);
+                                const current = Math.floor(easeProgress * target);
+                                
+                                counter.textContent = current.toLocaleString();
+
+                                if (progress < 1) {
+                                    requestAnimationFrame(updateCounter);
+                                } else {
+                                    counter.textContent = target.toLocaleString();
+                                }
+                            }
+
+                            requestAnimationFrame(updateCounter);
+                        });
+                        counterObserver.disconnect();
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            const statsSection = document.querySelector('.stats');
+            if (statsSection) {
+                counterObserver.observe(statsSection);
+            }
+
+            // Smooth Scroll for Anchor Links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        const headerOffset = 80;
+                        const elementPosition = target.getBoundingClientRect().top;
+                        const offsetPosition = elementPosition + window.scrollY - headerOffset;
+
+                        window.scrollTo({
+                            top: offsetPosition,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
