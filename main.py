@@ -28,7 +28,6 @@ SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")  # e.g., C0AHY0FA
 # Optional: lock Bart identification down to a known Slack user ID (recommended)
 # Find it by right-clicking Bart in Slack -> View profile -> Copy member ID
 BART_USER_ID = os.getenv("BART_USER_ID", "")  # e.g. U123ABC...
-BART_NAME = BartBot
 
 SLACK_API_BASE = "https://slack.com/api"
 
