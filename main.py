@@ -227,7 +227,7 @@ def extract_modal_values(view_state: Dict[str, Any]) -> Dict[str, Any]:
 
 def bart_prompt(search_term: str) -> str:
     return (
-        f'@{BART_USER_ID} Draft a technically accurate landing page outline for the exact search term: "{search_term}".\n\n'
+        f'"<@{BART_USER_ID}> Draft a technically accurate landing page outline for the exact search term: "{search_term}".\n\n'
         "Output format:\n"
         "1) Recommended angle (2 sentences)\n"
         "2) H1 that includes the search term verbatim\n"
