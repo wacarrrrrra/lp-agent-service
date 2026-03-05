@@ -24,18 +24,14 @@ logger = logging.getLogger("uvicorn.error")
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET", "")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
 SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")  # e.g., C0AHY0FAN4C
-
-# Optional: lock Bart identification down to a known Slack user ID (recommended)
-# Find it by right-clicking Bart in Slack -> View profile -> Copy member ID
-BART_USER_ID = os.getenv("BART_USER_ID", "")  # e.g. U123ABC...
+BART_USER_ID = os.getenv("BART_USER_ID", "")  # e.g. U09RYUJDUQL
 
 SLACK_API_BASE = "https://slack.com/api"
 
 # ----------------------------
-# In-memory state (v1)
-# For production: swap to Redis / DB
-# ----------------------------
+# In-memory job state
 # Keyed by thread_ts
+# ----------------------------
 JOBS: Dict[str, Dict[str, Any]] = {}
 
 # ----------------------------
@@ -94,7 +90,6 @@ async def slack_api(method: str, payload: Dict[str, Any]) -> Dict[str, Any]:
             headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
             json=payload,
         )
-
     data = resp.json()
     if not data.get("ok"):
         raise HTTPException(status_code=500, detail=f"Slack API {method} failed: {data}")
@@ -108,7 +103,6 @@ async def post_message(channel: str, text: str, thread_ts: Optional[str] = None)
     return data.get("ts")
 
 def build_modal_view(initial_search_term: str = "", channel_id: str = "") -> Dict[str, Any]:
-    # Intent + Primary Audience REQUIRED per your update
     return {
         "type": "modal",
         "callback_id": "lp_request_modal",
@@ -143,7 +137,6 @@ def build_modal_view(initial_search_term: str = "", channel_id: str = "") -> Dic
                     ],
                 },
             },
-            # REQUIRED: Intent
             {
                 "type": "input",
                 "block_id": "intent_block",
@@ -158,7 +151,6 @@ def build_modal_view(initial_search_term: str = "", channel_id: str = "") -> Dic
                     ],
                 },
             },
-            # REQUIRED: Primary Audience
             {
                 "type": "input",
                 "block_id": "primary_audience_block",
@@ -172,17 +164,12 @@ def build_modal_view(initial_search_term: str = "", channel_id: str = "") -> Dic
                     ],
                 },
             },
-            # Optional fields
             {
                 "type": "input",
                 "optional": True,
                 "block_id": "offer_block",
                 "label": {"type": "plain_text", "text": "Offer (optional)"},
-                "element": {
-                    "type": "plain_text_input",
-                    "action_id": "offer",
-                    "multiline": True,
-                },
+                "element": {"type": "plain_text_input", "action_id": "offer", "multiline": True},
             },
             {
                 "type": "input",
@@ -224,8 +211,8 @@ def extract_modal_values(view_state: Dict[str, Any]) -> Dict[str, Any]:
         "must_not_say": get_value("must_not_say_block", "must_not_say"),
     }
 
-def bart_prompt(search_term: str, primary_cta: str, intent: str, bart_user_id: str) -> str:
-    return f"""<@{bart_user_id}> You are validating + drafting a technically accurate SEM landing page outline.
+def bart_prompt(search_term: str, primary_cta: str, intent: str) -> str:
+    return f"""<@{BART_USER_ID}> You are validating + drafting a technically accurate SEM landing page outline.
 
 Context:
 - Audience: Platform Engineer
@@ -268,14 +255,6 @@ When you're fully done (claims validated + images uploaded), reply with exactly:
 # Claude stubs (wire later)
 # ----------------------------
 async def claude_writer(fields: Dict[str, Any], bart_output: str) -> Dict[str, str]:
-    """
-    Replace this with:
-    - Claude Desktop automation
-    - Claude MCP tool call
-    - or API call later
-    Return: {"outline_md": "...", "copy_md": "..."}
-    """
-    # For now, keep it deterministic and transparent:
     outline_md = f"# Outline\n\n(Based on Bart)\n\n{bart_output}\n"
     copy_md = (
         f"# Copy Draft\n\n"
@@ -287,12 +266,6 @@ async def claude_writer(fields: Dict[str, Any], bart_output: str) -> Dict[str, s
     return {"outline_md": outline_md, "copy_md": copy_md}
 
 async def claude_html_builder(fields: Dict[str, Any], outline_md: str, copy_md: str) -> str:
-    """
-    Replace this with Claude HTML Builder using:
-    - your uploaded sample HTML template
-    - your brand guide constraints
-    HTML should be LAST.
-    """
     title = fields["search_term"]
     meta = f"Learn how DataHub supports {fields['search_term']}."
     cta = fields["primary_cta"]
@@ -305,29 +278,15 @@ async def claude_html_builder(fields: Dict[str, Any], outline_md: str, copy_md: 
   <meta name="description" content="{meta}" />
 </head>
 <body>
-  <!-- Request -->
   <main>
     <section id="hero">
       <h1>{fields["search_term"]}</h1>
       <p><strong>Intent:</strong> {fields["intent"]} | <strong>Primary Audience:</strong> {fields["primary_audience"]}</p>
       <a href="#cta">{cta}</a>
     </section>
-
-    <section id="outline">
-      <h2>Outline (from Bart/Writer)</h2>
-      <pre>{outline_md[:1500]}</pre>
-    </section>
-
-    <section id="copy">
-      <h2>Copy (from Writer)</h2>
-      <pre>{copy_md[:1500]}</pre>
-    </section>
-
-    <section id="cta">
-      <h2>Next step</h2>
-      <p>Repeat CTA and clarify what happens after click.</p>
-      <a href="#">{cta}</a>
-    </section>
+    <section id="outline"><h2>Outline</h2><pre>{outline_md[:1500]}</pre></section>
+    <section id="copy"><h2>Copy</h2><pre>{copy_md[:1500]}</pre></section>
+    <section id="cta"><h2>Next step</h2><a href="#">{cta}</a></section>
   </main>
 </body>
 </html>"""
@@ -349,63 +308,54 @@ async def slack_events(request: Request):
     )
     body = json.loads(raw_body.decode("utf-8") or "{}")
 
-    # URL verification
     if body.get("type") == "url_verification":
         return JSONResponse({"challenge": body.get("challenge")})
 
-    event = body.get("event", {})
-    event_type = event.get("type")
+    event = body.get("event", {}) or {}
+    if event.get("type") != "message":
+        return JSONResponse({"ok": True})
 
-    # Handle Bart replies in-thread (message events)
-    if event_type == "message":
-        thread_ts = event.get("thread_ts") or event.get("ts")
-        user_id = event.get("user")  # for bot messages may differ
-        bot_id = event.get("bot_id")  # present when it's a bot message
-        text = event.get("text") or ""
+    # ignore edits/bot subtypes
+    if event.get("subtype"):
+        return JSONResponse({"ok": True})
 
-        # Only proceed if we have a job for this thread
-        job = JOBS.get(thread_ts)
-        if not job:
-            return JSONResponse({"ok": True})
+    thread_ts = event.get("thread_ts") or event.get("ts")
+    user_id = event.get("user") or ""
+    text = (event.get("text") or "").strip()
 
-        # Identify Bart response:
-        # Best: compare user_id to BART_USER_ID
-        # Fallback: if message includes typical Bart structure or is bot message and we asked Bart.
-        is_bart = False
-        if BART_USER_ID and user_id == BART_USER_ID:
-            is_bart = True
-        elif job.get("awaiting") == "bart" and (bot_id or "Recommended angle" in text):
-            is_bart = True
+    job = JOBS.get(thread_ts)
+    if not job:
+        return JSONResponse({"ok": True})
 
-        if is_bart and job.get("awaiting") == "bart":
-            job["bart_output"] = text
-            job["awaiting"] = "writer"
-            JOBS[thread_ts] = job
+    # Only treat as Bart response if from Bart AND includes completion token
+    if job.get("awaiting") == "bart" and user_id == BART_USER_ID and "BART_DONE" in text:
+        job["bart_output"] = text
+        job["awaiting"] = "writer"
+        JOBS[thread_ts] = job
 
-            channel_id = job["channel_id"]
-            request_id = job["request_id"]
-            fields = job["fields"]
+        channel_id = job["channel_id"]
+        request_id = job["request_id"]
+        fields = job["fields"]
 
-            async def continue_pipeline():
-                try:
-                    await post_message(channel_id, "✍️ Running Writer step (Claude) using Bart output…", thread_ts=thread_ts)
-                    writer_out = await claude_writer(fields, text)
+        async def continue_pipeline():
+            try:
+                await post_message(channel_id, "✍️ Step 2/3: running Writer step using Bart output…", thread_ts=thread_ts)
+                writer_out = await claude_writer(fields, text)
 
-                    await post_message(channel_id, "🧱 Running HTML Builder step (Claude) LAST…", thread_ts=thread_ts)
-                    html = await claude_html_builder(fields, writer_out["outline_md"], writer_out["copy_md"])
+                await post_message(channel_id, "🧱 Step 3/3: running HTML Builder LAST…", thread_ts=thread_ts)
+                html = await claude_html_builder(fields, writer_out["outline_md"], writer_out["copy_md"])
 
-                    # Post HTML last
-                    max_len = 3500
-                    chunk = html if len(html) <= max_len else html[:max_len] + "\n...(truncated)"
-                    await post_message(channel_id, f"✅ *Final HTML for {request_id}*\n```{chunk}```", thread_ts=thread_ts)
+                max_len = 3500
+                chunk = html if len(html) <= max_len else html[:max_len] + "\n...(truncated)"
+                await post_message(channel_id, f"✅ *Final HTML for {request_id}*\n```{chunk}```", thread_ts=thread_ts)
 
-                    job["awaiting"] = "done"
-                    JOBS[thread_ts] = job
-                except Exception as e:
-                    logger.exception("Pipeline continuation failed: %s", e)
-                    await post_message(channel_id, f"❌ Pipeline failed: `{e}`", thread_ts=thread_ts)
+                job["awaiting"] = "done"
+                JOBS[thread_ts] = job
+            except Exception as e:
+                logger.exception("Pipeline continuation failed: %s", e)
+                await post_message(channel_id, f"❌ Pipeline failed: `{e}`", thread_ts=thread_ts)
 
-            asyncio.create_task(continue_pipeline())
+        asyncio.create_task(continue_pipeline())
 
     return JSONResponse({"ok": True})
 
@@ -427,42 +377,46 @@ async def slack_commands(request: Request):
     if command != "/sem-lp-request":
         return PlainTextResponse("Unsupported command.", status_code=200)
 
-    if not trigger_id:
-        return PlainTextResponse("Missing trigger_id.", status_code=200)
-
     view = build_modal_view(initial_search_term=text, channel_id=channel_id)
-
-    # Open modal
     await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
     return PlainTextResponse("", status_code=200)
 
-# IMPORTANT: match Slack's Interactivity URL.
-# Your logs showed Slack calling /slack/interactivity
+# IMPORTANT: support both paths to avoid config mismatch
 @app.post("/slack/interactions")
+async def slack_interactions(request: Request):
+    return await _handle_interactivity(request)
+
+@app.post("/slack/interactivity")
 async def slack_interactivity(request: Request):
+    return await _handle_interactivity(request)
+
+async def _handle_interactivity(request: Request):
     raw_body = await request.body()
-    verify_slack_signature(
-        raw_body,
-        request.headers.get("X-Slack-Request-Timestamp", ""),
-        request.headers.get("X-Slack-Signature", ""),
-    )
+    logger.info("INTERACTIVITY hit bytes=%s path=%s", len(raw_body), request.url.path)
 
-    form = await request.form()
-    payload_raw = form.get("payload")
-    if not payload_raw:
-        return JSONResponse({"ok": True})
+    # Always respond quickly to Slack
+    try:
+        verify_slack_signature(
+            raw_body,
+            request.headers.get("X-Slack-Request-Timestamp", ""),
+            request.headers.get("X-Slack-Signature", ""),
+        )
 
-    payload = json.loads(payload_raw)
-    payload_type = payload.get("type")
+        form = await request.form()
+        payload_raw = form.get("payload")
+        if not payload_raw:
+            return JSONResponse({"ok": True})
 
-    if payload_type == "view_submission":
+        payload = json.loads(payload_raw)
+        if payload.get("type") != "view_submission":
+            return JSONResponse({"ok": True})
+
         view = payload.get("view", {})
         if view.get("callback_id") != "lp_request_modal":
             return JSONResponse({"response_action": "clear"})
 
         fields = extract_modal_values(view.get("state", {}))
 
-        # Required fields
         errors = {}
         if not fields.get("search_term"):
             errors["search_term_block"] = "Search term is required."
@@ -476,8 +430,6 @@ async def slack_interactivity(request: Request):
             return JSONResponse({"response_action": "errors", "errors": errors})
 
         request_id = generate_request_id()
-        _slug = slugify(fields["search_term"])
-
         user_id = (payload.get("user") or {}).get("id") or "unknown"
         channel_id = (view.get("private_metadata") or "").strip() or SLACK_DEFAULT_CHANNEL or ""
         if not channel_id:
@@ -494,10 +446,9 @@ async def slack_interactivity(request: Request):
                     f"*Primary Audience:* {fields['primary_audience']}\n"
                     f"*Requester:* <@{user_id}>"
                 )
-        
+
                 thread_ts = await post_message(channel_id, starter)
-        
-                # Store job state
+
                 JOBS[thread_ts] = {
                     "request_id": request_id,
                     "channel_id": channel_id,
@@ -506,38 +457,30 @@ async def slack_interactivity(request: Request):
                     "awaiting": "bart",
                     "bart_output": None,
                 }
-        
+
+                await post_message(channel_id, "🧠 Step 1/3: asking Bart…", thread_ts=thread_ts)
                 await post_message(
                     channel_id,
-                    "🧠 Step 1/3: asking Bart for technical outline + validated claims + visuals…",
-                    thread_ts=thread_ts
-                )
-        
-                msg = bart_prompt(
-                    search_term=fields["search_term"],
-                    primary_cta=fields["primary_cta"],
-                    intent=fields["intent"],
-                    bart_user_id=BART_USER_ID,
-                )
-        
-                await post_message(channel_id, msg, thread_ts=thread_ts)
-        
-                await post_message(
-                    channel_id,
-                    "⏳ Waiting for Bart reply… then I’ll run Writer (Claude) → HTML Builder (Claude) with HTML as the LAST step.",
+                    bart_prompt(fields["search_term"], fields["primary_cta"], fields["intent"]),
                     thread_ts=thread_ts,
                 )
-        
+                await post_message(
+                    channel_id,
+                    "⏳ Waiting for Bart reply… I’ll continue automatically after Bart posts `BART_DONE`.",
+                    thread_ts=thread_ts,
+                )
+
             except Exception as e:
                 logger.exception("run_pipeline failed: %s", e)
                 try:
                     await post_message(channel_id, f"❌ Pipeline failed to start: `{e}`")
                 except Exception:
                     pass
-        
-                asyncio.create_task(run_pipeline())
 
-        # Close modal immediately (<3s)
+        asyncio.create_task(run_pipeline())
+
         return JSONResponse({"response_action": "clear"})
 
-    return JSONResponse({"ok": True})
+    except Exception as e:
+        logger.exception("Interactivity handler error: %s", e)
+        return JSONResponse({"response_action": "clear"})
