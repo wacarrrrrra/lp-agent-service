@@ -224,13 +224,12 @@ def extract_modal_values(view_state: Dict[str, Any]) -> Dict[str, Any]:
         "must_not_say": get_value("must_not_say_block", "must_not_say"),
     }
 
-def bart_prompt(search_term: str) -> str:
-    return (
-        f'"<@{BART_USER_ID}> You are validating + drafting a technically accurate SEM landing page outline.
+def bart_prompt(search_term: str, primary_cta: str, intent: str, bart_user_id: str) -> str:
+    return f"""<@{bart_user_id}> You are validating + drafting a technically accurate SEM landing page outline.
 
 Context:
 - Audience: Platform Engineer
-- Search term (exact): “{search_term}”
+- Search term (exact): "{search_term}"
 - Primary CTA: {primary_cta}
 - Intent: {intent}
 
@@ -252,7 +251,7 @@ Provide:
 
 TASK C — Image generation (required):
 Generate 1–2 visuals to explain the concepts for this landing page.
-- Visual 1: a simple architecture diagram (preferred) that explains “{search_term}” in DataHub.
+- Visual 1: a simple architecture diagram (preferred) that explains "{search_term}" in DataHub.
 - Visual 2 (optional): a landing page layout wireframe showing section placement.
 Upload the generated image(s) to this Slack thread and include a 1–2 sentence caption + suggested alt text for each.
 
@@ -260,8 +259,10 @@ Output order:
 A) Validated claims table
 B) Outline
 C) FAQs
-D) Visual captions + alt text"
-    )
+D) Visual captions + alt text
+
+When you're fully done (claims validated + images uploaded), reply with exactly: BART_DONE
+"""
 
 # ----------------------------
 # Claude stubs (wire later)
@@ -506,14 +507,22 @@ async def slack_interactivity(request: Request):
                     "bart_output": None,
                 }
 
-                await post_message(channel_id, "🧠 Step 1/3: asking Bart for technical outline + claims + visuals…", thread_ts=thread_ts)
-                await post_message(channel_id, bart_prompt(fields["search_term"]), thread_ts=thread_ts)
+                await post_message(channel_id, "🧠 Step 1/3: asking Bart for technical outline + validated claims + visuals…", thread_ts=thread_ts)
 
-                await post_message(
-                    channel_id,
-                    "⏳ Waiting for Bart reply… then I’ll run Writer (Claude) → HTML Builder (Claude) with HTML as the LAST step.",
-                    thread_ts=thread_ts,
-                )
+msg = bart_prompt(
+    search_term=fields["search_term"],
+    primary_cta=fields["primary_cta"],
+    intent=fields["intent"],
+    bart_user_id=BART_USER_ID,
+)
+
+await post_message(channel_id, msg, thread_ts=thread_ts)
+
+await post_message(
+    channel_id,
+    "⏳ Waiting for Bart reply… then I’ll run Writer (Claude) → HTML Builder (Claude) with HTML as the LAST step.",
+    thread_ts=thread_ts,
+)
             except Exception as e:
                 logger.exception("run_pipeline failed: %s", e)
                 # Try to notify in the channel if possible
