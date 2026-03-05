@@ -226,14 +226,41 @@ def extract_modal_values(view_state: Dict[str, Any]) -> Dict[str, Any]:
 
 def bart_prompt(search_term: str) -> str:
     return (
-        f'"<@{BART_USER_ID}> Draft a technically accurate landing page outline for the exact search term: "{search_term}".\n\n'
-        "Output format:\n"
-        "1) Recommended angle (2 sentences)\n"
-        "2) H1 that includes the search term verbatim\n"
-        "3) Section outline (H2s + bullets)\n"
-        "4) Claims we can safely make + supporting product facts (no speculation)\n"
-        "5) FAQs\n"
-        "6) Visual plan (what visual, what it explains, placement)\n"
+        f'"<@{BART_USER_ID}> You are validating + drafting a technically accurate SEM landing page outline.
+
+Context:
+- Audience: Platform Engineer
+- Search term (exact): “{search_term}”
+- Primary CTA: {primary_cta}
+- Intent: {intent}
+
+TASK A — Codebase validation (required):
+Validate any capabilities/claims you mention by checking the codebase.
+Specifically:
+1) List 8–12 “safe claims” we can make for this landing page topic.
+2) For each claim, include:
+   - Validation result: ✅ supported / ⚠️ unclear / ❌ not supported
+   - Evidence: file path(s) + function/setting names, OR a short explanation if not found
+3) If something is unclear, propose a safer alternative claim.
+
+TASK B — Landing page outline (required):
+Provide:
+1) Recommended angle (2 sentences) tailored to a Platform Engineer.
+2) H1 that includes the search term verbatim.
+3) Section outline (H2s + bullets) including at least one H2 with the exact search term.
+4) FAQs (3–6) tailored to Platform Engineers.
+
+TASK C — Image generation (required):
+Generate 1–2 visuals to explain the concepts for this landing page.
+- Visual 1: a simple architecture diagram (preferred) that explains “{search_term}” in DataHub.
+- Visual 2 (optional): a landing page layout wireframe showing section placement.
+Upload the generated image(s) to this Slack thread and include a 1–2 sentence caption + suggested alt text for each.
+
+Output order:
+A) Validated claims table
+B) Outline
+C) FAQs
+D) Visual captions + alt text"
     )
 
 # ----------------------------
