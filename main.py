@@ -484,52 +484,56 @@ async def slack_interactivity(request: Request):
             return JSONResponse({"response_action": "clear"})
 
         async def run_pipeline():
-            try:
-                starter = (
-                    f"🚀 *LP request started*\n"
-                    f"*Request ID:* {request_id}\n"
-                    f"*Search term:* {fields['search_term']}\n"
-                    f"*Primary CTA:* {fields['primary_cta']}\n"
-                    f"*Intent:* {fields['intent']}\n"
-                    f"*Primary Audience:* {fields['primary_audience']}\n"
-                    f"*Requester:* <@{user_id}>"
-                )
+    try:
+        starter = (
+            f"🚀 *LP request started*\n"
+            f"*Request ID:* {request_id}\n"
+            f"*Search term:* {fields['search_term']}\n"
+            f"*Primary CTA:* {fields['primary_cta']}\n"
+            f"*Intent:* {fields['intent']}\n"
+            f"*Primary Audience:* {fields['primary_audience']}\n"
+            f"*Requester:* <@{user_id}>"
+        )
 
-                thread_ts = await post_message(channel_id, starter)
+        thread_ts = await post_message(channel_id, starter)
 
-                # Store job state
-                JOBS[thread_ts] = {
-                    "request_id": request_id,
-                    "channel_id": channel_id,
-                    "user_id": user_id,
-                    "fields": fields,
-                    "awaiting": "bart",
-                    "bart_output": None,
-                }
+        # Store job state
+        JOBS[thread_ts] = {
+            "request_id": request_id,
+            "channel_id": channel_id,
+            "user_id": user_id,
+            "fields": fields,
+            "awaiting": "bart",
+            "bart_output": None,
+        }
 
-                await post_message(channel_id, "🧠 Step 1/3: asking Bart for technical outline + validated claims + visuals…", thread_ts=thread_ts)
+        await post_message(
+            channel_id,
+            "🧠 Step 1/3: asking Bart for technical outline + validated claims + visuals…",
+            thread_ts=thread_ts
+        )
 
-msg = bart_prompt(
-    search_term=fields["search_term"],
-    primary_cta=fields["primary_cta"],
-    intent=fields["intent"],
-    bart_user_id=BART_USER_ID,
-)
+        msg = bart_prompt(
+            search_term=fields["search_term"],
+            primary_cta=fields["primary_cta"],
+            intent=fields["intent"],
+            bart_user_id=BART_USER_ID,
+        )
 
-await post_message(channel_id, msg, thread_ts=thread_ts)
+        await post_message(channel_id, msg, thread_ts=thread_ts)
 
-await post_message(
-    channel_id,
-    "⏳ Waiting for Bart reply… then I’ll run Writer (Claude) → HTML Builder (Claude) with HTML as the LAST step.",
-    thread_ts=thread_ts,
-)
-            except Exception as e:
-                logger.exception("run_pipeline failed: %s", e)
-                # Try to notify in the channel if possible
-                try:
-                    await post_message(channel_id, f"❌ Pipeline failed to start: `{e}`")
-                except Exception:
-                    pass
+        await post_message(
+            channel_id,
+            "⏳ Waiting for Bart reply… then I’ll run Writer (Claude) → HTML Builder (Claude) with HTML as the LAST step.",
+            thread_ts=thread_ts,
+        )
+
+    except Exception as e:
+        logger.exception("run_pipeline failed: %s", e)
+        try:
+            await post_message(channel_id, f"❌ Pipeline failed to start: `{e}`")
+        except Exception:
+            pass
 
         asyncio.create_task(run_pipeline())
 
