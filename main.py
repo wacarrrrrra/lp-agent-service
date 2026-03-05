@@ -410,7 +410,7 @@ async def slack_commands(request: Request):
 
 # IMPORTANT: match Slack's Interactivity URL.
 # Your logs showed Slack calling /slack/interactivity
-@app.post("/slack/interactivity")
+@app.post("/slack/interactions")
 async def slack_interactivity(request: Request):
     raw_body = await request.body()
     verify_slack_signature(
