@@ -7,6 +7,7 @@ import logging
 import asyncio
 from datetime import datetime
 from typing import Optional, Dict, Any
+from anthropic import Anthropic
 
 import httpx
 from fastapi import FastAPI, Request, HTTPException
@@ -25,6 +26,11 @@ SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET", "")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
 SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")  # e.g., C0AHY0FAN4C
 BART_USER_ID = os.getenv("BART_USER_ID", "")  # e.g. U09RYUJDUQL
+
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
+
+anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
 SLACK_API_BASE = "https://slack.com/api"
 
@@ -211,6 +217,54 @@ def extract_modal_values(view_state: Dict[str, Any]) -> Dict[str, Any]:
         "must_not_say": get_value("must_not_say_block", "must_not_say"),
     }
 
+def claude_text(prompt: str, max_tokens: int = 3500) -> str:
+    if not anthropic_client:
+        raise RuntimeError("Missing ANTHROPIC_API_KEY")
+
+    msg = anthropic_client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=max_tokens,
+        temperature=0.2,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    # Anthropic returns a list of content blocks; concatenate text blocks
+    out = []
+    for block in msg.content:
+        if getattr(block, "type", None) == "text":
+            out.append(block.text)
+    return "\n".join(out).strip()
+
+def build_writer_prompt(fields: dict, bart_output: str) -> str:
+    return f"""
+You are the SEM Landing Page Writer.
+
+Inputs:
+- search_term: "{fields["search_term"]}"
+- primary_cta: "{fields["primary_cta"]}"
+- intent: "{fields["intent"]}"
+- primary_audience: "{fields["primary_audience"]}"
+- offer: "{fields.get("offer","")}"
+- must_include: "{fields.get("must_include","")}"
+- must_not_say: "{fields.get("must_not_say","")}"
+
+BART_VALIDATED_OUTPUT:
+{bart_output}
+
+Rules:
+- Only use claims that are validated in BART_VALIDATED_OUTPUT.
+- search_term must appear in Title tag, H1, first 100 words, and at least one H2.
+- CTA above the fold and repeated.
+- Keep formatting scannable.
+
+Return ONLY valid JSON with keys:
+- "seo_json" (object: title_tag, meta_description, slug, h1)
+- "outline_md" (string)
+- "copy_md" (string)
+- "image_briefs_md" (string)
+- "qa_checklist_md" (string)
+""".strip()
+
 def bart_prompt(search_term: str, primary_cta: str, intent: str) -> str:
     return f"""<@{BART_USER_ID}> You are validating + drafting a technically accurate SEM landing page outline.
 
@@ -251,45 +305,63 @@ D) Visual captions + alt text
 When you're fully done (claims validated + images uploaded), reply with exactly: BART_DONE
 """
 
+
 # ----------------------------
 # Claude stubs (wire later)
 # ----------------------------
-async def claude_writer(fields: Dict[str, Any], bart_output: str) -> Dict[str, str]:
-    outline_md = f"# Outline\n\n(Based on Bart)\n\n{bart_output}\n"
-    copy_md = (
-        f"# Copy Draft\n\n"
-        f"## Hero\n"
-        f"**H1:** {fields['search_term']}\n\n"
-        f"Primary CTA: {fields['primary_cta']}\n\n"
-        f"(Replace with Claude Writer output)\n"
-    )
-    return {"outline_md": outline_md, "copy_md": copy_md}
+def build_html_prompt(fields: dict, writer_json: dict) -> str:
+    return f"""
+You are the HTML Builder. HTML is the LAST step.
 
-async def claude_html_builder(fields: Dict[str, Any], outline_md: str, copy_md: str) -> str:
-    title = fields["search_term"]
-    meta = f"Learn how DataHub supports {fields['search_term']}."
-    cta = fields["primary_cta"]
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>{title}</title>
-  <meta name="description" content="{meta}" />
-</head>
-<body>
-  <main>
-    <section id="hero">
-      <h1>{fields["search_term"]}</h1>
-      <p><strong>Intent:</strong> {fields["intent"]} | <strong>Primary Audience:</strong> {fields["primary_audience"]}</p>
-      <a href="#cta">{cta}</a>
-    </section>
-    <section id="outline"><h2>Outline</h2><pre>{outline_md[:1500]}</pre></section>
-    <section id="copy"><h2>Copy</h2><pre>{copy_md[:1500]}</pre></section>
-    <section id="cta"><h2>Next step</h2><a href="#">{cta}</a></section>
-  </main>
-</body>
-</html>"""
+Use this content exactly (do not invent claims):
+SEO_JSON:
+{json.dumps(writer_json["seo_json"], indent=2)}
+
+OUTLINE_MD:
+{writer_json["outline_md"]}
+
+COPY_MD:
+{writer_json["copy_md"]}
+
+IMAGE_BRIEFS_MD:
+{writer_json["image_briefs_md"]}
+
+Requirements:
+- Output a single complete semantic HTML document (<!doctype html> ...).
+- Title/meta from SEO_JSON.
+- H1 must include the search_term verbatim: "{fields["search_term"]}"
+- CTA appears above the fold and at the bottom.
+- Add alt text based on IMAGE_BRIEFS_MD.
+
+Return ONLY the HTML.
+""".strip()
+
+def build_html_prompt(fields: dict, writer_json: dict) -> str:
+    return f"""
+You are the HTML Builder. HTML is the LAST step.
+
+Use this content exactly (do not invent claims):
+SEO_JSON:
+{json.dumps(writer_json["seo_json"], indent=2)}
+
+OUTLINE_MD:
+{writer_json["outline_md"]}
+
+COPY_MD:
+{writer_json["copy_md"]}
+
+IMAGE_BRIEFS_MD:
+{writer_json["image_briefs_md"]}
+
+Requirements:
+- Output a single complete semantic HTML document (<!doctype html> ...).
+- Title/meta from SEO_JSON.
+- H1 must include the search_term verbatim: "{fields["search_term"]}"
+- CTA appears above the fold and at the bottom.
+- Add alt text based on IMAGE_BRIEFS_MD.
+
+Return ONLY the HTML.
+""".strip()
 
 # ----------------------------
 # Routes
@@ -339,15 +411,12 @@ async def slack_events(request: Request):
 
         async def continue_pipeline():
             try:
-                await post_message(channel_id, "✍️ Step 2/3: running Writer step using Bart output…", thread_ts=thread_ts)
-                writer_out = await claude_writer(fields, text)
+                writer_prompt = build_writer_prompt(fields, bart_output)
+                writer_raw = claude_text(writer_prompt, max_tokens=3500)
+                writer_json = json.loads(writer_raw)
 
-                await post_message(channel_id, "🧱 Step 3/3: running HTML Builder LAST…", thread_ts=thread_ts)
-                html = await claude_html_builder(fields, writer_out["outline_md"], writer_out["copy_md"])
-
-                max_len = 3500
-                chunk = html if len(html) <= max_len else html[:max_len] + "\n...(truncated)"
-                await post_message(channel_id, f"✅ *Final HTML for {request_id}*\n```{chunk}```", thread_ts=thread_ts)
+                html_prompt = build_html_prompt(fields, writer_json)
+                page_html = claude_text(html_prompt, max_tokens=3500)
 
                 job["awaiting"] = "done"
                 JOBS[thread_ts] = job
