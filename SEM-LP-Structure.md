@@ -57,6 +57,17 @@ Embed all forms with this script. Use the table below for the correct `formId`. 
 | Meta description | 150–160 characters. Include search term naturally + outcome. Sentence case. |
 | URL slug | `/primary-search-term-variant/` |
 
+### Additional Keywords
+
+If `additional_keywords` are provided in the request, distribute them across H2s, H3s, and H4s throughout the page. Do not force them into H1 or the title tag — the primary search term owns those.
+
+**Rules:**
+- Each additional keyword should appear in at least one heading (H2, H3, or H4)
+- Place keywords in the heading level that best matches the scope of the content below it — broader concepts at H2, narrower at H3/H4
+- The heading must still make sense as a heading — do not stuff keywords into headings that don't earn them
+- Natural integration only: the keyword should fit the section's meaning, not be bolted on
+- If an additional keyword overlaps semantically with the primary search term, use it as an H3 or H4 variant rather than repeating the primary term verbatim
+
 ---
 
 ## Page Sections (Strict Order)
