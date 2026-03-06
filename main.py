@@ -6,10 +6,11 @@ import json
 import logging
 import asyncio
 from datetime import datetime
-from typing import Optional, Dict, Any
-from anthropic import Anthropic
+from typing import Optional, Dict, Any, List
+from pathlib import Path
 
 import httpx
+from anthropic import Anthropic
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 
@@ -24,21 +25,38 @@ logger = logging.getLogger("uvicorn.error")
 # ----------------------------
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET", "")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
-SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")  # e.g., C0AHY0FAN4C
+SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")  # e.g. C0AHY0FAN4C
 BART_USER_ID = os.getenv("BART_USER_ID", "")  # e.g. U09RYUJDUQL
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
-
 anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
 SLACK_API_BASE = "https://slack.com/api"
 
 # ----------------------------
-# In-memory job state
+# In-memory job state (v1)
 # Keyed by thread_ts
 # ----------------------------
 JOBS: Dict[str, Dict[str, Any]] = {}
+
+# ----------------------------
+# Repo doc loading
+# ----------------------------
+def load_text(path: str, max_chars: int) -> str:
+    try:
+        txt = Path(path).read_text(encoding="utf-8")
+        return txt[:max_chars]
+    except Exception as e:
+        logger.warning("Could not load %s: %s", path, e)
+        return f"[Missing file: {path}]"
+
+SEM_STRUCTURE = load_text("SEM-LP-Structure.md", 18000)
+SEO_RULES = load_text("SEO-Best-Practices.md", 14000)
+EDITORIAL_STYLE = load_text("datahub-editorial-style.md", 14000)
+GARTNER_SNIPPETS = load_text("datahub-gartner-peer-insights.md", 9000)
+BRAND_GUIDELINES = load_text("brand-guidelines.md", 14000)
+HTML_TEMPLATE = load_text("datahub-observability-final.html", 20000)
 
 # ----------------------------
 # Slack signature verification
@@ -70,21 +88,8 @@ def verify_slack_signature(raw_body: bytes, timestamp: str, signature: str) -> N
         raise HTTPException(status_code=401, detail="Invalid Slack signature")
 
 # ----------------------------
-# Helpers
+# Slack helpers
 # ----------------------------
-def generate_request_id() -> str:
-    return datetime.now().strftime("LP-%Y%m%d-%H%M")
-
-def slugify(text: str, max_len: int = 50) -> str:
-    t = (text or "").strip().lower()
-    t = "-".join(t.split())
-    cleaned = []
-    for ch in t:
-        if ch.isalnum() or ch == "-":
-            cleaned.append(ch)
-    out = "".join(cleaned)
-    return out[:max_len] if len(out) > max_len else out
-
 async def slack_api(method: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     if not SLACK_BOT_TOKEN:
         raise HTTPException(status_code=500, detail="Missing SLACK_BOT_TOKEN")
@@ -108,6 +113,52 @@ async def post_message(channel: str, text: str, thread_ts: Optional[str] = None)
     data = await slack_api("chat.postMessage", payload)
     return data.get("ts")
 
+# ----------------------------
+# General helpers
+# ----------------------------
+def generate_request_id() -> str:
+    return datetime.now().strftime("LP-%Y%m%d-%H%M")
+
+def slugify(text: str, max_len: int = 50) -> str:
+    t = (text or "").strip().lower()
+    t = "-".join(t.split())
+    cleaned = []
+    for ch in t:
+        if ch.isalnum() or ch == "-":
+            cleaned.append(ch)
+    out = "".join(cleaned)
+    return out[:max_len] if len(out) > max_len else out
+
+def safe_truncate(s: str, n: int = 3500) -> str:
+    return s if len(s) <= n else s[:n] + "\n...(truncated)"
+
+def parse_secondary_keywords(raw: Optional[str]) -> List[str]:
+    """
+    Accepts:
+    - one per line
+    - comma separated
+    Returns unique, stripped, ordered list.
+    """
+    if not raw:
+        return []
+    # normalize commas to newlines
+    raw = raw.replace(",", "\n")
+    out: List[str] = []
+    seen = set()
+    for line in raw.splitlines():
+        k = line.strip()
+        if not k:
+            continue
+        lk = k.lower()
+        if lk in seen:
+            continue
+        seen.add(lk)
+        out.append(k)
+    return out
+
+# ----------------------------
+# Modal helpers
+# ----------------------------
 def build_modal_view(initial_search_term: str = "", channel_id: str = "") -> Dict[str, Any]:
     return {
         "type": "modal",
@@ -126,6 +177,22 @@ def build_modal_view(initial_search_term: str = "", channel_id: str = "") -> Dic
                     "action_id": "search_term",
                     "initial_value": initial_search_term or "",
                     "placeholder": {"type": "plain_text", "text": "e.g., datahub lineage"},
+                },
+            },
+            # NEW: Secondary keywords
+            {
+                "type": "input",
+                "optional": True,
+                "block_id": "secondary_keywords_block",
+                "label": {"type": "plain_text", "text": "Secondary keywords (optional)"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "secondary_keywords",
+                    "multiline": True,
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "One per line (or comma-separated)\nExample:\nmetadata management\ncolumn-level lineage\ndata observability",
+                    },
                 },
             },
             {
@@ -209,6 +276,7 @@ def extract_modal_values(view_state: Dict[str, Any]) -> Dict[str, Any]:
 
     return {
         "search_term": get_value("search_term_block", "search_term"),
+        "secondary_keywords": get_value("secondary_keywords_block", "secondary_keywords"),  # NEW
         "primary_cta": get_value("primary_cta_block", "primary_cta"),
         "intent": get_value("intent_block", "intent"),
         "primary_audience": get_value("primary_audience_block", "primary_audience"),
@@ -217,7 +285,38 @@ def extract_modal_values(view_state: Dict[str, Any]) -> Dict[str, Any]:
         "must_not_say": get_value("must_not_say_block", "must_not_say"),
     }
 
-def claude_text(prompt: str, max_tokens: int = 3500) -> str:
+# ----------------------------
+# Bart prompt
+# ----------------------------
+def bart_prompt(search_term: str, primary_cta: str, intent: str, secondary_keywords: List[str]) -> str:
+    secondary = "\n".join(f"- {k}" for k in secondary_keywords) if secondary_keywords else "(none)"
+    return f"""<@{BART_USER_ID}> You are validating + drafting a technically accurate SEM landing page outline.
+
+Context:
+- Audience: Platform Engineer
+- Search term (exact): "{search_term}"
+- Secondary keywords (optional):
+{secondary}
+- Primary CTA: {primary_cta}
+- Intent: {intent}
+
+TASK A — Codebase validation (required):
+Validate any capabilities/claims you mention by checking the codebase.
+For each claim include: ✅/⚠️/❌ + evidence (file paths/settings).
+
+TASK B — Landing page outline (required):
+Angle (2 sentences), H1 w/ exact search term, H2/H3/H4 outline + bullets, 3–6 FAQs.
+
+TASK C — Image generation (required):
+Generate 1–2 visuals (diagram preferred). Upload images to this thread with captions + alt text.
+
+When you're fully done (claims validated + images uploaded), reply with exactly: BART_DONE
+"""
+
+# ----------------------------
+# Claude helpers
+# ----------------------------
+def claude_text_sync(prompt: str, max_tokens: int = 3500) -> str:
     if not anthropic_client:
         raise RuntimeError("Missing ANTHROPIC_API_KEY")
 
@@ -228,19 +327,37 @@ def claude_text(prompt: str, max_tokens: int = 3500) -> str:
         messages=[{"role": "user", "content": prompt}],
     )
 
-    # Anthropic returns a list of content blocks; concatenate text blocks
-    out = []
+    parts = []
     for block in msg.content:
         if getattr(block, "type", None) == "text":
-            out.append(block.text)
-    return "\n".join(out).strip()
+            parts.append(block.text)
+    return "\n".join(parts).strip()
 
-def build_writer_prompt(fields: dict, bart_output: str) -> str:
+async def claude_text(prompt: str, max_tokens: int = 3500) -> str:
+    return await asyncio.to_thread(claude_text_sync, prompt, max_tokens)
+
+def build_writer_prompt(fields: dict, bart_output: str, secondary_keywords: List[str]) -> str:
+    secondary_block = "\n".join(f"- {k}" for k in secondary_keywords) if secondary_keywords else "(none)"
     return f"""
 You are the SEM Landing Page Writer.
 
+HARD CONSTRAINTS — follow these documents exactly:
+[SEM STRUCTURE]
+{SEM_STRUCTURE}
+
+[SEO BEST PRACTICES]
+{SEO_RULES}
+
+[EDITORIAL STYLE]
+{EDITORIAL_STYLE}
+
+[OPTIONAL GARTNER PEER INSIGHTS SNIPPETS — use sparingly and never fabricate]
+{GARTNER_SNIPPETS}
+
 Inputs:
-- search_term: "{fields["search_term"]}"
+- search_term (primary keyword): "{fields["search_term"]}"
+- secondary_keywords (optional):
+{secondary_block}
 - primary_cta: "{fields["primary_cta"]}"
 - intent: "{fields["intent"]}"
 - primary_audience: "{fields["primary_audience"]}"
@@ -248,72 +365,45 @@ Inputs:
 - must_include: "{fields.get("must_include","")}"
 - must_not_say: "{fields.get("must_not_say","")}"
 
-BART_VALIDATED_OUTPUT:
+BART_VALIDATED_OUTPUT (technical source of truth):
 {bart_output}
 
 Rules:
-- Only use claims that are validated in BART_VALIDATED_OUTPUT.
-- search_term must appear in Title tag, H1, first 100 words, and at least one H2.
-- CTA above the fold and repeated.
-- Keep formatting scannable.
+- Only use claims validated in BART_VALIDATED_OUTPUT.
+- Primary keyword requirements:
+  - must appear in Title tag, H1, first 100 words, and at least one H2.
+- Secondary keyword requirements:
+  - each secondary keyword MUST appear in at least one heading (H2, H3, or H4).
+  - do not force secondary keywords into Title tag or H1.
+- CTA above the fold and repeated near the bottom.
+- Scannable formatting, short paragraphs + bullets.
 
 Return ONLY valid JSON with keys:
 - "seo_json" (object: title_tag, meta_description, slug, h1)
-- "outline_md" (string)
+- "outline_md" (string)  # include H2/H3/H4 headings
 - "copy_md" (string)
 - "image_briefs_md" (string)
 - "qa_checklist_md" (string)
 """.strip()
 
-def bart_prompt(search_term: str, primary_cta: str, intent: str) -> str:
-    return f"""<@{BART_USER_ID}> You are validating + drafting a technically accurate SEM landing page outline.
-
-Context:
-- Audience: Platform Engineer
-- Search term (exact): "{search_term}"
-- Primary CTA: {primary_cta}
-- Intent: {intent}
-
-TASK A — Codebase validation (required):
-Validate any capabilities/claims you mention by checking the codebase.
-Specifically:
-1) List 8–12 “safe claims” we can make for this landing page topic.
-2) For each claim, include:
-   - Validation result: ✅ supported / ⚠️ unclear / ❌ not supported
-   - Evidence: file path(s) + function/setting names, OR a short explanation if not found
-3) If something is unclear, propose a safer alternative claim.
-
-TASK B — Landing page outline (required):
-Provide:
-1) Recommended angle (2 sentences) tailored to a Platform Engineer.
-2) H1 that includes the search term verbatim.
-3) Section outline (H2s + bullets) including at least one H2 with the exact search term.
-4) FAQs (3–6) tailored to Platform Engineers.
-
-TASK C — Image generation (required):
-Generate 1–2 visuals to explain the concepts for this landing page.
-- Visual 1: a simple architecture diagram (preferred) that explains "{search_term}" in DataHub.
-- Visual 2 (optional): a landing page layout wireframe showing section placement.
-Upload the generated image(s) to this Slack thread and include a 1–2 sentence caption + suggested alt text for each.
-
-Output order:
-A) Validated claims table
-B) Outline
-C) FAQs
-D) Visual captions + alt text
-
-When you're fully done (claims validated + images uploaded), reply with exactly: BART_DONE
-"""
-
-
-# ----------------------------
-# Claude stubs (wire later)
-# ----------------------------
-def build_html_prompt(fields: dict, writer_json: dict) -> str:
+def build_html_prompt(fields: dict, writer_json: dict, secondary_keywords: List[str]) -> str:
+    secondary_block = "\n".join(f"- {k}" for k in secondary_keywords) if secondary_keywords else "(none)"
     return f"""
 You are the HTML Builder. HTML is the LAST step.
 
-Use this content exactly (do not invent claims):
+HARD CONSTRAINTS — follow these documents exactly:
+[BRAND GUIDELINES]
+{BRAND_GUIDELINES}
+
+[HTML TEMPLATE TO REPLICATE (structure + section order)]
+{HTML_TEMPLATE}
+
+Inputs:
+- primary keyword: "{fields["search_term"]}"
+- secondary keywords:
+{secondary_block}
+
+Use this content exactly (no new claims, no new product assertions):
 SEO_JSON:
 {json.dumps(writer_json["seo_json"], indent=2)}
 
@@ -329,36 +419,12 @@ IMAGE_BRIEFS_MD:
 Requirements:
 - Output a single complete semantic HTML document (<!doctype html> ...).
 - Title/meta from SEO_JSON.
-- H1 must include the search_term verbatim: "{fields["search_term"]}"
+- H1 must include the primary keyword verbatim: "{fields["search_term"]}"
+- Ensure headings reflect OUTLINE_MD (including H2/H3/H4).
+- Ensure each secondary keyword appears in at least one heading (H2/H3/H4) (already satisfied in outline; do not remove).
 - CTA appears above the fold and at the bottom.
 - Add alt text based on IMAGE_BRIEFS_MD.
-
-Return ONLY the HTML.
-""".strip()
-
-def build_html_prompt(fields: dict, writer_json: dict) -> str:
-    return f"""
-You are the HTML Builder. HTML is the LAST step.
-
-Use this content exactly (do not invent claims):
-SEO_JSON:
-{json.dumps(writer_json["seo_json"], indent=2)}
-
-OUTLINE_MD:
-{writer_json["outline_md"]}
-
-COPY_MD:
-{writer_json["copy_md"]}
-
-IMAGE_BRIEFS_MD:
-{writer_json["image_briefs_md"]}
-
-Requirements:
-- Output a single complete semantic HTML document (<!doctype html> ...).
-- Title/meta from SEO_JSON.
-- H1 must include the search_term verbatim: "{fields["search_term"]}"
-- CTA appears above the fold and at the bottom.
-- Add alt text based on IMAGE_BRIEFS_MD.
+- Preserve template structure, but swap content with the provided copy.
 
 Return ONLY the HTML.
 """.strip()
@@ -369,64 +435,6 @@ Return ONLY the HTML.
 @app.get("/health")
 async def health():
     return {"ok": True}
-
-@app.post("/slack/events")
-async def slack_events(request: Request):
-    raw_body = await request.body()
-    verify_slack_signature(
-        raw_body,
-        request.headers.get("X-Slack-Request-Timestamp", ""),
-        request.headers.get("X-Slack-Signature", ""),
-    )
-    body = json.loads(raw_body.decode("utf-8") or "{}")
-
-    if body.get("type") == "url_verification":
-        return JSONResponse({"challenge": body.get("challenge")})
-
-    event = body.get("event", {}) or {}
-    if event.get("type") != "message":
-        return JSONResponse({"ok": True})
-
-    # ignore edits/bot subtypes
-    if event.get("subtype"):
-        return JSONResponse({"ok": True})
-
-    thread_ts = event.get("thread_ts") or event.get("ts")
-    user_id = event.get("user") or ""
-    text = (event.get("text") or "").strip()
-
-    job = JOBS.get(thread_ts)
-    if not job:
-        return JSONResponse({"ok": True})
-
-    # Only treat as Bart response if from Bart AND includes completion token
-    if job.get("awaiting") == "bart" and user_id == BART_USER_ID and "BART_DONE" in text:
-        job["bart_output"] = text
-        job["awaiting"] = "writer"
-        JOBS[thread_ts] = job
-
-        channel_id = job["channel_id"]
-        request_id = job["request_id"]
-        fields = job["fields"]
-
-        async def continue_pipeline():
-            try:
-                writer_prompt = build_writer_prompt(fields, bart_output)
-                writer_raw = claude_text(writer_prompt, max_tokens=3500)
-                writer_json = json.loads(writer_raw)
-
-                html_prompt = build_html_prompt(fields, writer_json)
-                page_html = claude_text(html_prompt, max_tokens=3500)
-
-                job["awaiting"] = "done"
-                JOBS[thread_ts] = job
-            except Exception as e:
-                logger.exception("Pipeline continuation failed: %s", e)
-                await post_message(channel_id, f"❌ Pipeline failed: `{e}`", thread_ts=thread_ts)
-
-        asyncio.create_task(continue_pipeline())
-
-    return JSONResponse({"ok": True})
 
 @app.post("/slack/commands")
 async def slack_commands(request: Request):
@@ -450,7 +458,7 @@ async def slack_commands(request: Request):
     await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
     return PlainTextResponse("", status_code=200)
 
-# IMPORTANT: support both paths to avoid config mismatch
+# Support both URLs to avoid config mismatch
 @app.post("/slack/interactions")
 async def slack_interactions(request: Request):
     return await _handle_interactivity(request)
@@ -463,7 +471,6 @@ async def _handle_interactivity(request: Request):
     raw_body = await request.body()
     logger.info("INTERACTIVITY hit bytes=%s path=%s", len(raw_body), request.url.path)
 
-    # Always respond quickly to Slack
     try:
         verify_slack_signature(
             raw_body,
@@ -499,10 +506,13 @@ async def _handle_interactivity(request: Request):
             return JSONResponse({"response_action": "errors", "errors": errors})
 
         request_id = generate_request_id()
+        slug = slugify(fields["search_term"])
         user_id = (payload.get("user") or {}).get("id") or "unknown"
         channel_id = (view.get("private_metadata") or "").strip() or SLACK_DEFAULT_CHANNEL or ""
         if not channel_id:
             return JSONResponse({"response_action": "clear"})
+
+        secondary_keywords = parse_secondary_keywords(fields.get("secondary_keywords"))
 
         async def run_pipeline():
             try:
@@ -510,6 +520,7 @@ async def _handle_interactivity(request: Request):
                     f"🚀 *LP request started*\n"
                     f"*Request ID:* {request_id}\n"
                     f"*Search term:* {fields['search_term']}\n"
+                    f"*Secondary keywords:* {', '.join(secondary_keywords) if secondary_keywords else '—'}\n"
                     f"*Primary CTA:* {fields['primary_cta']}\n"
                     f"*Intent:* {fields['intent']}\n"
                     f"*Primary Audience:* {fields['primary_audience']}\n"
@@ -520,9 +531,11 @@ async def _handle_interactivity(request: Request):
 
                 JOBS[thread_ts] = {
                     "request_id": request_id,
+                    "slug": slug,
                     "channel_id": channel_id,
                     "user_id": user_id,
                     "fields": fields,
+                    "secondary_keywords": secondary_keywords,
                     "awaiting": "bart",
                     "bart_output": None,
                 }
@@ -530,7 +543,7 @@ async def _handle_interactivity(request: Request):
                 await post_message(channel_id, "🧠 Step 1/3: asking Bart…", thread_ts=thread_ts)
                 await post_message(
                     channel_id,
-                    bart_prompt(fields["search_term"], fields["primary_cta"], fields["intent"]),
+                    bart_prompt(fields["search_term"], fields["primary_cta"], fields["intent"], secondary_keywords),
                     thread_ts=thread_ts,
                 )
                 await post_message(
@@ -547,9 +560,119 @@ async def _handle_interactivity(request: Request):
                     pass
 
         asyncio.create_task(run_pipeline())
-
         return JSONResponse({"response_action": "clear"})
 
     except Exception as e:
         logger.exception("Interactivity handler error: %s", e)
         return JSONResponse({"response_action": "clear"})
+
+@app.post("/slack/events")
+async def slack_events(request: Request):
+    raw_body = await request.body()
+    verify_slack_signature(
+        raw_body,
+        request.headers.get("X-Slack-Request-Timestamp", ""),
+        request.headers.get("X-Slack-Signature", ""),
+    )
+    body = json.loads(raw_body.decode("utf-8") or "{}")
+
+    if body.get("type") == "url_verification":
+        return JSONResponse({"challenge": body.get("challenge")})
+
+    event = body.get("event", {}) or {}
+    if event.get("type") != "message":
+        return JSONResponse({"ok": True})
+
+    if event.get("subtype"):
+        return JSONResponse({"ok": True})
+
+    thread_ts = event.get("thread_ts") or event.get("ts")
+    user_id = event.get("user") or ""
+    text = (event.get("text") or "").strip()
+
+    job = JOBS.get(thread_ts)
+    if not job:
+        return JSONResponse({"ok": True})
+
+    # Only proceed if waiting for Bart AND it's Bart AND it contains BART_DONE
+    if job.get("awaiting") == "bart" and user_id == BART_USER_ID and "BART_DONE" in text:
+        job["bart_output"] = text
+        job["awaiting"] = "writer"
+        JOBS[thread_ts] = job
+
+        channel_id = job["channel_id"]
+        request_id = job["request_id"]
+        fields = job["fields"]
+        slug = job["slug"]
+        secondary_keywords = job.get("secondary_keywords", [])
+
+        async def continue_pipeline():
+            try:
+                await post_message(channel_id, "✍️ Step 2/3: Claude Writer…", thread_ts=thread_ts)
+
+                writer_prompt = build_writer_prompt(fields, text, secondary_keywords)
+                writer_raw = await claude_text(writer_prompt, max_tokens=3800)
+
+                try:
+                    writer_json = json.loads(writer_raw)
+                except Exception:
+                    await post_message(
+                        channel_id,
+                        f"❌ Writer did not return JSON.\n```{safe_truncate(writer_raw, 3000)}```",
+                        thread_ts=thread_ts,
+                    )
+                    job["awaiting"] = "error"
+                    JOBS[thread_ts] = job
+                    return
+
+                await post_message(channel_id, "🧱 Step 3/3: Claude HTML Builder (LAST)…", thread_ts=thread_ts)
+                html_prompt = build_html_prompt(fields, writer_json, secondary_keywords)
+                page_html = await claude_text(html_prompt, max_tokens=4200)
+
+                await post_message(channel_id, f"✅ Build kit ready: *{request_id}* (`{slug}`)", thread_ts=thread_ts)
+
+                await post_message(
+                    channel_id,
+                    f"FILE: 05_Build/seo.json\n```json\n{json.dumps(writer_json['seo_json'], indent=2)}\n```",
+                    thread_ts=thread_ts,
+                )
+                await post_message(
+                    channel_id,
+                    f"FILE: 02_Outline/outline.md\n```md\n{safe_truncate(writer_json['outline_md'], 3300)}\n```",
+                    thread_ts=thread_ts,
+                )
+                await post_message(
+                    channel_id,
+                    f"FILE: 03_Copy/copy.md\n```md\n{safe_truncate(writer_json['copy_md'], 3300)}\n```",
+                    thread_ts=thread_ts,
+                )
+                await post_message(
+                    channel_id,
+                    f"FILE: 04_Images/image-briefs.md\n```md\n{safe_truncate(writer_json['image_briefs_md'], 3300)}\n```",
+                    thread_ts=thread_ts,
+                )
+                await post_message(
+                    channel_id,
+                    f"FILE: 05_Build/qa_checklist.md\n```md\n{safe_truncate(writer_json['qa_checklist_md'], 3300)}\n```",
+                    thread_ts=thread_ts,
+                )
+
+                # HTML last
+                await post_message(
+                    channel_id,
+                    f"FILE: 05_Build/page.html\n```html\n{safe_truncate(page_html, 3300)}\n```",
+                    thread_ts=thread_ts,
+                )
+
+                job["awaiting"] = "done"
+                JOBS[thread_ts] = job
+
+            except Exception as e:
+                logger.exception("Pipeline continuation failed: %s", e)
+                await post_message(channel_id, f"❌ Pipeline failed: `{e}`", thread_ts=thread_ts)
+                job["awaiting"] = "error"
+                JOBS[thread_ts] = job
+
+        asyncio.create_task(continue_pipeline())
+
+    return JSONResponse({"ok": True})
