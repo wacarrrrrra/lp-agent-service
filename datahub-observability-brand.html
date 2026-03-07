@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="DataHub Cloud data observability platform — automated monitoring, anomaly detection, and root cause analysis. Catch data issues before dashboards break.">
+<title>Data Observability Platform | DataHub Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Castoro:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Brand palette — Blue tonal group, Neutral + Highlights */
+  --dh-black:      #000000;
+  --dh-off-black:  #161616;
+  --dh-n01:        #1E1E1E;
+  --dh-n02:        #3F3F3F;
+  --dh-n03:        #767473;
+  --dh-n04:        #B2AEA7;
+  --dh-n05:        #E3E1D6;
+  --dh-off-white:  #F2F1EE;
+  --dh-white:      #FFFFFF;
+  --dh-blue-01:    #002131;
+  --dh-blue-02:    #0A4170;
+  --dh-blue-03:    #006DCD;
+  --dh-blue-04:    #3CBBEB;
+  --dh-blue-05:    #B0EAFC;
+  --dh-green-03:   #008070;
+  --dh-green-04:   #0FC691;
+
+  --font-h: 'Castoro', Georgia, serif;
+  --font-b: 'Geist', sans-serif;
+  --r: 8px;
+  --tr: 220ms cubic-bezier(0.4,0,0.2,1);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-b);font-size:16px;line-height:1.6;color:var(--dh-n02);background:var(--dh-off-white);overflow-x:hidden}
+img{max-width:100%;height:auto;display:block}
+a{text-decoration:none;color:inherit}
+
+/* ── SCROLL PROGRESS ── */
+.scroll-prog{position:fixed;top:0;left:0;width:0%;height:2px;background:var(--dh-blue-03);z-index:2000;transition:width 40ms linear}
+
+/* ── CONTAINER ── */
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+.wrap-narrow{max-width:860px;margin:0 auto;padding:0 24px}
+
+/* ── REVEAL ── */
+.rev{opacity:0;transform:translateY(24px);transition:opacity .55s ease,transform .55s ease}
+.rev.in{opacity:1;transform:none}
+.d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}.d4{transition-delay:.32s}
+
+/* ── HEADER ── */
+.hdr{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(242,241,238,.92);backdrop-filter:blur(10px);border-bottom:1px solid transparent;transition:border-color var(--tr),box-shadow var(--tr)}
+.hdr.scrolled{border-bottom-color:var(--dh-n05);box-shadow:0 1px 8px rgba(0,0,0,.06)}
+.hdr-inner{display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo img{height:28px;width:auto;display:block}
+.nav{display:none;align-items:center;gap:32px}
+@media(min-width:1024px){.nav{display:flex}}
+.nav a{font-size:14px;font-weight:400;color:var(--dh-n02);position:relative;padding:3px 0;transition:color var(--tr)}
+.nav a::after{content:'';position:absolute;bottom:0;left:0;width:0;height:1.5px;background:var(--dh-blue-03);transition:width var(--tr)}
+.nav a:hover{color:var(--dh-blue-03)}
+.nav a:hover::after{width:100%}
+.hdr-cta{display:flex;align-items:center;gap:10px}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;font-family:var(--font-b);font-size:14px;font-weight:500;border-radius:var(--r);border:none;cursor:pointer;transition:all var(--tr);white-space:nowrap}
+.btn-primary{background:var(--dh-blue-03);color:var(--dh-white)}
+.btn-primary:hover{background:var(--dh-blue-02);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--dh-n01);border:1.5px solid var(--dh-n04)}
+.btn-ghost:hover{border-color:var(--dh-blue-03);color:var(--dh-blue-03)}
+.btn-dark{background:var(--dh-blue-01);color:var(--dh-white)}
+.btn-dark:hover{background:var(--dh-blue-02);transform:translateY(-1px)}
+.btn-sm{padding:9px 18px;font-size:13px}
+
+/* ── SECTION LABEL ── */
+.sec-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dh-blue-03);margin-bottom:10px;display:block}
+.sec-header{text-align:center;margin-bottom:56px}
+.sec-header h2{font-family:var(--font-h);font-size:clamp(1.8rem,3.5vw,2.6rem);color:var(--dh-black);margin-bottom:14px;line-height:1.2}
+.sec-header p{font-size:16px;color:var(--dh-n03);max-width:580px;margin:0 auto}
+
+/* ── HERO ── */
+.hero{padding:140px 0 80px;background:var(--dh-white);border-bottom:1px solid var(--dh-n05)}
+.hero-inner{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center}
+@media(max-width:900px){.hero-inner{grid-template-columns:1fr;gap:48px}}
+.hero h1{font-family:var(--font-h);font-size:clamp(2.2rem,4.5vw,3.4rem);color:var(--dh-black);line-height:1.1;margin-bottom:20px}
+.hero h1 em{font-style:italic;color:var(--dh-blue-03)}
+.hero-sub{font-size:17px;color:var(--dh-n02);line-height:1.65;margin-bottom:28px;max-width:480px}
+.hero-bullets{list-style:none;margin-bottom:32px;display:flex;flex-direction:column;gap:10px}
+.hero-bullets li{display:flex;align-items:flex-start;gap:10px;font-size:15px;color:var(--dh-n02)}
+.hero-bullets li svg{flex-shrink:0;margin-top:3px;color:var(--dh-blue-03)}
+.btn-row{display:flex;gap:12px;flex-wrap:wrap}
+
+/* Hero visual — Stylized UI tile */
+.hero-visual{background:var(--dh-off-white);border:1.5px solid var(--dh-n05);border-radius:12px;padding:20px;position:relative}
+.hero-visual-bar{display:flex;gap:6px;margin-bottom:16px}
+.hero-visual-dot{width:10px;height:10px;border-radius:50%;background:var(--dh-n05)}
+.hero-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.h-metric{background:var(--dh-white);border:1px solid var(--dh-n05);border-radius:var(--r);padding:14px}
+.h-metric-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--dh-n03);margin-bottom:6px}
+.h-metric-val{font-family:var(--font-h);font-size:22px;color:var(--dh-black)}
+.h-metric-val.pos{color:var(--dh-blue-03)}
+.h-metric-tag{display:inline-block;font-size:10px;font-weight:600;background:var(--dh-blue-05);color:var(--dh-blue-02);border-radius:4px;padding:2px 6px;margin-top:4px}
+.hero-chart{background:var(--dh-white);border:1px solid var(--dh-n05);border-radius:var(--r);padding:14px}
+.hero-chart-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--dh-n03);margin-bottom:10px}
+.hero-bars{display:flex;align-items:flex-end;gap:6px;height:56px}
+.hero-bar{flex:1;border-radius:3px 3px 0 0;background:var(--dh-blue-05)}
+.hero-bar.hi{background:var(--dh-blue-03)}
+/* alert chip */
+.alert-chip{position:absolute;top:-14px;right:20px;background:var(--dh-white);border:1.5px solid var(--dh-n05);border-radius:20px;padding:7px 14px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;color:var(--dh-n01);box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.alert-dot{width:7px;height:7px;border-radius:50%;background:var(--dh-green-04)}
+
+/* ── TRUST STRIP ── */
+.trust{padding:44px 0;background:var(--dh-off-white);border-bottom:1px solid var(--dh-n05)}
+.trust-label{text-align:center;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dh-n03);margin-bottom:24px}
+.marquee{overflow:hidden;position:relative}
+.marquee::before,.marquee::after{content:'';position:absolute;top:0;bottom:0;width:80px;z-index:2;pointer-events:none}
+.marquee::before{left:0;background:linear-gradient(90deg,var(--dh-off-white),transparent)}
+.marquee::after{right:0;background:linear-gradient(90deg,transparent,var(--dh-off-white))}
+.marquee-track{display:flex;gap:56px;animation:scroll 28s linear infinite}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.marquee-item{flex-shrink:0;font-family:var(--font-b);font-size:15px;font-weight:600;color:var(--dh-n03);white-space:nowrap;transition:color var(--tr)}
+.marquee-item:hover{color:var(--dh-blue-03)}
+
+/* ── PROBLEM ── */
+.problem{padding:96px 0;background:var(--dh-off-white)}
+.problem-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:768px){.problem-grid{grid-template-columns:1fr}}
+.prob-tile{background:var(--dh-white);border:1.5px solid var(--dh-n05);border-radius:var(--r);padding:28px;transition:border-color var(--tr),box-shadow var(--tr)}
+.prob-tile:hover{border-color:var(--dh-blue-04);box-shadow:0 4px 20px rgba(0,33,49,.06)}
+.prob-icon{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--dh-blue-04);display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--dh-blue-03)}
+.prob-tile h4{font-family:var(--font-h);font-size:17px;color:var(--dh-black);margin-bottom:8px}
+.prob-tile p{font-size:14px;color:var(--dh-n03);line-height:1.6}
+/* cost block */
+.cost-block{margin-top:40px;background:var(--dh-blue-01);border-radius:var(--r);padding:36px 40px;display:flex;align-items:center;justify-content:center;gap:56px;flex-wrap:wrap}
+.cost-item{text-align:center}
+.cost-val{font-family:var(--font-h);font-size:clamp(2rem,4vw,3rem);color:var(--dh-white);line-height:1;margin-bottom:6px}
+.cost-val.accent{color:var(--dh-blue-04)}
+.cost-lbl{font-size:13px;color:var(--dh-blue-05)}
+.cost-sep{font-size:24px;color:var(--dh-blue-02)}
+
+/* ── FEATURES ── */
+.features{padding:96px 0;background:var(--dh-white)}
+.feat-tabs{display:flex;justify-content:center;gap:8px;margin-bottom:48px;flex-wrap:wrap}
+.feat-tab{padding:9px 20px;background:var(--dh-off-white);border:1.5px solid var(--dh-n05);border-radius:20px;font-family:var(--font-b);font-size:13px;font-weight:500;color:var(--dh-n02);cursor:pointer;transition:all var(--tr)}
+.feat-tab:hover{border-color:var(--dh-blue-04);color:var(--dh-blue-03)}
+.feat-tab.active{background:var(--dh-blue-03);border-color:var(--dh-blue-03);color:var(--dh-white)}
+.feat-panel{display:none;grid-template-columns:1fr 1fr;gap:64px;align-items:start;animation:fi .35s ease}
+.feat-panel.active{display:grid}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+@media(max-width:768px){.feat-panel.active{grid-template-columns:1fr;gap:32px}}
+.feat-text h3{font-family:var(--font-h);font-size:clamp(1.4rem,2.5vw,1.9rem);color:var(--dh-black);margin-bottom:14px;line-height:1.2}
+.feat-text p{font-size:15px;color:var(--dh-n02);line-height:1.65;margin-bottom:22px}
+.feat-list{list-style:none;display:flex;flex-direction:column;gap:10px}
+.feat-list li{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--dh-n02)}
+.feat-list li svg{flex-shrink:0;margin-top:3px;color:var(--dh-blue-03)}
+/* Stylized UI panel visual */
+.feat-visual{background:var(--dh-off-white);border:1.5px solid var(--dh-n05);border-radius:var(--r);padding:20px;min-height:240px;display:flex;flex-direction:column;gap:10px}
+.fv-row{display:flex;align-items:center;gap:10px;background:var(--dh-white);border:1px solid var(--dh-n05);border-radius:6px;padding:10px 14px}
+.fv-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.fv-dot.ok{background:var(--dh-green-04)}
+.fv-dot.warn{background:var(--dh-blue-04)}
+.fv-bar-wrap{flex:1;height:6px;background:var(--dh-n05);border-radius:3px;overflow:hidden}
+.fv-bar{height:100%;border-radius:3px;background:var(--dh-blue-03)}
+.fv-label{font-size:11px;color:var(--dh-n03);white-space:nowrap}
+.fv-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;background:var(--dh-blue-05);color:var(--dh-blue-02)}
+.fv-badge.ok{background:#e6faf5;color:var(--dh-green-03)}
+
+/* ── HOW IT WORKS ── */
+.how{padding:96px 0;background:var(--dh-blue-01)}
+.how .sec-header h2{color:var(--dh-white)}
+.how .sec-header p{color:var(--dh-blue-05)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;position:relative}
+@media(max-width:768px){.steps{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.steps{grid-template-columns:1fr}}
+/* connector line */
+.steps::before{content:'';position:absolute;top:28px;left:10%;right:10%;height:1.5px;background:linear-gradient(90deg,transparent,var(--dh-blue-03),transparent);opacity:.5}
+@media(max-width:768px){.steps::before{display:none}}
+.step{text-align:center;position:relative}
+.step-num{width:56px;height:56px;border-radius:50%;border:1.5px solid var(--dh-blue-03);background:var(--dh-blue-02);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-family:var(--font-h);font-size:20px;color:var(--dh-white);position:relative;z-index:1}
+.step h4{font-family:var(--font-h);font-size:16px;color:var(--dh-white);margin-bottom:8px}
+.step p{font-size:13px;color:var(--dh-blue-05);line-height:1.6}
+
+/* ── USE CASES ── */
+.roles{padding:96px 0;background:var(--dh-off-white)}
+.roles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:768px){.roles-grid{grid-template-columns:1fr}}
+.role-tile{background:var(--dh-white);border:1.5px solid var(--dh-n05);border-radius:var(--r);padding:32px;transition:all var(--tr);position:relative;overflow:hidden}
+.role-tile::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--dh-blue-03);transform:scaleX(0);transition:transform var(--tr)}
+.role-tile:hover{border-color:var(--dh-blue-04);box-shadow:0 6px 24px rgba(0,33,49,.07)}
+.role-tile:hover::after{transform:scaleX(1)}
+.role-icon{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--dh-blue-04);display:flex;align-items:center;justify-content:center;margin-bottom:18px;color:var(--dh-blue-03)}
+.role-tag{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dh-blue-03);margin-bottom:8px;display:block}
+.role-tile h4{font-family:var(--font-h);font-size:18px;color:var(--dh-black);margin-bottom:10px}
+.role-tile p{font-size:14px;color:var(--dh-n03);line-height:1.65;margin-bottom:20px}
+.role-stat{display:flex;align-items:center;gap:10px;background:var(--dh-off-white);border-radius:6px;padding:12px 14px}
+.role-stat-val{font-family:var(--font-h);font-size:22px;color:var(--dh-blue-03)}
+.role-stat-lbl{font-size:12px;color:var(--dh-n03)}
+
+/* ── STATS ── */
+.stats{padding:72px 0;background:var(--dh-white);border-top:1px solid var(--dh-n05);border-bottom:1px solid var(--dh-n05)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+@media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+.stat{text-align:center;padding:20px}
+.stat-val{font-family:var(--font-h);font-size:clamp(2rem,4vw,2.8rem);color:var(--dh-blue-03);line-height:1;margin-bottom:6px}
+.stat-lbl{font-size:13px;color:var(--dh-n03);font-weight:500}
+
+/* ── TESTIMONIALS ── */
+.testimonials{padding:96px 0;background:var(--dh-off-white)}
+/* main testimonial — frame-and-tile layout */
+.test-main{background:var(--dh-white);border:1.5px solid var(--dh-n05);border-radius:var(--r);padding:52px;margin-bottom:24px;display:grid;grid-template-columns:1fr 2fr;gap:48px;align-items:start}
+@media(max-width:768px){.test-main{grid-template-columns:1fr;padding:32px;gap:28px}}
+.test-co{font-family:var(--font-h);font-size:28px;color:var(--dh-blue-01);margin-bottom:12px}
+.test-co-lbl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dh-n03);margin-bottom:24px}
+.test-result{background:var(--dh-off-white);border-radius:6px;padding:16px}
+.test-result-lbl{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dh-blue-03);margin-bottom:6px}
+.test-result-val{font-family:var(--font-h);font-size:15px;color:var(--dh-black)}
+blockquote{font-family:var(--font-h);font-size:clamp(1.1rem,2vw,1.45rem);color:var(--dh-black);line-height:1.55;margin-bottom:28px;font-style:italic}
+.test-author{display:flex;align-items:center;gap:12px}
+.test-avatar{width:44px;height:44px;border-radius:50%;background:var(--dh-blue-02);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--dh-white);flex-shrink:0}
+.test-name{font-size:14px;font-weight:600;color:var(--dh-black)}
+.test-role{font-size:12px;color:var(--dh-n03)}
+.test-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--dh-blue-03);margin-top:18px;transition:gap var(--tr)}
+.test-link:hover{gap:10px}
+/* mini tiles */
+.test-mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:768px){.test-mini-grid{grid-template-columns:1fr}}
+.test-mini{background:var(--dh-white);border:1.5px solid var(--dh-n05);border-radius:var(--r);padding:22px}
+.test-mini-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.test-mini-av{width:36px;height:36px;border-radius:50%;background:var(--dh-blue-01);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--dh-white);flex-shrink:0}
+.test-mini-co{font-size:13px;font-weight:600;color:var(--dh-black)}
+.test-mini-role{font-size:11px;color:var(--dh-n03)}
+.test-mini q{font-size:13px;color:var(--dh-n02);line-height:1.6;font-style:italic}
+
+/* ── FAQ ── */
+.faq{padding:96px 0;background:var(--dh-white)}
+.faq-list{max-width:740px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.faq-item{background:var(--dh-off-white);border:1.5px solid var(--dh-n05);border-radius:var(--r);overflow:hidden;transition:border-color var(--tr)}
+.faq-item.open{border-color:var(--dh-blue-04)}
+.faq-q{width:100%;padding:20px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;font-family:var(--font-b);font-size:15px;font-weight:500;color:var(--dh-black);background:none;border:none;cursor:pointer;text-align:left}
+.faq-icon{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--dh-n04);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--tr)}
+.faq-item.open .faq-icon{background:var(--dh-blue-03);border-color:var(--dh-blue-03);transform:rotate(180deg)}
+.faq-icon svg{width:12px;height:12px;color:var(--dh-n03);transition:color var(--tr)}
+.faq-item.open .faq-icon svg{color:var(--dh-white)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease}
+.faq-item.open .faq-a{max-height:400px}
+.faq-a-inner{padding:0 22px 22px;font-size:14px;color:var(--dh-n02);line-height:1.7}
+
+/* ── FINAL CTA ── */
+.cta{padding:100px 0;background:var(--dh-blue-01)}
+.cta-inner{text-align:center;max-width:680px;margin:0 auto}
+.cta h2{font-family:var(--font-h);font-size:clamp(1.9rem,3.5vw,2.8rem);color:var(--dh-white);margin-bottom:16px;line-height:1.2}
+.cta p{font-size:16px;color:var(--dh-blue-05);margin-bottom:36px;line-height:1.65}
+.cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:40px}
+.btn-cta-outline{background:transparent;color:var(--dh-white);border:1.5px solid rgba(255,255,255,.25);padding:13px 26px;border-radius:var(--r);font-family:var(--font-b);font-size:14px;font-weight:500;cursor:pointer;transition:all var(--tr)}
+.btn-cta-outline:hover{background:rgba(255,255,255,.08)}
+.cta-trust{display:flex;justify-content:center;gap:28px;flex-wrap:wrap}
+.cta-trust-item{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--dh-blue-05)}
+.cta-trust-item svg{color:var(--dh-blue-04)}
+/* demo callout tile */
+.demo-tile{margin-top:40px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:var(--r);padding:18px 24px;display:inline-flex;align-items:center;gap:14px}
+.demo-tile svg{color:var(--dh-blue-04);flex-shrink:0}
+.demo-tile p{font-size:13px;color:var(--dh-blue-05);text-align:left}
+.demo-tile strong{color:var(--dh-white)}
+
+/* ── FOOTER ── */
+.footer{padding:56px 0 28px;background:var(--dh-off-black)}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:40px}
+@media(max-width:768px){.footer-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.footer-grid{grid-template-columns:1fr}}
+.footer-logo img{height:22px;width:auto;margin-bottom:12px;filter:brightness(0) invert(1)}
+.footer-brand p{font-size:13px;color:var(--dh-n03);max-width:240px;line-height:1.6}
+.footer-col h5{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dh-n04);margin-bottom:16px}
+.footer-links{list-style:none;display:flex;flex-direction:column;gap:10px}
+.footer-links a{font-size:13px;color:var(--dh-n03);transition:color var(--tr)}
+.footer-links a:hover{color:var(--dh-white)}
+.footer-bottom{padding-top:24px;border-top:1px solid #2a2a2a;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.footer-copy{font-size:12px;color:var(--dh-n03)}
+.footer-legal{display:flex;gap:20px}
+.footer-legal a{font-size:12px;color:var(--dh-n03);transition:color var(--tr)}
+.footer-legal a:hover{color:var(--dh-white)}
+
+/* ── MOBILE CTA ── */
+.mobile-cta{display:none;position:fixed;bottom:0;left:0;right:0;padding:14px 20px;background:rgba(242,241,238,.97);backdrop-filter:blur(10px);border-top:1px solid var(--dh-n05);z-index:999}
+@media(max-width:768px){.mobile-cta{display:block}}
+.mobile-cta .btn{width:100%;justify-content:center}
+</style>
+</head>
+<body>
+
+<div class="scroll-prog" id="sp"></div>
+
+<!-- HEADER -->
+<header class="hdr" id="hdr">
+  <div class="wrap">
+    <div class="hdr-inner">
+      <a href="https://datahub.com" aria-label="DataHub home">
+        <div class="logo">
+          <img src="https://cdn.jsdelivr.net/gh/wacarrrrrra/lp-agent-service@main/dataHub_logo_color_black.png" alt="DataHub" height="28">
+        </div>
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a href="https://datahub.com/products/">Product</a>
+        <a href="https://datahub.com/products/data-observability/">Observability</a>
+        <a href="https://datahub.com/resources/">Resources</a>
+        <a href="https://docs.datahub.com">Docs</a>
+        <a href="https://datahub.com/company/">Company</a>
+      </nav>
+      <div class="hdr-cta">
+        <a href="https://datahub.com/demos/bi-weekly-demo/" class="btn btn-ghost btn-sm">Join a Live Demo</a>
+        <a href="https://datahub.com/get-datahub-cloud/" class="btn btn-primary btn-sm">Get DataHub Cloud</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-inner">
+      <div class="rev">
+        <span class="sec-label">Data Observability</span>
+        <h1>Stop firefighting.<br><em>Start preventing.</em></h1>
+        <p class="hero-sub">Your data engineers spend 40% of their time debugging issues that have already broken dashboards. DataHub Cloud delivers automated monitoring, anomaly detection, and root cause analysis — so you catch problems before anyone notices.</p>
+        <ul class="hero-bullets">
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            One-click monitoring across hundreds of tables and columns
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Column-level lineage connects incidents to root cause in minutes
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Trusted by 3,000+ data teams at Netflix, Visa, Slack, and more
+          </li>
+        </ul>
+        <div class="btn-row">
+          <a href="https://datahub.com/get-datahub-cloud/" class="btn btn-primary">Get DataHub Cloud →</a>
+          <a href="https://datahub.com/product-tour/" class="btn btn-ghost">Watch product tour</a>
+        </div>
+      </div>
+
+      <!-- Stylized UI panel -->
+      <div class="hero-visual rev d2" role="img" aria-label="DataHub data quality monitoring dashboard">
+        <div class="alert-chip">
+          <span class="alert-dot"></span>
+          Anomaly detected &amp; resolved — 2 min ago
+        </div>
+        <div class="hero-visual-bar">
+          <div class="hero-visual-dot"></div>
+          <div class="hero-visual-dot"></div>
+          <div class="hero-visual-dot"></div>
+        </div>
+        <div class="hero-metrics">
+          <div class="h-metric">
+            <div class="h-metric-label">Quality Score</div>
+            <div class="h-metric-val pos">98.7%</div>
+            <span class="h-metric-tag">↑ 2.3%</span>
+          </div>
+          <div class="h-metric">
+            <div class="h-metric-label">Active Monitors</div>
+            <div class="h-metric-val">1,247</div>
+          </div>
+          <div class="h-metric">
+            <div class="h-metric-label">Resolved This Week</div>
+            <div class="h-metric-val">142</div>
+          </div>
+        </div>
+        <div class="hero-chart">
+          <div class="hero-chart-label">Incident volume — last 7 days</div>
+          <div class="hero-bars">
+            <div class="hero-bar" style="height:70%"></div>
+            <div class="hero-bar" style="height:85%"></div>
+            <div class="hero-bar" style="height:55%"></div>
+            <div class="hero-bar" style="height:90%"></div>
+            <div class="hero-bar" style="height:40%"></div>
+            <div class="hero-bar hi" style="height:25%"></div>
+            <div class="hero-bar hi" style="height:15%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST STRIP -->
+<section class="trust" aria-label="Customers">
+  <div class="trust-label">Trusted by industry leaders</div>
+  <div class="marquee">
+    <div class="marquee-track">
+      <span class="marquee-item">Netflix</span><span class="marquee-item">Visa</span><span class="marquee-item">Slack</span><span class="marquee-item">Notion</span><span class="marquee-item">Chime</span><span class="marquee-item">Pinterest</span><span class="marquee-item">Airtel</span><span class="marquee-item">MYOB</span><span class="marquee-item">Foursquare</span><span class="marquee-item">Etsy</span><span class="marquee-item">DoorDash</span><span class="marquee-item">Twilio</span>
+      <span class="marquee-item">Netflix</span><span class="marquee-item">Visa</span><span class="marquee-item">Slack</span><span class="marquee-item">Notion</span><span class="marquee-item">Chime</span><span class="marquee-item">Pinterest</span><span class="marquee-item">Airtel</span><span class="marquee-item">MYOB</span><span class="marquee-item">Foursquare</span><span class="marquee-item">Etsy</span><span class="marquee-item">DoorDash</span><span class="marquee-item">Twilio</span>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="problem">
+  <div class="wrap">
+    <div class="sec-header rev">
+      <span class="sec-label">The problem</span>
+      <h2>Data issues cost more than you think</h2>
+      <p>Every incident erodes trust, wastes engineering time, and reaches the wrong people before it reaches you.</p>
+    </div>
+    <div class="problem-grid">
+      <div class="prob-tile rev d1">
+        <div class="prob-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h4>40% of engineering time lost</h4>
+        <p>Data engineers spend nearly half their week debugging and firefighting issues that rule-based checks missed entirely.</p>
+      </div>
+      <div class="prob-tile rev d2">
+        <div class="prob-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h4>Executives find problems first</h4>
+        <p>Wrong numbers surface in board meetings. Every incident that reaches a stakeholder before your team does erodes trust in data permanently.</p>
+      </div>
+      <div class="prob-tile rev d3">
+        <div class="prob-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <h4>$15M+ in avoidable annual loss</h4>
+        <p>The average enterprise loses over $15 million to poor data quality each year. Most of these incidents are detectable days before they escalate.</p>
+      </div>
+    </div>
+    <div class="cost-block rev">
+      <div class="cost-item">
+        <div class="cost-val">$2.4M</div>
+        <div class="cost-lbl">Typical annual cost of data incidents</div>
+      </div>
+      <div class="cost-sep">→</div>
+      <div class="cost-item">
+        <div class="cost-val accent">83%</div>
+        <div class="cost-lbl">Reduction reported with DataHub</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="wrap">
+    <div class="sec-header rev">
+      <span class="sec-label">Capabilities</span>
+      <h2>From firefighting to prevention</h2>
+      <p>Everything you need to monitor, detect, and resolve data quality issues before they reach a dashboard.</p>
+    </div>
+    <div class="feat-tabs rev">
+      <button class="feat-tab active" data-tab="monitor">Proactive monitoring</button>
+      <button class="feat-tab" data-tab="anomaly">Anomaly detection</button>
+      <button class="feat-tab" data-tab="lineage">Impact analysis</button>
+      <button class="feat-tab" data-tab="incidents">Incident management</button>
+    </div>
+
+    <div class="feat-panel active" data-panel="monitor">
+      <div class="feat-text">
+        <h3>Proactive data quality monitoring</h3>
+        <p>Define schema, freshness, volume, and custom quality checks that run automatically across your entire data stack. Smart alerts fire to the right owners when data deviates from expected patterns.</p>
+        <ul class="feat-list">
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>One-click bulk monitor creation across thousands of tables</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Complete lineage with suggested resolution actions</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Data Contracts enforce SLAs automatically</li>
+        </ul>
+      </div>
+      <div class="feat-visual" aria-label="Data quality monitoring dashboard">
+        <div class="fv-row"><span class="fv-dot ok"></span><span class="fv-label">orders.daily_revenue</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:98%"></div></div><span class="fv-badge ok">Healthy</span></div>
+        <div class="fv-row"><span class="fv-dot ok"></span><span class="fv-label">customers.profile_complete</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:94%"></div></div><span class="fv-badge ok">Healthy</span></div>
+        <div class="fv-row"><span class="fv-dot warn"></span><span class="fv-label">events.session_duration</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:61%"></div></div><span class="fv-badge">Warning</span></div>
+        <div class="fv-row"><span class="fv-dot ok"></span><span class="fv-label">payments.transaction_amount</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:99%"></div></div><span class="fv-badge ok">Healthy</span></div>
+        <div class="fv-row"><span class="fv-dot ok"></span><span class="fv-label">inventory.stock_levels</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:88%"></div></div><span class="fv-badge ok">Healthy</span></div>
+      </div>
+    </div>
+
+    <div class="feat-panel" data-panel="anomaly">
+      <div class="feat-text">
+        <h3>Anomaly detection that learns your data</h3>
+        <p>ML-powered detection spots unexpected patterns in volume, distribution, and quality metrics that rule-based checks miss. Models adapt to your data patterns over time — without manual tuning.</p>
+        <ul class="feat-list">
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Smart Assertions learn and adapt automatically</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Catches issues rule-based systems miss</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Subscribe to datasets and assertion types that matter to your team</li>
+        </ul>
+      </div>
+      <div class="feat-visual" aria-label="Anomaly detection interface">
+        <div class="fv-row"><span class="fv-dot warn"></span><span class="fv-label">Volume anomaly — orders table</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:35%"></div></div><span class="fv-badge">Investigating</span></div>
+        <div class="fv-row"><span class="fv-dot ok"></span><span class="fv-label">Distribution shift — revenue</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:82%"></div></div><span class="fv-badge ok">Resolved</span></div>
+        <div class="fv-row"><span class="fv-dot ok"></span><span class="fv-label">Schema change — users.status</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:100%"></div></div><span class="fv-badge ok">Auto-resolved</span></div>
+      </div>
+    </div>
+
+    <div class="feat-panel" data-panel="lineage">
+      <div class="feat-text">
+        <h3>Column-level impact analysis</h3>
+        <p>Know exactly what breaks when upstream data changes. Column-level lineage traces data flow from source to dashboard — blast radius analysis shows affected models, reports, and teams before changes merge.</p>
+        <ul class="feat-list">
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Trace incidents from dashboards back to source tables</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>See affected teams before changes merge</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Coordinate proactively — not reactively</li>
+        </ul>
+      </div>
+      <div class="feat-visual" aria-label="Column-level lineage view">
+        <div class="fv-row"><span class="fv-dot ok"></span><span class="fv-label">raw.orders → staging.orders</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:100%"></div></div><span class="fv-badge ok">Tracked</span></div>
+        <div class="fv-row"><span class="fv-dot ok"></span><span class="fv-label">staging.orders → marts.revenue</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:100%"></div></div><span class="fv-badge ok">Tracked</span></div>
+        <div class="fv-row"><span class="fv-dot warn"></span><span class="fv-label">marts.revenue → dashboard: GMV</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:45%"></div></div><span class="fv-badge">Impact: 3 reports</span></div>
+      </div>
+    </div>
+
+    <div class="feat-panel" data-panel="incidents">
+      <div class="feat-text">
+        <h3>End-to-end incident management</h3>
+        <p>Built-in workflows manage incidents from detection to resolution. Historical patterns, schema changes, and quality trends surface root causes in minutes — not hours of Slack archaeology.</p>
+        <ul class="feat-list">
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Four severity levels for smart prioritization</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Auto-route to dataset owners and domain experts</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Slack and email integration for real-time alerts</li>
+        </ul>
+      </div>
+      <div class="feat-visual" aria-label="Incident management workflow">
+        <div class="fv-row"><span class="fv-dot warn"></span><span class="fv-label">P1 — Revenue drop detected</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:20%"></div></div><span class="fv-badge">Open</span></div>
+        <div class="fv-row"><span class="fv-dot ok"></span><span class="fv-label">P2 — Null rate spike in users</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:100%"></div></div><span class="fv-badge ok">Resolved 4h</span></div>
+        <div class="fv-row"><span class="fv-dot ok"></span><span class="fv-label">P3 — Schema drift in events</span><div class="fv-bar-wrap"><div class="fv-bar" style="width:100%"></div></div><span class="fv-badge ok">Auto-resolved</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how">
+  <div class="wrap">
+    <div class="sec-header rev">
+      <span class="sec-label" style="color:var(--dh-blue-04)">How it works</span>
+      <h2>Connected to your stack in hours, not months</h2>
+      <p>Four steps from connection to proactive data quality operations.</p>
+    </div>
+    <div class="steps">
+      <div class="step rev d1">
+        <div class="step-num">1</div>
+        <h4>Connect your stack</h4>
+        <p>100+ pre-built integrations with Snowflake, Databricks, BigQuery, dbt, Airflow, and more. No custom code required.</p>
+      </div>
+      <div class="step rev d2">
+        <div class="step-num">2</div>
+        <h4>Auto-discover assets</h4>
+        <p>DataHub catalogs your tables, columns, and lineage automatically. It suggests monitors based on your actual data patterns.</p>
+      </div>
+      <div class="step rev d3">
+        <div class="step-num">3</div>
+        <h4>Enable monitoring</h4>
+        <p>Bulk-create freshness, volume, and schema monitors in one click. Set thresholds manually or let the system learn them.</p>
+      </div>
+      <div class="step rev d4">
+        <div class="step-num">4</div>
+        <h4>Resolve proactively</h4>
+        <p>Get alerted before issues reach users. Root cause analysis and lineage help your team fix problems in minutes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- USE CASES -->
+<section class="roles" id="use-cases">
+  <div class="wrap">
+    <div class="sec-header rev">
+      <span class="sec-label">Who it's for</span>
+      <h2>Built for every data role</h2>
+      <p>Purpose-built workflows for the people who depend on data being right.</p>
+    </div>
+    <div class="roles-grid">
+      <div class="role-tile rev d1">
+        <div class="role-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </div>
+        <span class="role-tag">Data analysts</span>
+        <h4>Trust your dashboards instantly</h4>
+        <p>Freshness monitors and certification badges show which datasets are production-ready. No more Slack pings to verify data before a report goes out.</p>
+        <div class="role-stat">
+          <span class="role-stat-val">80%</span>
+          <span class="role-stat-lbl">Less time spent verifying data</span>
+        </div>
+      </div>
+      <div class="role-tile rev d2">
+        <div class="role-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <span class="role-tag">Data engineers</span>
+        <h4>Zero breaking changes per week</h4>
+        <p>See downstream impact across the entire pipeline before changes merge. Alerts notify affected teams early — you coordinate proactively instead of apologizing reactively.</p>
+        <div class="role-stat">
+          <span class="role-stat-val">0</span>
+          <span class="role-stat-lbl">Breaking changes per week at MYOB</span>
+        </div>
+      </div>
+      <div class="role-tile rev d3">
+        <div class="role-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M5 8v2a4 4 0 0 0 4 4h2M19 8v2a4 4 0 0 1-4 4h-2"/></svg>
+        </div>
+        <span class="role-tag">Data scientists</span>
+        <h4>Verify provenance in seconds</h4>
+        <p>Column-level lineage connects model and feature pipelines back to their source data. Confirm what you're training on without hunting through docs or pinging engineers.</p>
+        <div class="role-stat">
+          <span class="role-stat-val">95%</span>
+          <span class="role-stat-lbl">Faster data validation</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats">
+  <div class="wrap">
+    <div class="stats-grid rev">
+      <div class="stat">
+        <div class="stat-val">3,000+</div>
+        <div class="stat-lbl">Data teams</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">100+</div>
+        <div class="stat-lbl">Native integrations</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">83%</div>
+        <div class="stat-lbl">Fewer data incidents</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">Open<br>source</div>
+        <div class="stat-lbl">Core platform on GitHub</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials" id="testimonials">
+  <div class="wrap">
+    <div class="sec-header rev">
+      <span class="sec-label">Customer stories</span>
+      <h2>Trusted by modern data teams</h2>
+    </div>
+
+    <div class="test-main rev">
+      <div>
+        <div class="test-co">MYOB</div>
+        <div class="test-co-lbl">Engineering Manager</div>
+        <div class="test-result">
+          <div class="test-result-lbl">Key result</div>
+          <div class="test-result-val">Breaking changes: multiple per week → zero</div>
+        </div>
+      </div>
+      <div>
+        <blockquote>"Before bringing DataHub on board, our data teams would see multiple breaking changes per week. Since integrating DataHub into our workflow, DataHub has helped us significantly reduce the number of breaking changes, to the extent that they are no longer a burden on all teams."</blockquote>
+        <div class="test-author">
+          <div class="test-avatar">AN</div>
+          <div>
+            <div class="test-name">Asad Naveed</div>
+            <div class="test-role">Engineering Manager, MYOB</div>
+          </div>
+        </div>
+        <a class="test-link" href="https://datahub.com/customer-stories/myob/">Read the full case study →</a>
+      </div>
+    </div>
+
+    <div class="test-mini-grid rev">
+      <div class="test-mini">
+        <div class="test-mini-hdr">
+          <div class="test-mini-av">DT</div>
+          <div>
+            <div class="test-mini-co">Deutsche Telekom</div>
+            <div class="test-mini-role">Data Platform Lead</div>
+          </div>
+        </div>
+        <q>DataHub simplified discovery and resolved pipeline issues faster than any tool we've used.</q>
+      </div>
+      <div class="test-mini">
+        <div class="test-mini-hdr">
+          <div class="test-mini-av">NT</div>
+          <div>
+            <div class="test-mini-co">Notion</div>
+            <div class="test-mini-role">Data Engineering Manager</div>
+          </div>
+        </div>
+        <q>We scaled metadata management while improving impact analysis and GDPR compliance.</q>
+      </div>
+      <div class="test-mini">
+        <div class="test-mini-hdr">
+          <div class="test-mini-av">CH</div>
+          <div>
+            <div class="test-mini-co">Chime</div>
+            <div class="test-mini-role">Staff Data Engineer</div>
+          </div>
+        </div>
+        <q>DataHub Cloud unified producers and consumers with shared ownership and proactive quality monitoring.</q>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="wrap">
+    <div class="sec-header rev">
+      <span class="sec-label">FAQ</span>
+      <h2>Frequently asked questions about data observability</h2>
+    </div>
+    <div class="faq-list rev">
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">How quickly can we get started?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-a"><div class="faq-a-inner">Most teams connect their first data source and have monitors running within a few hours. DataHub's 100+ pre-built integrations cover the most common warehouse and pipeline tools. The platform auto-discovers your assets and suggests monitors based on observed data patterns — no manual configuration needed to get meaningful coverage quickly.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">How does DataHub prevent alert fatigue?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-a"><div class="faq-a-inner">Smart Assertions use ML to learn your data patterns and adapt thresholds automatically. You can subscribe to specific datasets and assertion types relevant to your ownership area. The Data Health Dashboard provides filtered views by priority and team — so engineers focus on what actually requires their attention, not a firehose of noise.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">What integrations are supported?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-a"><div class="faq-a-inner">DataHub integrates natively with 100+ tools including Snowflake, Databricks, BigQuery, Redshift, dbt, Airflow, Spark, Kafka, Looker, and Tableau. Native connectors capture lineage, execution status, and metadata automatically — without additional instrumentation on your side.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">How is DataHub different from standalone observability tools?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-a"><div class="faq-a-inner">DataHub unifies discovery, observability, and governance in a single platform. Quality signals appear in the discovery layer, so analysts can assess reliability when selecting datasets — not after they've built on top of them. Lineage connects incidents to governance policies. You get one source of truth instead of three separate tools that don't share context.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">What does implementation actually involve for our team?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-a"><div class="faq-a-inner">For most environments, implementation means configuring your first connector, reviewing the auto-discovered asset inventory, and enabling monitors. The complexity depends on your stack and how broadly you want to roll out — most teams start narrow (one warehouse, one pipeline tool) and expand from there. DataHub assigns a technical contact to support implementation for enterprise deployments.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="cta">
+  <div class="wrap">
+    <div class="cta-inner">
+      <span class="sec-label" style="color:var(--dh-blue-04)">Ready to start preventing</span>
+      <h2>Your pipelines pass.<br>Your dashboards shouldn't have to guess.</h2>
+      <p>Join 3,000+ data teams who've moved from firefighting to proactive data quality operations with DataHub Cloud.</p>
+      <div class="cta-btns">
+        <a href="https://datahub.com/get-datahub-cloud/" class="btn btn-primary" style="font-size:15px;padding:15px 30px">Get DataHub Cloud →</a>
+        <a href="https://datahub.com/demos/bi-weekly-demo/" class="btn-cta-outline">Join a live demo</a>
+      </div>
+      <div class="cta-trust">
+        <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Full platform access from day one</div>
+        <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Connects to your existing stack</div>
+        <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Technical onboarding included</div>
+      </div>
+      <div class="demo-tile">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <p><strong>Live group demo every Thursday</strong> — See DataHub in action with open Q&A from the engineering team</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo">
+        <img src="https://cdn.jsdelivr.net/gh/wacarrrrrra/lp-agent-service@main/dataHub_logo_color_white.png" alt="DataHub">
+        </div>
+        <p>DataHub enables AI and data to work together — bringing order to data chaos at enterprise scale.</p>
+      </div>
+      <div class="footer-col">
+        <h5>Product</h5>
+        <ul class="footer-links">
+          <li><a href="https://datahub.com/products/">Overview</a></li>
+          <li><a href="https://datahub.com/products/data-discovery/">Discovery</a></li>
+          <li><a href="https://datahub.com/products/data-observability/">Observability</a></li>
+          <li><a href="https://datahub.com/products/data-governance/">Governance</a></li>
+          <li><a href="https://datahub.com/products/data-lineage/">Lineage</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Resources</h5>
+        <ul class="footer-links">
+          <li><a href="https://datahub.com/resources/?2004611554=dh-stories">Customer Stories</a></li>
+          <li><a href="https://datahub.com/blog/">Blog</a></li>
+          <li><a href="https://docs.datahub.com">Documentation</a></li>
+          <li><a href="https://datahub.com/resources/?2004611554=dh-webinars">Webinars</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Company</h5>
+        <ul class="footer-links">
+          <li><a href="https://datahub.com/company/">About</a></li>
+          <li><a href="https://datahub.com/datahub-careers/">Careers</a></li>
+          <li><a href="https://datahub.com/news/">News</a></li>
+          <li><a href="https://datahub.com/slack/">Community</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="footer-copy">© 2026 Acryl Data, Inc.</p>
+      <div class="footer-legal">
+        <a href="https://datahub.com/privacy-policy/">Privacy</a>
+        <a href="https://datahub.com/terms-of-service/">Terms</a>
+        <a href="https://datahub.com/security/">Security</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<div class="mobile-cta">
+  <a href="https://datahub.com/get-datahub-cloud/" class="btn btn-primary">Get DataHub Cloud →</a>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  // Scroll progress
+  const sp=document.getElementById('sp');
+  window.addEventListener('scroll',()=>{
+    const p=(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight))*100;
+    sp.style.width=p+'%';
+  },{passive:true});
+
+  // Header
+  const hdr=document.getElementById('hdr');
+  window.addEventListener('scroll',()=>hdr.classList.toggle('scrolled',window.scrollY>40),{passive:true});
+
+  // Reveal
+  const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');obs.unobserve(e.target)}}),{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.rev').forEach(el=>obs.observe(el));
+
+  // Feature tabs
+  document.querySelectorAll('.feat-tab').forEach(t=>{
+    t.addEventListener('click',()=>{
+      document.querySelectorAll('.feat-tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.feat-panel').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      document.querySelector(`[data-panel="${t.dataset.tab}"]`).classList.add('active');
+    });
+  });
+
+  // FAQ
+  document.querySelectorAll('.faq-item').forEach(item=>{
+    item.querySelector('.faq-q').addEventListener('click',()=>{
+      const open=item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i=>{i.classList.remove('open');i.querySelector('.faq-q').setAttribute('aria-expanded','false')});
+      if(!open){item.classList.add('open');item.querySelector('.faq-q').setAttribute('aria-expanded','true')}
+    });
+  });
+});
+</script>
+</body>
+</html>
