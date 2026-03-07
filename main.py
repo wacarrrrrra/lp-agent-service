@@ -436,6 +436,19 @@ Return ONLY the HTML.
 async def health():
     return {"ok": True}
 
+@app.get("/anthropic/models")
+async def anthropic_models():
+    if not ANTHROPIC_API_KEY:
+        return {"ok": False, "error": "Missing ANTHROPIC_API_KEY"}
+
+    headers = {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+    }
+    async with httpx.AsyncClient(timeout=20) as client:
+        r = await client.get("https://api.anthropic.com/v1/models", headers=headers)
+        return {"status_code": r.status_code, "json": r.json()}
+
 @app.post("/slack/commands")
 async def slack_commands(request: Request):
     raw_body = await request.body()
