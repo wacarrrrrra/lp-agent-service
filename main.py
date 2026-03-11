@@ -89,6 +89,11 @@ BRAND_SKILL_MD = load_text(".claude/skills/front-end-design/SKILL.md", 22000)
 SAMPLE_LP_HTML = load_text("templates/datahub-governance-lp1.html", 28000)
 BRAND_VOICE_MD = load_text("docs/brand-voice.md", 8000)
 
+# Extract the full <style> block from the template once at startup
+# so the HTML builder never needs to regenerate CSS
+_style_match = re.search(r'<style[\s\S]*?</style>', SAMPLE_LP_HTML, re.IGNORECASE)
+TEMPLATE_CSS = _style_match.group(0) if _style_match else ""
+
 # ----------------------------
 # Slack signature verification
 # ----------------------------
@@ -484,6 +489,8 @@ Available SVG images — use <picture> with SVG primary source and PNG fallback:
 
 Non-negotiable design rules:
 - Single complete HTML document: <!doctype html> … </html>
+- In the <head>, write this exact placeholder comment where the <style> block goes — do NOT write any CSS yourself:
+  <!-- INJECT_CSS -->
 - Title tag and meta description verbatim from SEO_JSON
 - H1 must include primary keyword verbatim: "{fields["search_term"]}"
 - Header: background #F2F1EE, border-bottom 1px solid #DDDBD6
@@ -543,6 +550,10 @@ async def generate_full_lp(
     html_match = re.search(r'<!doctype html[\s\S]*</html>', page_html, re.IGNORECASE | re.DOTALL)
     if html_match:
         page_html = html_match.group(0)
+
+    # Inject the full template CSS in place of the placeholder
+    if TEMPLATE_CSS:
+        page_html = page_html.replace("<!-- INJECT_CSS -->", TEMPLATE_CSS)
 
     seo = writer_json.get("seo_json", {})
     raw_slug = (seo.get("slug") or slugify(fields["search_term"])).strip("/")
