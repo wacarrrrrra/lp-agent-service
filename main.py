@@ -764,6 +764,118 @@ async def claude_text(prompt: str, max_tokens: int = 3500) -> str:
     return await asyncio.to_thread(claude_text_sync, prompt, max_tokens)
 
 # ----------------------------
+# Thread link parsing (for manual build trigger)
+# ----------------------------
+def parse_slack_thread_link(link: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Extract (channel_id, thread_ts) from a Slack thread link.
+    Link format: https://workspace.slack.com/archives/CHANNEL_ID/p1234567890123456
+    Returns (None, None) if parsing fails.
+    """
+    match = re.search(r'/archives/([A-Z0-9]+)/p(\d+)', link)
+    if not match:
+        return None, None
+    channel_id = match.group(1)
+    raw_ts = match.group(2)          # e.g. "1741234567890123" (no dot)
+    thread_ts = raw_ts[:-6] + "." + raw_ts[-6:]  # → "1741234567.890123"
+    return channel_id, thread_ts
+
+def build_build_modal_view(channel_id: str = "") -> Dict[str, Any]:
+    """Modal for /sem-lp-build — manual pipeline trigger."""
+    return {
+        "type": "modal",
+        "callback_id": "lp_build_modal",
+        "private_metadata": channel_id or "",
+        "title": {"type": "plain_text", "text": "Manual LP Build"},
+        "submit": {"type": "plain_text", "text": "Build"},
+        "close": {"type": "plain_text", "text": "Cancel"},
+        "blocks": [
+            {
+                "type": "input",
+                "block_id": "thread_link_block",
+                "label": {"type": "plain_text", "text": "Bart thread link"},
+                "hint": {"type": "plain_text", "text": "Right-click the Bart thread in #sem-lp-requests → Copy link"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "thread_link",
+                    "placeholder": {"type": "plain_text", "text": "https://yourworkspace.slack.com/archives/G.../p..."},
+                },
+            },
+            {
+                "type": "input",
+                "block_id": "search_term_block",
+                "label": {"type": "plain_text", "text": "Search term (exact)"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "search_term",
+                    "placeholder": {"type": "plain_text", "text": "e.g., data governance software"},
+                },
+            },
+            {
+                "type": "input",
+                "optional": True,
+                "block_id": "secondary_keywords_block",
+                "label": {"type": "plain_text", "text": "Secondary keywords (optional)"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "secondary_keywords",
+                    "multiline": True,
+                    "placeholder": {"type": "plain_text", "text": "One per line or comma-separated"},
+                },
+            },
+            {
+                "type": "input",
+                "block_id": "primary_cta_block",
+                "label": {"type": "plain_text", "text": "Primary CTA"},
+                "element": {
+                    "type": "static_select",
+                    "action_id": "primary_cta",
+                    "options": [
+                        {"text": {"type": "plain_text", "text": "Demo"}, "value": "Demo"},
+                        {"text": {"type": "plain_text", "text": "Free Trial"}, "value": "Free Trial"},
+                        {"text": {"type": "plain_text", "text": "Product Tour"}, "value": "Product Tour"},
+                        {"text": {"type": "plain_text", "text": "Bi-weekly Demo"}, "value": "Bi-weekly Demo"},
+                    ],
+                },
+            },
+            {
+                "type": "input",
+                "block_id": "intent_block",
+                "label": {"type": "plain_text", "text": "Intent"},
+                "element": {
+                    "type": "static_select",
+                    "action_id": "intent",
+                    "options": [
+                        {"text": {"type": "plain_text", "text": "Commercial"}, "value": "Commercial"},
+                        {"text": {"type": "plain_text", "text": "Educational"}, "value": "Educational"},
+                        {"text": {"type": "plain_text", "text": "Transactional"}, "value": "Transactional"},
+                    ],
+                },
+            },
+            {
+                "type": "input",
+                "block_id": "primary_audience_block",
+                "label": {"type": "plain_text", "text": "Primary Audience"},
+                "element": {
+                    "type": "static_select",
+                    "action_id": "primary_audience",
+                    "options": [
+                        {"text": {"type": "plain_text", "text": "Economic Buyer"}, "value": "Economic Buyer"},
+                        {"text": {"type": "plain_text", "text": "Platform Engineer"}, "value": "Platform Engineer"},
+                    ],
+                },
+            },
+            {
+                "type": "input",
+                "optional": True,
+                "block_id": "must_include_block",
+                "label": {"type": "plain_text", "text": "Must include (optional)"},
+                "element": {"type": "plain_text_input", "action_id": "must_include", "multiline": True},
+            },
+        ],
+    }
+
+# ----------------------------
 # Routes
 # ----------------------------
 @app.get("/health")
@@ -800,12 +912,17 @@ async def slack_commands(request: Request):
     text = (form.get("text") or "").strip()
     channel_id = form.get("channel_id") or ""
 
-    if command != "/sem-lp-request":
-        return PlainTextResponse("Unsupported command.", status_code=200)
+    if command == "/sem-lp-request":
+        view = build_modal_view(initial_search_term=text, channel_id=channel_id)
+        await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
+        return PlainTextResponse("", status_code=200)
 
-    view = build_modal_view(initial_search_term=text, channel_id=channel_id)
-    await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
-    return PlainTextResponse("", status_code=200)
+    if command == "/sem-lp-build":
+        view = build_build_modal_view(channel_id=channel_id)
+        await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
+        return PlainTextResponse("", status_code=200)
+
+    return PlainTextResponse("Unsupported command.", status_code=200)
 
 @app.post("/slack/interactions")
 async def slack_interactions(request: Request):
@@ -814,6 +931,136 @@ async def slack_interactions(request: Request):
 @app.post("/slack/interactivity")
 async def slack_interactivity(request: Request):
     return await _handle_interactivity(request)
+
+async def _handle_build_modal(payload: dict, view: dict) -> JSONResponse:
+    """Handle /sem-lp-build modal submission — manual pipeline trigger from a Bart thread."""
+    values = view.get("state", {}).get("values", {})
+
+    def gv(block_id: str, action_id: str) -> Optional[str]:
+        block = values.get(block_id, {})
+        action = block.get(action_id, {})
+        if "value" in action:
+            return action.get("value")
+        sel = action.get("selected_option")
+        return sel.get("value") if sel else None
+
+    thread_link = (gv("thread_link_block", "thread_link") or "").strip()
+    search_term = (gv("search_term_block", "search_term") or "").strip()
+    primary_cta = gv("primary_cta_block", "primary_cta") or "Demo"
+    intent = gv("intent_block", "intent") or "Commercial"
+    primary_audience = gv("primary_audience_block", "primary_audience") or ""
+    secondary_keywords = parse_secondary_keywords(gv("secondary_keywords_block", "secondary_keywords"))
+    must_include = gv("must_include_block", "must_include") or ""
+
+    errors: Dict[str, str] = {}
+    if not thread_link:
+        errors["thread_link_block"] = "Paste the Slack link to the Bart thread."
+    if not search_term:
+        errors["search_term_block"] = "Search term is required."
+
+    bart_channel, thread_ts = parse_slack_thread_link(thread_link)
+    if thread_link and (not bart_channel or not thread_ts):
+        errors["thread_link_block"] = "Couldn't parse that link — right-click the thread message and choose Copy link."
+
+    if errors:
+        return JSONResponse({"response_action": "errors", "errors": errors})
+
+    user_id = (payload.get("user") or {}).get("id") or "unknown"
+    requester_channel = (view.get("private_metadata") or "").strip() or SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL
+    request_id = generate_request_id()
+    slug = slugify(search_term)
+
+    fields = {
+        "search_term": search_term,
+        "primary_cta": primary_cta,
+        "intent": intent,
+        "primary_audience": primary_audience,
+        "secondary_keywords": None,
+        "must_include": must_include,
+        "offer": "",
+        "must_not_say": "",
+    }
+
+    async def run_manual_build():
+        try:
+            await post_message(
+                requester_channel,
+                f"🔧 Manual build started — `{search_term}` _(Request ID: {request_id})_\n"
+                f"Fetching Bart's thread and building now…",
+            )
+
+            # Fetch and accumulate full Bart brief from the thread
+            messages = await fetch_thread_messages(bart_channel, thread_ts)
+            bart_brief = accumulate_bart_brief(messages, BART_USER_ID)
+            if not bart_brief:
+                await post_message(
+                    requester_channel,
+                    f"⚠️ No messages from Bart found in that thread. Check the link and try again."
+                )
+                return
+
+            # Generate SVGs
+            image_refs = parse_image_refs(bart_brief)
+            svgs: Dict[str, str] = {}
+            if image_refs:
+                await post_message(
+                    requester_channel,
+                    f"🎨 Generating {len(image_refs)} SVG(s)…",
+                )
+                svgs = await generate_svgs(bart_brief, slug)
+
+            # Generate LP package
+            await post_message(requester_channel, "✍️ Conversion copywriting + HTML build…")
+            lp_package = await generate_full_lp(fields, bart_brief, svgs, secondary_keywords)
+            final_slug = lp_package["slug"]
+
+            # Commit to GitHub
+            files_to_commit: Dict[str, str] = {
+                f"generated-pages/{final_slug}/index.html": lp_package["html"],
+                f"generated-pages/{final_slug}/metadata.json": lp_package["metadata_json"],
+                f"generated-pages/{final_slug}/brief.md": bart_brief,
+            }
+            for svg_name, svg_content in svgs.items():
+                files_to_commit[f"generated-pages/{final_slug}/images/{svg_name}"] = svg_content
+
+            kit_url = (
+                f"https://github.com/{GITHUB_REPO}/tree/{GITHUB_BRANCH}"
+                f"/generated-pages/{final_slug}"
+            )
+
+            if GITHUB_TOKEN and GITHUB_REPO:
+                await post_message(requester_channel, "📤 Committing to GitHub…")
+                all_ok, failed_paths = await github_commit_files(
+                    GITHUB_REPO, files_to_commit,
+                    f"Add LP package: {final_slug}", GITHUB_BRANCH,
+                )
+                if all_ok:
+                    result_msg = (
+                        f"✅ *LP package ready*\n"
+                        f"*Search term:* {search_term}\n"
+                        f"*Slug:* `{final_slug}`\n"
+                        f"*Files:* {kit_url}"
+                    )
+                else:
+                    result_msg = (
+                        f"⚠️ *LP generated* — `{final_slug}` — some files failed:\n"
+                        + "\n".join(f"• `{p}`" for p in failed_paths)
+                    )
+            else:
+                result_msg = f"✅ *LP package generated* — `{final_slug}` (GitHub not configured)"
+
+            await post_message(requester_channel, result_msg)
+
+        except Exception as e:
+            logger.exception("Manual build failed: %s", e)
+            try:
+                await post_message(requester_channel, f"❌ Manual build failed: `{e}`")
+            except Exception:
+                pass
+
+    asyncio.create_task(run_manual_build())
+    return JSONResponse({"response_action": "clear"})
+
 
 async def _handle_interactivity(request: Request):
     raw_body = await request.body()
@@ -836,7 +1083,12 @@ async def _handle_interactivity(request: Request):
             return JSONResponse({"ok": True})
 
         view = payload.get("view", {})
-        if view.get("callback_id") != "lp_request_modal":
+        callback_id = view.get("callback_id")
+
+        if callback_id == "lp_build_modal":
+            return await _handle_build_modal(payload, view)
+
+        if callback_id != "lp_request_modal":
             return JSONResponse({"response_action": "clear"})
 
         fields = extract_modal_values(view.get("state", {}))
