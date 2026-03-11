@@ -73,6 +73,7 @@ HTML_TEMPLATE = load_text("datahub-observability-final.html", 20000)
 # DataHub brand system docs
 BRAND_SKILL_MD = load_text(".claude/skills/front-end-design/SKILL.md", 22000)
 SAMPLE_LP_HTML = load_text("templates/datahub-governance-lp1.html", 28000)
+BRAND_VOICE_MD = load_text("docs/brand-voice.md", 8000)
 
 # ----------------------------
 # Slack signature verification
@@ -280,20 +281,24 @@ def _hubspot_form_id(cta_type: str) -> str:
         "Product Tour": "aa56e90c-044a-46d8-a92f-cb905ad662f8",
     }.get(cta_type, "ed2447d6-e6f9-4771-8f77-825b114a9421")
 
-def build_lp_writer_prompt(fields: dict, bart_brief: str, secondary_keywords: List[str]) -> str:
+def build_copywriter_prompt(fields: dict, bart_brief: str, secondary_keywords: List[str]) -> str:
     secondary_block = (
         "\n".join(f"- {k}" for k in secondary_keywords) if secondary_keywords else "(none)"
     )
     form_id = _hubspot_form_id(fields.get("primary_cta", "Demo"))
-    return f"""You are the SEM Landing Page Writer for DataHub.
+    cta = fields.get("primary_cta", "Demo")
+    return f"""You are a conversion copywriter for DataHub SEM landing pages. Your job is to transform a validated technical brief into persuasive page copy that earns scrolls and form fills.
 
 HARD CONSTRAINTS — follow these documents exactly:
 
-[SEM PAGE STRUCTURE]
+[SEM PAGE STRUCTURE — section order is mandatory]
 {SEM_STRUCTURE}
 
 [SEO BEST PRACTICES]
 {SEO_RULES}
+
+[BRAND VOICE]
+{BRAND_VOICE_MD}
 
 [EDITORIAL STYLE]
 {EDITORIAL_STYLE}
@@ -301,35 +306,82 @@ HARD CONSTRAINTS — follow these documents exactly:
 [GARTNER PEER INSIGHTS — use sparingly, never fabricate]
 {GARTNER_SNIPPETS}
 
-Inputs:
-- search_term (primary keyword, exact): "{fields["search_term"]}"
-- secondary_keywords:
+Campaign inputs:
+- Primary keyword (exact, verbatim): "{fields["search_term"]}"
+- Secondary keywords:
 {secondary_block}
-- primary_cta: "{fields.get("primary_cta","Demo")}"
-- intent: "{fields.get("intent","Commercial")}"
-- primary_audience: "{fields.get("primary_audience","")}"
-- offer: "{fields.get("offer","")}"
-- must_include: "{fields.get("must_include","")}"
-- must_not_say: "{fields.get("must_not_say","")}"
+- Primary CTA: "{cta}"
+- Intent: "{fields.get("intent","Commercial")}"
+- Primary audience: "{fields.get("primary_audience","")}"
+- Offer: "{fields.get("offer","")}"
+- Must include: "{fields.get("must_include","")}"
+- Must not say: "{fields.get("must_not_say","")}"
 
-BART_VALIDATED_OUTPUT — technical source of truth (only use claims from here):
+BART_VALIDATED_OUTPUT — only use claims that appear here:
 {bart_brief[:8000]}
 
-Rules:
+━━━ CONVERSION COPYWRITING RULES ━━━
+
+COGNITIVE BIAS — apply these deliberately, section by section:
+
+Loss aversion (Problem section):
+- Lead with the cost of inaction, not just the pain point
+- Make the risk concrete: compliance failures, audit gaps, data incidents, engineer-hours lost
+- One sharp statistic or scenario per pain point — sourced from BART_VALIDATED_OUTPUT only
+
+Authority + social proof (Trust Strip, Technical Credibility, Social Proof):
+- Trust strip: named enterprises only — no "leading companies" generics
+- Technical Credibility: codebase-validated facts from Bart only; format as evidence, not claims
+- Social proof: name/title/company for every testimonial; specific outcomes over adjectives
+
+Reciprocity (Hero, Offer):
+- If an offer exists, lead with it — give before asking
+- Frame the CTA as access to value, not a transaction ("See it live" not "Submit")
+
+Commitment escalation (FAQ):
+- FAQ is the objection-handling close — address the real reasons people don't convert
+- End each answer with a forward-lean: what they gain by acting, not just reassurance
+
+SCROLL MECHANICS — every section must pull the reader to the next:
+
+Hero:
+- H1: outcome-first, primary keyword verbatim, ≤80 chars, Title Case
+- Subheadline: one sentence that names the specific pain and the specific relief
+- 3 outcome bullets: lead with the result, explain the mechanism in 6 words or fewer
+- CTA button copy: benefit-led ("See DataHub govern your data"), not action-led ("Submit")
+
+H2 cadence:
+- 30–50% of H2s as open-loop questions that the section answers ("What does governance failure actually cost?")
+- Remaining H2s: outcome statements, not feature labels ("End-to-end lineage in under 10 minutes")
+- No H2 should be skippable — each must create a reason to keep reading
+
+Paragraph + bullet discipline:
+- Maximum 3 lines per paragraph — hard limit
+- Follow every 2–3 sentence block with a bullet list or visual anchor
+- No wall-of-text sections anywhere on the page
+
+Section transitions:
+- Each section's final sentence should tease what comes next or raise a question the next section answers
+- Never end a section with a summary — end with a lean forward
+
+FAQ placement and structure:
+- 4–6 questions, each one a real sales objection ("Does DataHub work with our existing stack?")
+- Keep answers to 3–5 sentences: validate the concern, resolve it, restate the benefit
+- Place FAQ immediately before final CTA to clear the last objections before the ask
+
+Final CTA section:
+- Restate the single biggest outcome from the hero
+- Add one risk-reduction line near the form ("No credit card. 20-minute session.")
+- CTA button copy must differ slightly from hero CTA — reinforce momentum, not repetition
+
+━━━ SEO RULES ━━━
 - Page word count: 900–1,500 words
-- Primary keyword must appear verbatim in: title tag (≤60 chars), H1 (≤80 chars, Title Case),
-  first 100 words, meta description (≤140 chars), and at least one H2
-- Each secondary keyword must appear in at least one H2/H3/H4
-- 30–50% of H2s phrased as questions where natural
+- Primary keyword verbatim in: title tag (≤60 chars), H1 (≤80 chars), first 100 words, meta description (≤140 chars), and at least one H2
+- Each secondary keyword in at least one H2/H3/H4
 - Sentence case for all headings except H1
 - No exclamation marks. Active voice. No weasel words — quantify or omit
-- Never invent technical claims — only use facts from BART_VALIDATED_OUTPUT
-- Required section order (10 sections):
-  Hero → Trust Strip → Problem → Solution → How It Works →
-  Technical Credibility → Visual → Social Proof → FAQ (3–6 Qs) → Final CTA
-- HubSpot portal ID: 14552909, region: na1
-- HubSpot form ID for "{fields.get("primary_cta","Demo")}": {form_id}
 
+━━━ OUTPUT FORMAT ━━━
 Return ONLY valid JSON with exactly these keys:
 {{
   "seo_json": {{
@@ -343,6 +395,12 @@ Return ONLY valid JSON with exactly these keys:
   }},
   "outline_md": "",
   "copy_md": "",
+  "cta_microcopy": {{
+    "hero_button": "",
+    "hero_risk_reduction": "",
+    "final_button": "",
+    "final_risk_reduction": ""
+  }},
   "image_briefs_md": "",
   "qa_checklist_md": ""
 }}""".strip()
@@ -394,6 +452,9 @@ OUTLINE_MD:
 COPY_MD:
 {writer_json.get("copy_md", "")}
 
+CTA_MICROCOPY — use these exact strings for buttons and risk-reduction lines:
+{json.dumps(writer_json.get("cta_microcopy", {}), indent=2)}
+
 IMAGE_BRIEFS_MD:
 {writer_json.get("image_briefs_md", "")}
 
@@ -426,8 +487,8 @@ async def generate_full_lp(
     svgs: Dict[str, str],
     secondary_keywords: List[str],
 ) -> Dict[str, str]:
-    writer_prompt = build_lp_writer_prompt(fields, bart_brief, secondary_keywords)
-    writer_raw = await claude_text(writer_prompt, max_tokens=4000)
+    writer_prompt = build_copywriter_prompt(fields, bart_brief, secondary_keywords)
+    writer_raw = await claude_text(writer_prompt, max_tokens=4500)
 
     try:
         writer_json = json.loads(writer_raw)
@@ -906,9 +967,9 @@ async def slack_events(request: Request):
                     )
                     svgs = await generate_svgs(bart_brief, slug)
 
-                # Step 3 — Generate LP package
+                # Step 3 — Copywrite + build LP package
                 await post_message(
-                    bart_channel, "✍️ Building landing page package…", thread_ts=thread_ts
+                    bart_channel, "✍️ Step 3/4: Conversion copywriting…", thread_ts=thread_ts
                 )
                 lp_package = await generate_full_lp(fields, bart_brief, svgs, secondary_keywords)
                 final_slug = lp_package["slug"]
