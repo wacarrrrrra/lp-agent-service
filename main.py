@@ -403,7 +403,7 @@ Final CTA section:
 - No exclamation marks. Active voice. No weasel words — quantify or omit
 
 ━━━ OUTPUT FORMAT ━━━
-Return ONLY valid JSON with exactly these keys:
+Return ONLY valid JSON — no code fences, no preamble. All string values must be properly escaped (double quotes inside strings use \", newlines use \n). Return ONLY valid JSON with exactly these keys:
 {{
   "seo_json": {{
     "title_tag": "",
@@ -511,17 +511,34 @@ async def generate_full_lp(
     writer_prompt = build_copywriter_prompt(fields, bart_brief, secondary_keywords)
     writer_raw = await claude_text(writer_prompt, max_tokens=8000)
 
+    # Strip code fences if Claude wrapped the JSON
+    writer_raw = re.sub(r'^```(?:json)?\s*', '', writer_raw.strip(), flags=re.IGNORECASE)
+    writer_raw = re.sub(r'\s*```$', '', writer_raw.strip())
+
     try:
         writer_json = json.loads(writer_raw)
     except Exception:
+        # Try extracting just the outermost JSON object
         match = re.search(r'\{[\s\S]*\}', writer_raw)
         if match:
-            writer_json = json.loads(match.group(0))
+            try:
+                writer_json = json.loads(match.group(0))
+            except Exception:
+                # Last resort: ask Claude to fix it
+                fix_prompt = (
+                    "The following text is meant to be valid JSON but has a syntax error. "
+                    "Fix it and return ONLY the corrected JSON with no explanation:\n\n"
+                    + match.group(0)[:6000]
+                )
+                fixed = await claude_text(fix_prompt, max_tokens=8000)
+                fixed = re.sub(r'^```(?:json)?\s*', '', fixed.strip(), flags=re.IGNORECASE)
+                fixed = re.sub(r'\s*```$', '', fixed.strip())
+                writer_json = json.loads(fixed)
         else:
             raise ValueError(f"Writer did not return valid JSON: {writer_raw[:500]}")
 
     html_prompt = build_lp_html_prompt(fields, writer_json, svgs, secondary_keywords)
-    page_html = await claude_text(html_prompt, max_tokens=5000)
+    page_html = await claude_text(html_prompt, max_tokens=8000)
 
     html_match = re.search(r'<!doctype html[\s\S]*</html>', page_html, re.IGNORECASE | re.DOTALL)
     if html_match:
