@@ -90,9 +90,14 @@ SAMPLE_LP_HTML = load_text("templates/datahub-governance-lp1.html", 28000)
 BRAND_VOICE_MD = load_text("docs/brand-voice.md", 8000)
 
 # Extract the full <style> block from the template once at startup
-# so the HTML builder never needs to regenerate CSS
+# so the HTML builder never needs to regenerate CSS.
+# Override is-hidden to always show content — animation is progressive enhancement only.
 _style_match = re.search(r'<style[\s\S]*?</style>', SAMPLE_LP_HTML, re.IGNORECASE)
-TEMPLATE_CSS = _style_match.group(0) if _style_match else ""
+_raw_css = _style_match.group(0) if _style_match else ""
+TEMPLATE_CSS = _raw_css.replace(
+    ".animate-in.is-hidden { opacity: 0; transform: translateY(24px); }",
+    ".animate-in.is-hidden { opacity: 1; transform: none; }"
+)
 
 # ----------------------------
 # Slack signature verification
@@ -1378,3 +1383,4 @@ async def slack_events(request: Request):
         asyncio.create_task(continue_pipeline())
 
     return JSONResponse({"ok": True})
+
