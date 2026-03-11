@@ -805,7 +805,7 @@ def build_build_modal_view(channel_id: str = "") -> Dict[str, Any]:
                 "type": "input",
                 "block_id": "thread_link_block",
                 "label": {"type": "plain_text", "text": "Bart thread link"},
-                "hint": {"type": "plain_text", "text": "Right-click the Bart thread in #sem-lp-requests → Copy link"},
+                "hint": {"type": "plain_text", "text": "Go to #sem-lp-requests, right-click any message in the Bart thread → Copy link"},
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "thread_link",
@@ -969,9 +969,11 @@ async def _handle_build_modal(payload: dict, view: dict) -> JSONResponse:
     if not search_term:
         errors["search_term_block"] = "Search term is required."
 
-    bart_channel, thread_ts = parse_slack_thread_link(thread_link)
-    if thread_link and (not bart_channel or not thread_ts):
+    _parsed_channel, thread_ts = parse_slack_thread_link(thread_link)
+    if thread_link and not thread_ts:
         errors["thread_link_block"] = "Couldn't parse that link — right-click the thread message and choose Copy link."
+    # Always fetch from the private Bart channel regardless of what's in the link
+    bart_channel = SEM_LP_REQUESTS_CHANNEL or _parsed_channel
 
     if errors:
         return JSONResponse({"response_action": "errors", "errors": errors})
