@@ -89,15 +89,31 @@ BRAND_SKILL_MD = load_text(".claude/skills/front-end-design/SKILL.md", 22000)
 SAMPLE_LP_HTML = load_text("templates/datahub-governance-lp1.html", 28000)
 BRAND_VOICE_MD = load_text("docs/brand-voice.md", 8000)
 
-# Extract the full <style> block from the template once at startup
-# so the HTML builder never needs to regenerate CSS.
-# Override is-hidden to always show content — animation is progressive enhancement only.
+# Extract the full <style> block and <head> from the template at startup.
+# Claude only generates the <body> — we assemble the full page in code.
 _style_match = re.search(r'<style[\s\S]*?</style>', SAMPLE_LP_HTML, re.IGNORECASE)
 _raw_css = _style_match.group(0) if _style_match else ""
+# Make is-hidden visible so content shows without JS
 TEMPLATE_CSS = _raw_css.replace(
     ".animate-in.is-hidden { opacity: 0; transform: translateY(24px); }",
     ".animate-in.is-hidden { opacity: 1; transform: none; }"
+).replace(
+    ".animate-in.is-hidden{opacity:0;transform:translateY(24px)}",
+    ".animate-in.is-hidden{opacity:1;transform:none}"
 )
+
+def build_page_head(title: str, meta_description: str) -> str:
+    """Build the full <head> with correct title/meta and the template CSS."""
+    return f"""<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="{meta_description}">
+<title>{title}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Castoro:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+{TEMPLATE_CSS}
+</head>"""
 
 # ----------------------------
 # Slack signature verification
@@ -492,11 +508,13 @@ IMAGE_BRIEFS_MD:
 Available SVG images — use <picture> with SVG primary source and PNG fallback:
 {picture_elements if picture_elements else "(none)"}
 
-Non-negotiable design rules:
-- Single complete HTML document: <!doctype html> … </html>
-- In the <head>, write this exact placeholder comment where the <style> block goes — do NOT write any CSS yourself:
-  <!-- INJECT_CSS -->
-- Title tag and meta description verbatim from SEO_JSON
+Non-negotiable output rules:
+- Output ONLY the contents of <body>…</body> — nothing else
+- Do NOT write <!doctype>, <html>, <head>, <title>, <meta>, <style>, or <link> tags
+- Do NOT write any CSS — the stylesheet is already handled
+- Start your output with the first element inside <body> (e.g. the scroll progress bar or header)
+- End your output with the last element before </body> (e.g. the footer or script tags)
+- Title tag and meta description are handled separately — do not include them
 - H1 must include primary keyword verbatim: "{fields["search_term"]}"
 - Header: background #F2F1EE, border-bottom 1px solid #DDDBD6
   Logo: <img src="images/dataHub_logo_color_black.svg" alt="DataHub"> — no text logo
@@ -552,14 +570,16 @@ async def generate_full_lp(
     html_prompt = build_lp_html_prompt(fields, writer_json, svgs, secondary_keywords)
     page_html = await claude_text(html_prompt, max_tokens=8000)
 
-    html_match = re.search(r'<!doctype html[\s\S]*</html>', page_html, re.IGNORECASE | re.DOTALL)
-    if html_match:
-        page_html = html_match.group(0)
+    # Claude returns body content only — strip any accidental wrapper tags
+    page_html = re.sub(r'(?i)<!doctype[^>]*>', '', page_html).strip()
+    page_html = re.sub(r'(?i)</?html[^>]*>', '', page_html).strip()
+    # Strip <head>...</head> if Claude included one despite instructions
+    page_html = re.sub(r'(?i)<head[\s\S]*?</head>', '', page_html).strip()
+    # Strip accidental <body> / </body> wrapper tags
+    page_html = re.sub(r'(?i)<body[^>]*>', '', page_html).strip()
+    page_html = re.sub(r'(?i)</body>', '', page_html).strip()
 
-    # Inject the full template CSS in place of the placeholder
-    if TEMPLATE_CSS:
-        page_html = page_html.replace("<!-- INJECT_CSS -->", TEMPLATE_CSS)
-
+    # Assemble metadata and full page
     seo = writer_json.get("seo_json", {})
     raw_slug = (seo.get("slug") or slugify(fields["search_term"])).strip("/")
     metadata = {
@@ -575,8 +595,12 @@ async def generate_full_lp(
         "bart_done": True,
     }
 
+    # Wrap body content with the template head (CSS included, no token waste)
+    head = build_page_head(metadata["title_tag"], metadata["meta_description"])
+    full_html = f"<!doctype html>\n<html lang=\"en\">\n{head}\n<body>\n{page_html}\n</body>\n</html>"
+
     return {
-        "html": page_html,
+        "html": full_html,
         "metadata_json": json.dumps(metadata, indent=2),
         "writer_json": writer_json,
         "slug": metadata["slug"],
@@ -1275,6 +1299,46 @@ async def slack_events(request: Request):
                 user_id, thread_ts, list(JOBS.keys()), "BART_DONE" in text, text[:80])
 
     job = JOBS.get(thread_ts)
+
+    # If job not in memory (e.g. Render restarted) but Bart posted BART_DONE,
+    # reconstruct the job from the thread's starter message
+    if not job and user_id == BART_USER_ID and "BART_DONE" in text and thread_ts:
+        logger.info("Job not in memory — attempting reconstruction from thread %s", thread_ts)
+        try:
+            bart_channel = SEM_LP_REQUESTS_CHANNEL or SLACK_DEFAULT_CHANNEL
+            thread_messages = await fetch_thread_messages(bart_channel, thread_ts)
+            starter = next(
+                (m for m in thread_messages if "Search term:" in (m.get("text") or "")),
+                None
+            )
+            if starter:
+                starter_text = starter.get("text", "")
+                def _parse_field(label: str) -> str:
+                    m = re.search(rf'\*{label}:\*\s*(.+)', starter_text)
+                    return m.group(1).strip() if m else ""
+                search_term = _parse_field("Search term")
+                job = {
+                    "request_id": _parse_field("Request ID") or generate_request_id(),
+                    "slug": slugify(search_term),
+                    "bart_channel": bart_channel,
+                    "requester_channel": SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL,
+                    "fields": {
+                        "search_term": search_term,
+                        "primary_cta": _parse_field("Primary CTA") or "Demo",
+                        "intent": _parse_field("Intent") or "Commercial",
+                        "primary_audience": _parse_field("Primary Audience") or "",
+                        "secondary_keywords": None,
+                        "offer": "", "must_include": "", "must_not_say": "",
+                    },
+                    "secondary_keywords": [],
+                    "awaiting": "bart",
+                }
+                JOBS[thread_ts] = job
+                _save_jobs()
+                logger.info("Job reconstructed for thread %s search_term=%s", thread_ts, search_term)
+        except Exception as e:
+            logger.warning("Job reconstruction failed: %s", e)
+
     if not job:
         return JSONResponse({"ok": True})
 
@@ -1383,4 +1447,3 @@ async def slack_events(request: Request):
         asyncio.create_task(continue_pipeline())
 
     return JSONResponse({"ok": True})
-
