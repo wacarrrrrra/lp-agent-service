@@ -27,8 +27,8 @@ logger = logging.getLogger("uvicorn.error")
 # ----------------------------
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET", "")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
-SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")  # e.g. C0AHY0FAN4C
-BART_USER_ID = os.getenv("BART_USER_ID", "")  # e.g. U09RYUJDUQL
+SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")
+BART_USER_ID = os.getenv("BART_USER_ID", "")
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
@@ -39,14 +39,15 @@ SLACK_API_BASE = "https://slack.com/api"
 # ----------------------------
 # Env Vars — new
 # ----------------------------
-SEM_LP_BUILD_KITS_CHANNEL = os.getenv("SEM_LP_BUILD_KITS_CHANNEL", "")  # public results channel
+SEM_LP_REQUESTS_CHANNEL = os.getenv("SEM_LP_REQUESTS_CHANNEL", "")   # private channel with BartBot
+SEM_LP_BUILD_KITS_CHANNEL = os.getenv("SEM_LP_BUILD_KITS_CHANNEL", "")  # agency-facing results channel
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
-GITHUB_REPO = os.getenv("GITHUB_REPO", "")   # e.g. wacarrrrrra/lp-agent-service
+GITHUB_REPO = os.getenv("GITHUB_REPO", "")
 GITHUB_BRANCH = os.getenv("GITHUB_BRANCH", "main")
 
 # ----------------------------
-# In-memory job state (v1)
-# Keyed by thread_ts
+# In-memory job state
+# Keyed by bart_thread_ts (the thread in the private Bart channel)
 # ----------------------------
 JOBS: Dict[str, Dict[str, Any]] = {}
 
@@ -61,7 +62,7 @@ def load_text(path: str, max_chars: int) -> str:
         logger.warning("Could not load %s: %s", path, e)
         return f"[Missing file: {path}]"
 
-# Existing docs (keep for backward compatibility)
+# Existing docs
 SEM_STRUCTURE = load_text("SEM-LP-Structure.md", 18000)
 SEO_RULES = load_text("SEO-Best-Practices.md", 14000)
 EDITORIAL_STYLE = load_text("datahub-editorial-style.md", 14000)
@@ -69,7 +70,7 @@ GARTNER_SNIPPETS = load_text("datahub-gartner-peer-insights.md", 9000)
 BRAND_GUIDELINES = load_text("brand-guidelines.md", 14000)
 HTML_TEMPLATE = load_text("datahub-observability-final.html", 20000)
 
-# DataHub brand system docs (add these files to the lp-agent-service repo)
+# DataHub brand system docs
 BRAND_SKILL_MD = load_text(".claude/skills/front-end-design/SKILL.md", 22000)
 SAMPLE_LP_HTML = load_text("templates/datahub-governance-lp1.html", 28000)
 
@@ -79,26 +80,19 @@ SAMPLE_LP_HTML = load_text("templates/datahub-governance-lp1.html", 28000)
 def verify_slack_signature(raw_body: bytes, timestamp: str, signature: str) -> None:
     if not SLACK_SIGNING_SECRET:
         raise HTTPException(status_code=500, detail="Missing SLACK_SIGNING_SECRET")
-
     if not timestamp or not signature:
         raise HTTPException(status_code=400, detail="Missing Slack signature headers")
-
     now = int(time.time())
     try:
         ts = int(timestamp)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid X-Slack-Request-Timestamp")
-
     if abs(now - ts) > 60 * 5:
         raise HTTPException(status_code=400, detail="Stale Slack request (possible replay)")
-
     basestring = f"v0:{timestamp}:".encode("utf-8") + raw_body
     expected = "v0=" + hmac.new(
-        SLACK_SIGNING_SECRET.encode("utf-8"),
-        basestring,
-        hashlib.sha256,
+        SLACK_SIGNING_SECRET.encode("utf-8"), basestring, hashlib.sha256
     ).hexdigest()
-
     if not hmac.compare_digest(expected, signature):
         raise HTTPException(status_code=401, detail="Invalid Slack signature")
 
@@ -108,7 +102,6 @@ def verify_slack_signature(raw_body: bytes, timestamp: str, signature: str) -> N
 async def slack_api(method: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     if not SLACK_BOT_TOKEN:
         raise HTTPException(status_code=500, detail="Missing SLACK_BOT_TOKEN")
-
     url = f"{SLACK_API_BASE}/{method}"
     async with httpx.AsyncClient(timeout=20) as client:
         resp = await client.post(
@@ -137,10 +130,7 @@ def generate_request_id() -> str:
 def slugify(text: str, max_len: int = 50) -> str:
     t = (text or "").strip().lower()
     t = "-".join(t.split())
-    cleaned = []
-    for ch in t:
-        if ch.isalnum() or ch == "-":
-            cleaned.append(ch)
+    cleaned = [ch for ch in t if ch.isalnum() or ch == "-"]
     out = "".join(cleaned)
     return out[:max_len] if len(out) > max_len else out
 
@@ -165,10 +155,9 @@ def parse_secondary_keywords(raw: Optional[str]) -> List[str]:
     return out
 
 # ----------------------------
-# Thread accumulation (multi-part BartBot messages)
+# Thread accumulation
 # ----------------------------
 async def fetch_thread_messages(channel: str, thread_ts: str) -> List[Dict[str, Any]]:
-    """Fetch all messages in a Slack thread."""
     try:
         data = await slack_api(
             "conversations.replies",
@@ -180,27 +169,19 @@ async def fetch_thread_messages(channel: str, thread_ts: str) -> List[Dict[str, 
         return []
 
 def accumulate_bart_brief(messages: List[Dict[str, Any]], bart_user_id: str) -> str:
-    """Join all BartBot messages from a thread into a single brief string."""
-    parts = []
-    for msg in messages:
-        if msg.get("user") == bart_user_id:
-            text = (msg.get("text") or "").strip()
-            if text:
-                parts.append(text)
+    parts = [
+        (msg.get("text") or "").strip()
+        for msg in messages
+        if msg.get("user") == bart_user_id and (msg.get("text") or "").strip()
+    ]
     return "\n\n---\n\n".join(parts) if parts else ""
 
 # ----------------------------
 # Image reference parsing
 # ----------------------------
 def parse_image_refs(bart_brief: str) -> List[Dict[str, str]]:
-    """
-    Extract image references from a BartBot brief.
-    Returns list of {filename, description, path} dicts.
-    """
     images: List[Dict[str, str]] = []
     seen: set = set()
-
-    # Markdown images: ![alt text](path/to/image.png)
     for alt, path in re.findall(
         r'!\[([^\]]*)\]\(([^)]+\.(?:png|jpg|jpeg))\)', bart_brief, re.IGNORECASE
     ):
@@ -208,8 +189,6 @@ def parse_image_refs(bart_brief: str) -> List[Dict[str, str]]:
         if name not in seen:
             seen.add(name)
             images.append({"filename": name, "description": alt, "path": path})
-
-    # Bare filenames like datahub-foo.png
     for name in re.findall(r'\b([\w-]+\.png)\b', bart_brief, re.IGNORECASE):
         if name not in seen:
             seen.add(name)
@@ -218,7 +197,6 @@ def parse_image_refs(bart_brief: str) -> List[Dict[str, str]]:
                 "description": name.replace("-", " ").replace(".png", ""),
                 "path": f"images/{name}",
             })
-
     return images
 
 # ----------------------------
@@ -228,22 +206,21 @@ def build_svg_prompt(image_info: Dict[str, str], bart_brief: str, slug: str) -> 
     fname = image_info["filename"].lower()
     if "workflow" in fname or "process" in fname or "policy" in fname:
         diagram_type = "Explainer (horizontal workflow)"
-        viewbox = '0 0 960 540'
+        viewbox = "0 0 960 540"
     elif "ui" in fname or "screenshot" in fname:
         diagram_type = "Stylized UI"
-        viewbox = '0 0 960 680'
+        viewbox = "0 0 960 680"
     else:
         diagram_type = "Explainer (architecture)"
-        viewbox = '0 0 960 680'
+        viewbox = "0 0 960 680"
 
     svg_name = image_info["filename"].replace(".png", ".svg")
-
     return f"""You are operating in SVG Conversion Mode from the DataHub brand system.
 
 [DATAHUB BRAND SYSTEM]
 {BRAND_SKILL_MD}
 
-[SOURCE BRIEF — use this as the source of truth for diagram content]
+[SOURCE BRIEF — source of truth for diagram content]
 {bart_brief[:6000]}
 
 Task: Generate a brand-compliant DataHub SVG illustration for the following image.
@@ -272,7 +249,6 @@ No code fences, no explanation, no preamble.
 """.strip()
 
 async def generate_svgs(bart_brief: str, slug: str) -> Dict[str, str]:
-    """Generate brand-compliant SVGs for every image referenced in the brief."""
     image_refs = parse_image_refs(bart_brief)
     if not image_refs:
         return {}
@@ -281,7 +257,6 @@ async def generate_svgs(bart_brief: str, slug: str) -> Dict[str, str]:
         prompt = build_svg_prompt(img_info, bart_brief, slug)
         try:
             svg_content = await claude_text(prompt, max_tokens=4500)
-            # Strip any accidental code fences
             match = re.search(r'<svg[\s\S]*?</svg>', svg_content, re.DOTALL)
             if match:
                 svg_content = match.group(0)
@@ -305,9 +280,7 @@ def _hubspot_form_id(cta_type: str) -> str:
         "Product Tour": "aa56e90c-044a-46d8-a92f-cb905ad662f8",
     }.get(cta_type, "ed2447d6-e6f9-4771-8f77-825b114a9421")
 
-def build_lp_writer_prompt(
-    fields: dict, bart_brief: str, secondary_keywords: List[str]
-) -> str:
+def build_lp_writer_prompt(fields: dict, bart_brief: str, secondary_keywords: List[str]) -> str:
     secondary_block = (
         "\n".join(f"- {k}" for k in secondary_keywords) if secondary_keywords else "(none)"
     )
@@ -383,7 +356,6 @@ def build_lp_html_prompt(
     secondary_block = (
         "\n".join(f"- {k}" for k in secondary_keywords) if secondary_keywords else "(none)"
     )
-
     picture_elements = ""
     for svg_name in svgs:
         png_name = svg_name.replace(".svg", ".png")
@@ -393,11 +365,9 @@ def build_lp_html_prompt(
             f'  <img src="images/{png_name}" alt="[descriptive alt text]" loading="lazy">\n'
             f'</picture>'
         )
-
     form_id = writer_json.get("seo_json", {}).get(
         "hubspot_form_id", _hubspot_form_id(fields.get("primary_cta", "Demo"))
     )
-
     return f"""You are the HTML Builder. This is the final build step.
 
 HARD CONSTRAINTS — follow these documents exactly:
@@ -456,7 +426,6 @@ async def generate_full_lp(
     svgs: Dict[str, str],
     secondary_keywords: List[str],
 ) -> Dict[str, str]:
-    """Two-stage LP generation: writer then HTML builder."""
     writer_prompt = build_lp_writer_prompt(fields, bart_brief, secondary_keywords)
     writer_raw = await claude_text(writer_prompt, max_tokens=4000)
 
@@ -472,12 +441,10 @@ async def generate_full_lp(
     html_prompt = build_lp_html_prompt(fields, writer_json, svgs, secondary_keywords)
     page_html = await claude_text(html_prompt, max_tokens=5000)
 
-    # Strip accidental code fences from HTML
     html_match = re.search(r'<!doctype html[\s\S]*</html>', page_html, re.IGNORECASE | re.DOTALL)
     if html_match:
         page_html = html_match.group(0)
 
-    # Build metadata.json
     seo = writer_json.get("seo_json", {})
     metadata = {
         "slug": seo.get("slug") or slugify(fields["search_term"]),
@@ -505,7 +472,6 @@ async def generate_full_lp(
 async def github_commit_file(
     repo: str, path: str, content: str, message: str, branch: str
 ) -> bool:
-    """Commit a single file to GitHub via the Contents API."""
     if not GITHUB_TOKEN or not repo:
         logger.warning("GitHub commit skipped — GITHUB_TOKEN or GITHUB_REPO not set")
         return False
@@ -519,15 +485,10 @@ async def github_commit_file(
     }
 
     async with httpx.AsyncClient(timeout=30) as client:
-        # Get existing file SHA (needed for updates)
         r = await client.get(url, headers=headers, params={"ref": branch})
         sha = r.json().get("sha") if r.status_code == 200 else None
 
-        payload: Dict[str, Any] = {
-            "message": message,
-            "content": encoded,
-            "branch": branch,
-        }
+        payload: Dict[str, Any] = {"message": message, "content": encoded, "branch": branch}
         if sha:
             payload["sha"] = sha
 
@@ -543,7 +504,6 @@ async def github_commit_files(
     commit_message: str,
     branch: str,
 ) -> Tuple[bool, List[str]]:
-    """Commit multiple files sequentially. Returns (all_succeeded, failed_paths)."""
     failed: List[str] = []
     for path, content in files.items():
         ok = await github_commit_file(repo, path, content, commit_message, branch)
@@ -713,14 +673,12 @@ When you're fully done (claims validated + images uploaded), reply with exactly:
 def claude_text_sync(prompt: str, max_tokens: int = 3500) -> str:
     if not anthropic_client:
         raise RuntimeError("Missing ANTHROPIC_API_KEY")
-
     msg = anthropic_client.messages.create(
         model=CLAUDE_MODEL,
         max_tokens=max_tokens,
         temperature=0.2,
         messages=[{"role": "user", "content": prompt}],
     )
-
     parts = []
     for block in msg.content:
         if getattr(block, "type", None) == "text":
@@ -729,97 +687,6 @@ def claude_text_sync(prompt: str, max_tokens: int = 3500) -> str:
 
 async def claude_text(prompt: str, max_tokens: int = 3500) -> str:
     return await asyncio.to_thread(claude_text_sync, prompt, max_tokens)
-
-# ----------------------------
-# Legacy writer/HTML prompts (kept for reference)
-# ----------------------------
-def build_writer_prompt(fields: dict, bart_output: str, secondary_keywords: List[str]) -> str:
-    secondary_block = "\n".join(f"- {k}" for k in secondary_keywords) if secondary_keywords else "(none)"
-    return f"""
-You are the SEM Landing Page Writer.
-
-HARD CONSTRAINTS — follow these documents exactly:
-[SEM STRUCTURE]
-{SEM_STRUCTURE}
-
-[SEO BEST PRACTICES]
-{SEO_RULES}
-
-[EDITORIAL STYLE]
-{EDITORIAL_STYLE}
-
-[OPTIONAL GARTNER PEER INSIGHTS SNIPPETS — use sparingly and never fabricate]
-{GARTNER_SNIPPETS}
-
-Inputs:
-- search_term (primary keyword): "{fields["search_term"]}"
-- secondary_keywords (optional):
-{secondary_block}
-- primary_cta: "{fields["primary_cta"]}"
-- intent: "{fields["intent"]}"
-- primary_audience: "{fields["primary_audience"]}"
-- offer: "{fields.get("offer","")}"
-- must_include: "{fields.get("must_include","")}"
-- must_not_say: "{fields.get("must_not_say","")}"
-
-BART_VALIDATED_OUTPUT (technical source of truth):
-{bart_output}
-
-Rules:
-- Only use claims validated in BART_VALIDATED_OUTPUT.
-- Primary keyword must appear in Title tag, H1, first 100 words, and at least one H2.
-- Each secondary keyword MUST appear in at least one heading (H2, H3, or H4).
-- CTA above the fold and repeated near the bottom.
-- Scannable formatting, short paragraphs + bullets.
-
-Return ONLY valid JSON with keys:
-- "seo_json" (object: title_tag, meta_description, slug, h1)
-- "outline_md" (string)
-- "copy_md" (string)
-- "image_briefs_md" (string)
-- "qa_checklist_md" (string)
-""".strip()
-
-def build_html_prompt(fields: dict, writer_json: dict, secondary_keywords: List[str]) -> str:
-    secondary_block = "\n".join(f"- {k}" for k in secondary_keywords) if secondary_keywords else "(none)"
-    return f"""
-You are the HTML Builder. HTML is the LAST step.
-
-HARD CONSTRAINTS — follow these documents exactly:
-[BRAND GUIDELINES]
-{BRAND_GUIDELINES}
-
-[HTML TEMPLATE TO REPLICATE (structure + section order)]
-{HTML_TEMPLATE}
-
-Inputs:
-- primary keyword: "{fields["search_term"]}"
-- secondary keywords:
-{secondary_block}
-
-Use this content exactly (no new claims, no new product assertions):
-SEO_JSON:
-{json.dumps(writer_json["seo_json"], indent=2)}
-
-OUTLINE_MD:
-{writer_json["outline_md"]}
-
-COPY_MD:
-{writer_json["copy_md"]}
-
-IMAGE_BRIEFS_MD:
-{writer_json["image_briefs_md"]}
-
-Requirements:
-- Output a single complete semantic HTML document (<!doctype html> ...).
-- Title/meta from SEO_JSON.
-- H1 must include the primary keyword verbatim: "{fields["search_term"]}"
-- CTA appears above the fold and at the bottom.
-- Add alt text based on IMAGE_BRIEFS_MD.
-- Preserve template structure, but swap content with the provided copy.
-
-Return ONLY the HTML.
-""".strip()
 
 # ----------------------------
 # Routes
@@ -832,7 +699,6 @@ async def health():
 async def anthropic_models():
     if not ANTHROPIC_API_KEY:
         return {"ok": False, "error": "Missing ANTHROPIC_API_KEY"}
-
     headers = {
         "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
@@ -849,7 +715,6 @@ async def slack_commands(request: Request):
         request.headers.get("X-Slack-Request-Timestamp", ""),
         request.headers.get("X-Slack-Signature", ""),
     )
-
     form = await request.form()
     command = form.get("command")
     trigger_id = form.get("trigger_id")
@@ -863,7 +728,6 @@ async def slack_commands(request: Request):
     await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
     return PlainTextResponse("", status_code=200)
 
-# Support both URLs to avoid config mismatch
 @app.post("/slack/interactions")
 async def slack_interactions(request: Request):
     return await _handle_interactivity(request)
@@ -913,14 +777,27 @@ async def _handle_interactivity(request: Request):
         request_id = generate_request_id()
         slug = slugify(fields["search_term"])
         user_id = (payload.get("user") or {}).get("id") or "unknown"
-        channel_id = (view.get("private_metadata") or "").strip() or SLACK_DEFAULT_CHANNEL or ""
-        if not channel_id:
+
+        # Channel where the slash command was run (agency-facing, e.g. #sem-lp-build-kits)
+        requester_channel = (view.get("private_metadata") or "").strip() or SLACK_DEFAULT_CHANNEL or ""
+        if not requester_channel:
             return JSONResponse({"response_action": "clear"})
+
+        # Private Bart channel — fall back to requester_channel if not configured
+        bart_channel = SEM_LP_REQUESTS_CHANNEL or requester_channel
 
         secondary_keywords = parse_secondary_keywords(fields.get("secondary_keywords"))
 
         async def run_pipeline():
             try:
+                # Acknowledge in the agency channel immediately
+                await post_message(
+                    requester_channel,
+                    f"Got it — drafting `{fields['search_term']}` now. "
+                    f"I'll post the package here when it's ready. _(Request ID: {request_id})_",
+                )
+
+                # Start the Bart thread in the private channel
                 starter = (
                     f"🚀 *LP request started*\n"
                     f"*Request ID:* {request_id}\n"
@@ -931,13 +808,13 @@ async def _handle_interactivity(request: Request):
                     f"*Primary Audience:* {fields['primary_audience']}\n"
                     f"*Requester:* <@{user_id}>"
                 )
+                bart_thread_ts = await post_message(bart_channel, starter)
 
-                thread_ts = await post_message(channel_id, starter)
-
-                JOBS[thread_ts] = {
+                JOBS[bart_thread_ts] = {
                     "request_id": request_id,
                     "slug": slug,
-                    "channel_id": channel_id,
+                    "bart_channel": bart_channel,
+                    "requester_channel": requester_channel,
                     "user_id": user_id,
                     "fields": fields,
                     "secondary_keywords": secondary_keywords,
@@ -945,22 +822,21 @@ async def _handle_interactivity(request: Request):
                     "bart_output": None,
                 }
 
-                await post_message(channel_id, "🧠 Step 1/4: Asking Bart…", thread_ts=thread_ts)
                 await post_message(
-                    channel_id,
+                    bart_channel,
                     bart_prompt(fields["search_term"], fields["primary_cta"], fields["intent"], secondary_keywords),
-                    thread_ts=thread_ts,
+                    thread_ts=bart_thread_ts,
                 )
                 await post_message(
-                    channel_id,
-                    "⏳ Waiting for Bart… I'll continue automatically after Bart posts `BART_DONE`.",
-                    thread_ts=thread_ts,
+                    bart_channel,
+                    "⏳ Waiting for Bart… pipeline continues automatically after `BART_DONE`.",
+                    thread_ts=bart_thread_ts,
                 )
 
             except Exception as e:
                 logger.exception("run_pipeline failed: %s", e)
                 try:
-                    await post_message(channel_id, f"❌ Pipeline failed to start: `{e}`")
+                    await post_message(requester_channel, f"❌ Pipeline failed to start: `{e}`")
                 except Exception:
                     pass
 
@@ -987,7 +863,6 @@ async def slack_events(request: Request):
     event = body.get("event", {}) or {}
     if event.get("type") != "message":
         return JSONResponse({"ok": True})
-
     if event.get("subtype"):
         return JSONResponse({"ok": True})
 
@@ -999,13 +874,13 @@ async def slack_events(request: Request):
     if not job:
         return JSONResponse({"ok": True})
 
-    # Only proceed if waiting for Bart AND it's Bart AND it contains BART_DONE
     if job.get("awaiting") == "bart" and user_id == BART_USER_ID and "BART_DONE" in text:
         job["bart_output"] = text
         job["awaiting"] = "generating"
         JOBS[thread_ts] = job
 
-        channel_id = job["channel_id"]
+        bart_channel = job["bart_channel"]
+        requester_channel = job["requester_channel"]
         request_id = job["request_id"]
         fields = job["fields"]
         slug = job["slug"]
@@ -1013,34 +888,32 @@ async def slack_events(request: Request):
 
         async def continue_pipeline():
             try:
-                # Step 1 — Fetch full thread to accumulate multi-part BartBot brief
+                # Step 1 — Accumulate full multi-part brief from the Bart thread
                 await post_message(
-                    channel_id, "📖 Step 2/4: Collecting full brief from thread…", thread_ts=thread_ts
+                    bart_channel, "📖 Collecting full brief from thread…", thread_ts=thread_ts
                 )
-                messages = await fetch_thread_messages(channel_id, thread_ts)
-                bart_brief = accumulate_bart_brief(messages, BART_USER_ID)
-                if not bart_brief:
-                    bart_brief = text  # fallback: use the BART_DONE message itself
+                messages = await fetch_thread_messages(bart_channel, thread_ts)
+                bart_brief = accumulate_bart_brief(messages, BART_USER_ID) or text
 
-                # Step 2 — Generate brand-compliant SVGs for each image in the brief
+                # Step 2 — Generate brand-compliant SVGs
                 image_refs = parse_image_refs(bart_brief)
                 svgs: Dict[str, str] = {}
                 if image_refs:
                     await post_message(
-                        channel_id,
-                        f"🎨 Step 3/4: Generating {len(image_refs)} brand-compliant SVG(s)…",
+                        bart_channel,
+                        f"🎨 Generating {len(image_refs)} brand-compliant SVG(s)…",
                         thread_ts=thread_ts,
                     )
                     svgs = await generate_svgs(bart_brief, slug)
 
-                # Step 3 — Generate full LP package (writer → HTML builder)
+                # Step 3 — Generate LP package
                 await post_message(
-                    channel_id, "✍️ Step 4/4: Building landing page package…", thread_ts=thread_ts
+                    bart_channel, "✍️ Building landing page package…", thread_ts=thread_ts
                 )
                 lp_package = await generate_full_lp(fields, bart_brief, svgs, secondary_keywords)
                 final_slug = lp_package["slug"]
 
-                # Step 4 — Commit all files to GitHub
+                # Step 4 — Commit to GitHub
                 files_to_commit: Dict[str, str] = {
                     f"generated-pages/{final_slug}/index.html": lp_package["html"],
                     f"generated-pages/{final_slug}/metadata.json": lp_package["metadata_json"],
@@ -1049,49 +922,43 @@ async def slack_events(request: Request):
                 for svg_name, svg_content in svgs.items():
                     files_to_commit[f"generated-pages/{final_slug}/images/{svg_name}"] = svg_content
 
+                kit_url = (
+                    f"https://github.com/{GITHUB_REPO}/tree/{GITHUB_BRANCH}"
+                    f"/generated-pages/{final_slug}"
+                )
+
                 if GITHUB_TOKEN and GITHUB_REPO:
                     await post_message(
-                        channel_id, "📤 Committing files to GitHub…", thread_ts=thread_ts
+                        bart_channel, "📤 Committing files to GitHub…", thread_ts=thread_ts
                     )
                     all_ok, failed_paths = await github_commit_files(
-                        GITHUB_REPO,
-                        files_to_commit,
-                        f"Add LP package: {final_slug}",
-                        GITHUB_BRANCH,
-                    )
-                    kit_url = (
-                        f"https://github.com/{GITHUB_REPO}/tree/{GITHUB_BRANCH}"
-                        f"/generated-pages/{final_slug}"
+                        GITHUB_REPO, files_to_commit,
+                        f"Add LP package: {final_slug}", GITHUB_BRANCH,
                     )
                     if all_ok:
-                        status_msg = f"✅ *LP package ready* — `{final_slug}`\n{kit_url}"
+                        internal_status = f"✅ Committed to GitHub: {kit_url}"
                     else:
-                        status_msg = (
-                            f"⚠️ *LP generated* — `{final_slug}` — some files failed to commit:\n"
+                        internal_status = (
+                            f"⚠️ Some files failed to commit:\n"
                             + "\n".join(f"• `{p}`" for p in failed_paths)
                         )
                 else:
-                    kit_url = "(GitHub not configured — set GITHUB_TOKEN and GITHUB_REPO)"
-                    status_msg = (
-                        f"✅ *LP package generated* — `{final_slug}`\n"
-                        f"_(GitHub commit skipped — env vars not set)_"
-                    )
+                    all_ok = False
+                    internal_status = "⚠️ GitHub commit skipped — GITHUB_TOKEN or GITHUB_REPO not set"
 
-                # Confirmation in the original thread
-                await post_message(channel_id, status_msg, thread_ts=thread_ts)
+                # Internal confirmation in the private Bart thread
+                await post_message(bart_channel, internal_status, thread_ts=thread_ts)
 
-                # Announce in #sem-lp-build-kits
-                if SEM_LP_BUILD_KITS_CHANNEL:
-                    metadata = json.loads(lp_package["metadata_json"])
-                    kits_msg = (
-                        f"🚀 *New LP package ready*\n"
-                        f"*Search term:* {fields['search_term']}\n"
-                        f"*Slug:* `{final_slug}`\n"
-                        f"*CTA:* {fields.get('primary_cta','Demo')} | "
-                        f"*Intent:* {fields.get('intent','Commercial')}\n"
-                        f"*Files:* {kit_url}"
-                    )
-                    await post_message(SEM_LP_BUILD_KITS_CHANNEL, kits_msg)
+                # Agency-facing confirmation in #sem-lp-build-kits
+                agency_msg = (
+                    f"✅ *LP package ready*\n"
+                    f"*Search term:* {fields['search_term']}\n"
+                    f"*Slug:* `{final_slug}`\n"
+                    f"*CTA:* {fields.get('primary_cta','Demo')} | "
+                    f"*Intent:* {fields.get('intent','Commercial')}\n"
+                    f"*Files:* {kit_url}"
+                )
+                await post_message(requester_channel, agency_msg)
 
                 job["awaiting"] = "done"
                 JOBS[thread_ts] = job
@@ -1099,9 +966,8 @@ async def slack_events(request: Request):
             except Exception as e:
                 logger.exception("Pipeline continuation failed: %s", e)
                 try:
-                    await post_message(
-                        channel_id, f"❌ Pipeline failed: `{e}`", thread_ts=thread_ts
-                    )
+                    await post_message(bart_channel, f"❌ Pipeline failed: `{e}`", thread_ts=thread_ts)
+                    await post_message(requester_channel, f"❌ LP generation failed for `{slug}`: `{e}`")
                 except Exception:
                     pass
                 job["awaiting"] = "error"
