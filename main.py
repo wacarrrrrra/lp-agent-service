@@ -950,6 +950,9 @@ async def slack_events(request: Request):
     user_id = event.get("user") or ""
     text = (event.get("text") or "").strip()
 
+    logger.info("EVENT user=%s thread_ts=%s jobs_loaded=%s bart_done=%s text_preview=%s",
+                user_id, thread_ts, list(JOBS.keys()), "BART_DONE" in text, text[:80])
+
     job = JOBS.get(thread_ts)
     if not job:
         return JSONResponse({"ok": True})
