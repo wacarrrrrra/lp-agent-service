@@ -26,131 +26,144 @@
   <!-- Header bar -->
   <rect x="20" y="20" width="920" height="56" rx="10" ry="10" fill="#002131"/>
   <rect x="20" y="54" width="920" height="22" fill="#002131"/>
-  <text x="48" y="53" font-family="'Castoro', Georgia, serif" font-size="18" fill="#FFFFFF" font-weight="400">DataHub Automated Data Lineage Architecture</text>
-  <text x="820" y="53" font-family="'Geist', sans-serif" font-size="11" fill="#3CBBEB" font-weight="500" letter-spacing="1">EXPLAINER</text>
+  <text x="480" y="53" font-family="'Castoro', Georgia, serif" font-size="18" fill="#FFFFFF" text-anchor="middle" font-weight="400">DataHub Automated Data Lineage Architecture</text>
 
-  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ============================================================ -->
   <!-- COLUMN 1: DATA SOURCES (left) -->
-  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ============================================================ -->
 
   <!-- Sources section tile -->
-  <rect x="44" y="96" width="192" height="536" rx="8" ry="8" fill="#B0EAFC" stroke="#3CBBEB" stroke-width="1"/>
-  <text x="140" y="118" font-family="'Geist', sans-serif" font-size="10" fill="#0A4170" font-weight="600" letter-spacing="1.2" text-anchor="middle">DATA SOURCES</text>
+  <rect x="40" y="96" width="192" height="532" rx="8" ry="8" fill="#B0EAFC" stroke="#3CBBEB" stroke-width="1.2"/>
+
+  <!-- Sources header -->
+  <rect x="40" y="96" width="192" height="36" rx="8" ry="8" fill="#0A4170"/>
+  <rect x="40" y="114" width="192" height="18" fill="#0A4170"/>
+  <text x="136" y="119" font-family="'Geist', sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle" font-weight="600" letter-spacing="1">DATA SOURCES</text>
 
   <!-- Source: Snowflake -->
-  <rect x="60" y="128" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+  <rect x="56" y="146" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
   <!-- Snowflake icon: snowflake shape -->
-  <g transform="translate(76, 148)">
-    <line x1="0" y1="-10" x2="0" y2="10" stroke="#006DCD" stroke-width="1.8"/>
-    <line x1="-8.66" y1="-5" x2="8.66" y2="5" stroke="#006DCD" stroke-width="1.8"/>
-    <line x1="-8.66" y1="5" x2="8.66" y2="-5" stroke="#006DCD" stroke-width="1.8"/>
-    <circle cx="-6" cy="-3.5" r="1.5" fill="none" stroke="#006DCD" stroke-width="1.2"/>
-    <circle cx="6" cy="3.5" r="1.5" fill="none" stroke="#006DCD" stroke-width="1.2"/>
+  <g transform="translate(72,162)">
+    <line x1="8" y1="0" x2="8" y2="20" stroke="#006DCD" stroke-width="1.8"/>
+    <line x1="0" y1="10" x2="16" y2="10" stroke="#006DCD" stroke-width="1.8"/>
+    <line x1="1.4" y1="2.9" x2="14.6" y2="17.1" stroke="#006DCD" stroke-width="1.8"/>
+    <line x1="14.6" y1="2.9" x2="1.4" y2="17.1" stroke="#006DCD" stroke-width="1.8"/>
   </g>
-  <text x="102" y="147" font-family="'Geist', sans-serif" font-size="12" fill="#1E1E1E" font-weight="500">Snowflake</text>
-  <text x="102" y="162" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="400">Query log parsing</text>
+  <text x="100" y="168" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="600">Snowflake</text>
+  <text x="100" y="182" font-family="'Geist', sans-serif" font-size="9" fill="#767473">Query log parsing</text>
 
   <!-- Source: BigQuery -->
-  <rect x="60" y="192" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
-  <g transform="translate(76, 212)">
-    <polygon points="0,-11 9.5,5.5 -9.5,5.5" fill="none" stroke="#006DCD" stroke-width="1.8"/>
-    <line x1="0" y1="-4" x2="0" y2="5.5" stroke="#006DCD" stroke-width="1.2"/>
-    <line x1="-4" y1="2" x2="4" y2="2" stroke="#006DCD" stroke-width="1.2"/>
+  <rect x="56" y="210" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <g transform="translate(72,226)">
+    <polygon points="8,0 16,14 0,14" fill="none" stroke="#006DCD" stroke-width="1.8" stroke-linejoin="round"/>
+    <circle cx="8" cy="9" r="3" fill="none" stroke="#006DCD" stroke-width="1.5"/>
   </g>
-  <text x="102" y="211" font-family="'Geist', sans-serif" font-size="12" fill="#1E1E1E" font-weight="500">BigQuery</text>
-  <text x="102" y="226" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="400">Audit log extraction</text>
+  <text x="100" y="232" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="600">BigQuery</text>
+  <text x="100" y="246" font-family="'Geist', sans-serif" font-size="9" fill="#767473">Audit log extraction</text>
 
   <!-- Source: dbt -->
-  <rect x="60" y="256" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
-  <g transform="translate(76, 276)">
-    <rect x="-10" y="-10" width="20" height="20" rx="3" fill="none" stroke="#006DCD" stroke-width="1.8"/>
-    <text x="0" y="5" font-family="'Geist', sans-serif" font-size="10" fill="#006DCD" font-weight="600" text-anchor="middle">dbt</text>
+  <rect x="56" y="274" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <g transform="translate(72,290)">
+    <rect x="0" y="4" width="10" height="10" rx="2" fill="none" stroke="#006DCD" stroke-width="1.8"/>
+    <rect x="6" y="0" width="10" height="10" rx="2" fill="none" stroke="#006DCD" stroke-width="1.8"/>
+    <line x1="10" y1="9" x2="6" y2="9" stroke="#006DCD" stroke-width="1.5"/>
   </g>
-  <text x="102" y="275" font-family="'Geist', sans-serif" font-size="12" fill="#1E1E1E" font-weight="500">dbt</text>
-  <text x="102" y="290" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="400">Models + column lineage</text>
+  <text x="100" y="296" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="600">dbt</text>
+  <text x="100" y="310" font-family="'Geist', sans-serif" font-size="9" fill="#767473">Transformation lineage</text>
 
   <!-- Source: Airflow -->
-  <rect x="60" y="320" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
-  <g transform="translate(76, 340)">
-    <circle cx="0" cy="0" r="10" fill="none" stroke="#006DCD" stroke-width="1.8"/>
-    <path d="M-5,-5 Q0,-10 5,-5 Q10,0 5,5 Q0,10 -5,5 Q-10,0 -5,-5" fill="none" stroke="#006DCD" stroke-width="1.2"/>
+  <rect x="56" y="338" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <g transform="translate(72,354)">
+    <circle cx="8" cy="10" r="8" fill="none" stroke="#006DCD" stroke-width="1.8"/>
+    <path d="M4,10 Q8,4 12,10" fill="none" stroke="#006DCD" stroke-width="1.5"/>
+    <circle cx="8" cy="10" r="2" fill="#006DCD"/>
   </g>
-  <text x="102" y="339" font-family="'Geist', sans-serif" font-size="12" fill="#1E1E1E" font-weight="500">Airflow</text>
-  <text x="102" y="354" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="400">DAG dependencies</text>
+  <text x="100" y="360" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="600">Airflow</text>
+  <text x="100" y="374" font-family="'Geist', sans-serif" font-size="9" fill="#767473">DAG dependencies</text>
 
   <!-- Source: Redshift -->
-  <rect x="60" y="384" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
-  <g transform="translate(76, 404)">
-    <rect x="-10" y="-8" width="20" height="16" rx="2" fill="none" stroke="#006DCD" stroke-width="1.8"/>
-    <line x1="-6" y1="-3" x2="6" y2="-3" stroke="#006DCD" stroke-width="1.2"/>
-    <line x1="-6" y1="1" x2="6" y2="1" stroke="#006DCD" stroke-width="1.2"/>
-    <line x1="-6" y1="5" x2="2" y2="5" stroke="#006DCD" stroke-width="1.2"/>
+  <rect x="56" y="402" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <g transform="translate(72,418)">
+    <rect x="0" y="2" width="16" height="16" rx="3" fill="none" stroke="#006DCD" stroke-width="1.8"/>
+    <line x1="0" y1="8" x2="16" y2="8" stroke="#006DCD" stroke-width="1.2"/>
+    <line x1="5" y1="2" x2="5" y2="18" stroke="#006DCD" stroke-width="1.2"/>
   </g>
-  <text x="102" y="403" font-family="'Geist', sans-serif" font-size="12" fill="#1E1E1E" font-weight="500">Redshift</text>
-  <text x="102" y="418" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="400">Lineage extraction</text>
+  <text x="100" y="424" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="600">Redshift</text>
+  <text x="100" y="438" font-family="'Geist', sans-serif" font-size="9" fill="#767473">Lineage extraction</text>
 
   <!-- Source: BI Tools -->
-  <rect x="60" y="448" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
-  <g transform="translate(76, 468)">
-    <rect x="-10" y="-10" width="20" height="20" rx="2" fill="none" stroke="#006DCD" stroke-width="1.8"/>
-    <rect x="-6" y="0" width="4" height="8" fill="none" stroke="#006DCD" stroke-width="1.2"/>
-    <rect x="-1" y="-4" width="4" height="12" fill="none" stroke="#006DCD" stroke-width="1.2"/>
-    <rect x="4" y="-7" width="4" height="15" fill="none" stroke="#006DCD" stroke-width="1.2"/>
+  <rect x="56" y="466" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <g transform="translate(72,482)">
+    <rect x="0" y="8" width="5" height="10" fill="none" stroke="#006DCD" stroke-width="1.5"/>
+    <rect x="6" y="4" width="5" height="14" fill="none" stroke="#006DCD" stroke-width="1.5"/>
+    <rect x="12" y="0" width="5" height="18" fill="none" stroke="#006DCD" stroke-width="1.5"/>
   </g>
-  <text x="102" y="467" font-family="'Geist', sans-serif" font-size="12" fill="#1E1E1E" font-weight="500">BI Tools</text>
-  <text x="102" y="482" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="400">Looker, Tableau, Power BI</text>
+  <text x="100" y="488" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="600">BI Tools</text>
+  <text x="100" y="502" font-family="'Geist', sans-serif" font-size="9" fill="#767473">Looker, Tableau, Power BI</text>
 
   <!-- Source: ML Platforms -->
-  <rect x="60" y="512" width="160" height="52" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
-  <g transform="translate(76, 532)">
-    <circle cx="0" cy="-4" r="5" fill="none" stroke="#006DCD" stroke-width="1.8"/>
-    <circle cx="-7" cy="6" r="4" fill="none" stroke="#006DCD" stroke-width="1.4"/>
-    <circle cx="7" cy="6" r="4" fill="none" stroke="#006DCD" stroke-width="1.4"/>
-    <line x1="-3" y1="0" x2="-5" y2="3" stroke="#006DCD" stroke-width="1.2"/>
-    <line x1="3" y1="0" x2="5" y2="3" stroke="#006DCD" stroke-width="1.2"/>
+  <rect x="56" y="530" width="160" height="80" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <g transform="translate(72,548)">
+    <circle cx="4" cy="4" r="3.5" fill="none" stroke="#006DCD" stroke-width="1.5"/>
+    <circle cx="14" cy="4" r="3.5" fill="none" stroke="#006DCD" stroke-width="1.5"/>
+    <circle cx="9" cy="14" r="3.5" fill="none" stroke="#006DCD" stroke-width="1.5"/>
+    <line x1="7.5" y1="4" x2="10.5" y2="4" stroke="#006DCD" stroke-width="1.2"/>
+    <line x1="6" y1="7" x2="8" y2="11" stroke="#006DCD" stroke-width="1.2"/>
+    <line x1="12" y1="7" x2="10" y2="11" stroke="#006DCD" stroke-width="1.2"/>
   </g>
-  <text x="102" y="531" font-family="'Geist', sans-serif" font-size="12" fill="#1E1E1E" font-weight="500">ML Platforms</text>
-  <text x="102" y="546" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="400">SageMaker, MLflow</text>
+  <text x="100" y="554" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="600">ML Platforms</text>
+  <text x="100" y="568" font-family="'Geist', sans-serif" font-size="9" fill="#767473">SageMaker, MLflow</text>
+  <text x="100" y="582" font-family="'Geist', sans-serif" font-size="9" fill="#767473">Feature Stores</text>
 
-  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ============================================================ -->
   <!-- ARROWS: Sources → Ingestion Engine -->
-  <!-- ═══════════════════════════════════════════════════════ -->
-  <line x1="220" y1="154" x2="282" y2="220" stroke="#3CBBEB" stroke-width="1.4" marker-end="url(#arrow-right)"/>
-  <line x1="220" y1="218" x2="282" y2="260" stroke="#3CBBEB" stroke-width="1.4" marker-end="url(#arrow-right)"/>
-  <line x1="220" y1="282" x2="282" y2="300" stroke="#3CBBEB" stroke-width="1.4" marker-end="url(#arrow-right)"/>
-  <line x1="220" y1="346" x2="282" y2="340" stroke="#3CBBEB" stroke-width="1.4" marker-end="url(#arrow-right)"/>
-  <line x1="220" y1="410" x2="282" y2="380" stroke="#3CBBEB" stroke-width="1.4" marker-end="url(#arrow-right)"/>
-  <line x1="220" y1="474" x2="282" y2="420" stroke="#3CBBEB" stroke-width="1.4" marker-end="url(#arrow-right)"/>
-  <line x1="220" y1="538" x2="282" y2="460" stroke="#3CBBEB" stroke-width="1.4" marker-end="url(#arrow-right)"/>
+  <!-- ============================================================ -->
+  <line x1="216" y1="172" x2="268" y2="172" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right)"/>
+  <line x1="216" y1="236" x2="268" y2="236" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right)"/>
+  <line x1="216" y1="300" x2="268" y2="300" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right)"/>
+  <line x1="216" y1="364" x2="268" y2="364" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right)"/>
+  <line x1="216" y1="428" x2="268" y2="428" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right)"/>
+  <line x1="216" y1="492" x2="268" y2="492" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right)"/>
+  <line x1="216" y1="570" x2="268" y2="570" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right)"/>
 
-  <!-- ═══════════════════════════════════════════════════════ -->
-  <!-- COLUMN 2: INGESTION ENGINE (center-left) -->
-  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ============================================================ -->
+  <!-- COLUMN 2: DATAHUB INGESTION ENGINE (center-left) -->
+  <!-- ============================================================ -->
 
-  <!-- Ingestion Engine tile -->
-  <rect x="282" y="96" width="196" height="536" rx="8" ry="8" fill="#0A4170" stroke="#3CBBEB" stroke-width="1"/>
-  <text x="380" y="118" font-family="'Geist', sans-serif" font-size="10" fill="#3CBBEB" font-weight="600" letter-spacing="1.2" text-anchor="middle">INGESTION ENGINE</text>
+  <!-- Ingestion engine tile -->
+  <rect x="272" y="96" width="200" height="532" rx="8" ry="8" fill="#0A4170" stroke="#3CBBEB" stroke-width="1.5"/>
 
-  <!-- Ingestion: SQL Parser -->
-  <rect x="298" y="128" width="164" height="64" rx="6" ry="6" fill="#002131" stroke="#3CBBEB" stroke-width="1"/>
-  <g transform="translate(316, 152)">
-    <rect x="-8" y="-10" width="16" height="20" rx="2" fill="none" stroke="#3CBBEB" stroke-width="1.6"/>
-    <line x1="-4" y1="-4" x2="4" y2="-4" stroke="#3CBBEB" stroke-width="1.2"/>
-    <line x1="-4" y1="0" x2="4" y2="0" stroke="#3CBBEB" stroke-width="1.2"/>
-    <line x1="-4" y1="4" x2="1" y2="4" stroke="#3CBBEB" stroke-width="1.2"/>
+  <!-- Ingestion header -->
+  <rect x="272" y="96" width="200" height="36" rx="8" ry="8" fill="#002131"/>
+  <rect x="272" y="114" width="200" height="18" fill="#002131"/>
+  <text x="372" y="119" font-family="'Geist', sans-serif" font-size="11" fill="#3CBBEB" text-anchor="middle" font-weight="600" letter-spacing="1">INGESTION ENGINE</text>
+
+  <!-- Ingestion sub-label -->
+  <text x="372" y="148" font-family="'Geist', sans-serif" font-size="10" fill="#B0EAFC" text-anchor="middle">50+ Source Connectors</text>
+
+  <!-- SQL Parser tile -->
+  <rect x="288" y="160" width="168" height="60" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <g transform="translate(300,172)">
+    <rect x="0" y="0" width="18" height="14" rx="2" fill="none" stroke="#006DCD" stroke-width="1.8"/>
+    <line x1="3" y1="4" x2="15" y2="4" stroke="#006DCD" stroke-width="1.2"/>
+    <line x1="3" y1="7" x2="12" y2="7" stroke="#006DCD" stroke-width="1.2"/>
+    <line x1="3" y1="10" x2="15" y2="10" stroke="#006DCD" stroke-width="1.2"/>
   </g>
-  <text x="338" y="148" font-family="'Geist', sans-serif" font-size="11" fill="#FFFFFF" font-weight="500">SQL Parser</text>
-  <text x="338" y="163" font-family="'Geist', sans-serif" font-size="9" fill="#B0EAFC" font-weight="400">sqlglot-powered</text>
-  <text x="338" y="176" font-family="'Geist', sans-serif" font-size="9" fill="#B0EAFC" font-weight="400">AST extraction</text>
+  <text x="330" y="176" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="600">SQL Parser</text>
+  <text x="330" y="190" font-family="'Geist', sans-serif" font-size="9" fill="#767473">sqlglot-powered</text>
+  <text x="330" y="202" font-family="'Geist', sans-serif" font-size="9" fill="#767473">query analysis</text>
 
-  <!-- Ingestion: Audit Log Processor -->
-  <rect x="298" y="204" width="164" height="64" rx="6" ry="6" fill="#002131" stroke="#3CBBEB" stroke-width="1"/>
-  <g transform="translate(316, 228)">
-    <circle cx="0" cy="0" r="10" fill="none" stroke="#3CBBEB" stroke-width="1.6"/>
-    <line x1="-5" y1="-5" x2="5" y2="5" stroke="#3CBBEB" stroke-width="1.2"/>
-    <line x1="5" y1="-5" x2="-5" y2="5" stroke="#3CBBEB" stroke-width="1.2"/>
-    <circle cx="0" cy="0" r="3" fill="none" stroke="#3CBBEB" stroke-width="1.2"/>
+  <!-- Audit Log Parser tile -->
+  <rect x="288" y="232" width="168" height="60" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <g transform="translate(300,244)">
+    <rect x="0" y="0" width="18" height="18" rx="2" fill="none" stroke="#006DCD" stroke-width="1.8"/>
+    <line x1="4" y1="5" x2="14" y2="5" stroke="#006DCD" stroke-width="1.2"/>
+    <line x1="4" y1="9" x2="14" y2="9" stroke="#006DCD" stroke-width="1.2"/>
+    <line x1="4" y1="13" x2="10" y2="13" stroke="#006DCD" stroke-width="1.2"/>
+    <circle cx="15" cy="13" r="3" fill="none" stroke="#3CBBEB" stroke-width="1.2"/>
   </g>
-  <text x="338" y="224" font-family="'Geist', sans-serif" font-size="11" fill="#FFFFFF" font-weight="500">Audit Log</text>
-  <text x="338" y="239" font-family="'Geist', sans-serif" font-size="11" fill="#FFFFFF" font-weight="500">Processor</text>
-  <text x="338" y="254" font-family="'Ge
+  <text x="330" y="248" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="600">Audit Log Parser</text>
+  <text x="330" y="262" font-family="'Geist', sans-serif" font-size="9" fill="#767473">Real-time extraction</text>
+  <text x="330" y="274" font-family="'Geist', sans-serif" font-size="9" fill="#767473">from warehouse logs</text>
+
+  <!-- Column Lineage Extractor tile -->
