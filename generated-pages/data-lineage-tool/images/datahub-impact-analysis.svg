@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" role="img">
-  <title>DataHub Impact Analysis — Multi-Hop Lineage Visualization</title>
-  <desc>Impact analysis diagram showing a source dataset expanding downstream through multi-hop lineage traversal across datasets, dashboards, and ML models using DataHub's automated lineage platform.</desc>
+  <title>DataHub Impact Analysis — Multi-Hop Data Lineage Visualization</title>
+  <desc>Architecture diagram showing DataHub impact analysis capability: a source dataset triggers downstream lineage traversal across 247 datasets, 15 dashboards, and 8 ML models through multi-hop lineage with column-level dependency paths.</desc>
 
   <defs>
     <style>
@@ -23,136 +23,140 @@
   <!-- Outer frame -->
   <rect x="20" y="20" width="920" height="640" rx="10" ry="10" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.5"/>
 
-  <!-- Header tile -->
-  <rect x="20" y="20" width="920" height="72" rx="10" ry="10" fill="#002131"/>
-  <rect x="20" y="72" width="920" height="20" fill="#002131"/>
+  <!-- Header band -->
+  <rect x="20" y="20" width="920" height="64" rx="10" ry="10" fill="#002131"/>
+  <rect x="20" y="64" width="920" height="20" fill="#002131"/>
 
   <!-- Header text -->
-  <text x="48" y="63" font-family="'Castoro', Georgia, serif" font-size="22" fill="#FFFFFF" font-weight="400">Impact Analysis</text>
-  <text x="48" y="63" font-family="'Castoro', Georgia, serif" font-size="22" fill="#FFFFFF" font-weight="400"/>
-  <text x="230" y="63" font-family="'Geist', sans-serif" font-size="13" fill="#3CBBEB" font-weight="400" letter-spacing="0.5">Multi-hop downstream lineage traversal · Up to 1000 hops</text>
+  <text x="48" y="58" font-family="'Castoro', Georgia, serif" font-size="22" fill="#FFFFFF" font-weight="400">Impact Analysis</text>
+  <text x="48" y="76" font-family="'Geist', sans-serif" font-size="11" fill="#3CBBEB" font-weight="400" letter-spacing="1.5">MULTI-HOP DATA LINEAGE · DOWNSTREAM DEPENDENCY TRAVERSAL</text>
 
-  <!-- Badge: Open Source -->
-  <rect x="800" y="38" width="116" height="26" rx="4" fill="#0A4170"/>
-  <text x="858" y="55" font-family="'Geist', sans-serif" font-size="11" fill="#B0EAFC" font-weight="500" text-anchor="middle" letter-spacing="0.8">OPEN SOURCE</text>
+  <!-- Badge: up to 1000 hops -->
+  <rect x="760" y="34" width="160" height="32" rx="4" fill="#0A4170"/>
+  <text x="840" y="54" font-family="'Geist', sans-serif" font-size="11" fill="#B0EAFC" font-weight="500" text-anchor="middle" letter-spacing="0.5">Up to 1,000 hops</text>
 
-  <!-- ── SOURCE DATASET NODE ── -->
-  <g id="source-node">
-    <rect x="48" y="128" width="148" height="80" rx="8" fill="#002131" stroke="#3CBBEB" stroke-width="2"/>
-    <!-- DB icon -->
-    <ellipse cx="122" cy="148" rx="18" ry="6" fill="none" stroke="#3CBBEB" stroke-width="1.5"/>
-    <line x1="104" y1="148" x2="104" y2="164" stroke="#3CBBEB" stroke-width="1.5"/>
-    <line x1="140" y1="148" x2="140" y2="164" stroke="#3CBBEB" stroke-width="1.5"/>
-    <ellipse cx="122" cy="164" rx="18" ry="6" fill="none" stroke="#3CBBEB" stroke-width="1.5"/>
-    <text x="122" y="186" font-family="'Geist', sans-serif" font-size="11" fill="#B0EAFC" font-weight="500" text-anchor="middle">orders_raw</text>
-    <text x="122" y="200" font-family="'Geist', sans-serif" font-size="9" fill="#3CBBEB" font-weight="300" text-anchor="middle">SOURCE DATASET</text>
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SOURCE DATASET — left anchor -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <g id="source-dataset">
+    <rect x="48" y="118" width="160" height="88" rx="6" fill="#002131" stroke="#3CBBEB" stroke-width="1.5"/>
+    <!-- icon: database -->
+    <rect x="80" y="132" width="32" height="6" rx="3" fill="#3CBBEB"/>
+    <rect x="80" y="142" width="32" height="6" rx="3" fill="#3CBBEB" opacity="0.6"/>
+    <ellipse cx="96" cy="132" rx="16" ry="5" fill="none" stroke="#3CBBEB" stroke-width="1.5"/>
+    <line x1="80" y1="132" x2="80" y2="148" stroke="#3CBBEB" stroke-width="1.5"/>
+    <line x1="112" y1="132" x2="112" y2="148" stroke="#3CBBEB" stroke-width="1.5"/>
+    <ellipse cx="96" cy="148" rx="16" ry="5" fill="none" stroke="#3CBBEB" stroke-width="1.5"/>
+    <text x="96" y="172" font-family="'Geist', sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="middle">Source Dataset</text>
+    <text x="96" y="186" font-family="'Geist', sans-serif" font-size="9" fill="#B0EAFC" font-weight="400" text-anchor="middle">orders.transactions</text>
   </g>
 
   <!-- Source label -->
-  <text x="122" y="224" font-family="'Geist', sans-serif" font-size="10" fill="#767473" font-weight="400" text-anchor="middle">Snowflake · production</text>
+  <text x="128" y="220" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="400" text-anchor="middle" letter-spacing="0.8">SCHEMA CHANGE DETECTED</text>
 
-  <!-- ── HOP 1 LABEL ── -->
-  <rect x="240" y="108" width="60" height="20" rx="4" fill="#0A4170"/>
-  <text x="270" y="122" font-family="'Geist', sans-serif" font-size="10" fill="#B0EAFC" font-weight="500" text-anchor="middle" letter-spacing="0.6">HOP 1</text>
-
-  <!-- ── HOP 1 NODES ── -->
-  <!-- Node 1a: orders_cleaned -->
-  <g id="hop1-a">
-    <rect x="240" y="128" width="140" height="64" rx="6" fill="#F2F1EE" stroke="#0A4170" stroke-width="1.5"/>
-    <!-- table icon -->
-    <rect x="256" y="142" width="20" height="16" rx="2" fill="none" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="256" y1="148" x2="276" y2="148" stroke="#0A4170" stroke-width="1"/>
-    <line x1="256" y1="153" x2="276" y2="153" stroke="#0A4170" stroke-width="1"/>
-    <text x="284" y="152" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="500">orders_cleaned</text>
-    <text x="284" y="165" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="300">dbt model · Snowflake</text>
-    <text x="310" y="183" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="400" text-anchor="middle">DATASET</text>
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- DATAHUB PLATFORM HUB — center -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <g id="datahub-hub">
+    <rect x="360" y="100" width="240" height="124" rx="8" fill="#0A4170" stroke="#3CBBEB" stroke-width="2"/>
+    <!-- DataHub wordmark area -->
+    <text x="480" y="128" font-family="'Castoro', Georgia, serif" font-size="18" fill="#FFFFFF" font-weight="400" text-anchor="middle">DataHub</text>
+    <line x1="380" y1="136" x2="580" y2="136" stroke="#3CBBEB" stroke-width="0.75" opacity="0.5"/>
+    <!-- Feature pills -->
+    <rect x="376" y="144" width="96" height="20" rx="3" fill="#002131"/>
+    <text x="424" y="158" font-family="'Geist', sans-serif" font-size="9" fill="#3CBBEB" font-weight="500" text-anchor="middle" letter-spacing="0.3">Lineage Graph</text>
+    <rect x="480" y="144" width="96" height="20" rx="3" fill="#002131"/>
+    <text x="528" y="158" font-family="'Geist', sans-serif" font-size="9" fill="#3CBBEB" font-weight="500" text-anchor="middle" letter-spacing="0.3">Impact Engine</text>
+    <rect x="376" y="170" width="96" height="20" rx="3" fill="#002131"/>
+    <text x="424" y="184" font-family="'Geist', sans-serif" font-size="9" fill="#3CBBEB" font-weight="500" text-anchor="middle" letter-spacing="0.3">Column Lineage</text>
+    <rect x="480" y="170" width="96" height="20" rx="3" fill="#002131"/>
+    <text x="528" y="184" font-family="'Geist', sans-serif" font-size="9" fill="#3CBBEB" font-weight="500" text-anchor="middle" letter-spacing="0.3">Multi-Hop Traversal</text>
+    <text x="480" y="214" font-family="'Geist', sans-serif" font-size="9" fill="#B0EAFC" font-weight="400" text-anchor="middle" letter-spacing="1">AUTOMATED LINEAGE EXTRACTION</text>
   </g>
 
-  <!-- Node 1b: orders_enriched -->
-  <g id="hop1-b">
-    <rect x="240" y="212" width="140" height="64" rx="6" fill="#F2F1EE" stroke="#0A4170" stroke-width="1.5"/>
-    <rect x="256" y="226" width="20" height="16" rx="2" fill="none" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="256" y1="232" x2="276" y2="232" stroke="#0A4170" stroke-width="1"/>
-    <line x1="256" y1="237" x2="276" y2="237" stroke="#0A4170" stroke-width="1"/>
-    <text x="284" y="236" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="500">orders_enriched</text>
-    <text x="284" y="249" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="300">dbt model · Snowflake</text>
-    <text x="310" y="267" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="400" text-anchor="middle">DATASET</text>
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- CONNECTOR: Source → DataHub -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <line x1="208" y1="162" x2="358" y2="162" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <rect x="234" y="150" width="100" height="18" rx="3" fill="#F2F1EE" stroke="#3CBBEB" stroke-width="0.75"/>
+  <text x="284" y="163" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="500" text-anchor="middle">audit log + SQL parse</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- HOP LABELS — traversal path indicator -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <g id="hop-indicators">
+    <rect x="48" y="240" width="864" height="28" rx="4" fill="#B0EAFC" opacity="0.35"/>
+    <text x="88" y="259" font-family="'Geist', sans-serif" font-size="10" fill="#002131" font-weight="600" letter-spacing="0.5">HOP 1</text>
+    <line x1="140" y1="254" x2="200" y2="254" stroke="#0A4170" stroke-width="0.75" stroke-dasharray="3 2"/>
+    <text x="220" y="259" font-family="'Geist', sans-serif" font-size="10" fill="#002131" font-weight="600" letter-spacing="0.5">HOP 2</text>
+    <line x1="272" y1="254" x2="332" y2="254" stroke="#0A4170" stroke-width="0.75" stroke-dasharray="3 2"/>
+    <text x="352" y="259" font-family="'Geist', sans-serif" font-size="10" fill="#002131" font-weight="600" letter-spacing="0.5">HOP 3</text>
+    <line x1="404" y1="254" x2="464" y2="254" stroke="#0A4170" stroke-width="0.75" stroke-dasharray="3 2"/>
+    <text x="484" y="259" font-family="'Geist', sans-serif" font-size="10" fill="#002131" font-weight="600" letter-spacing="0.5">HOP N</text>
+    <text x="560" y="259" font-family="'Geist', sans-serif" font-size="10" fill="#767473" font-weight="400">· · · up to 1,000 hops downstream · · ·</text>
   </g>
 
-  <!-- Node 1c: orders_aggregated -->
-  <g id="hop1-c">
-    <rect x="240" y="296" width="140" height="64" rx="6" fill="#F2F1EE" stroke="#0A4170" stroke-width="1.5"/>
-    <rect x="256" y="310" width="20" height="16" rx="2" fill="none" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="256" y1="316" x2="276" y2="316" stroke="#0A4170" stroke-width="1"/>
-    <line x1="256" y1="321" x2="276" y2="321" stroke="#0A4170" stroke-width="1"/>
-    <text x="284" y="320" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="500">orders_agg_daily</text>
-    <text x="284" y="333" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="300">dbt model · BigQuery</text>
-    <text x="310" y="351" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="400" text-anchor="middle">DATASET</text>
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- DOWNSTREAM IMPACT TILES — three columns -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- Column A: Datasets (247) -->
+  <g id="downstream-datasets">
+    <rect x="48" y="292" width="248" height="220" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.5"/>
+    <!-- Header -->
+    <rect x="48" y="292" width="248" height="36" rx="6" fill="#002131"/>
+    <rect x="48" y="316" width="248" height="12" fill="#002131"/>
+    <!-- icon: stack -->
+    <rect x="64" y="302" width="14" height="3" rx="1" fill="#3CBBEB"/>
+    <rect x="64" y="308" width="14" height="3" rx="1" fill="#3CBBEB" opacity="0.6"/>
+    <rect x="64" y="314" width="14" height="3" rx="1" fill="#3CBBEB" opacity="0.3"/>
+    <text x="86" y="316" font-family="'Geist', sans-serif" font-size="12" fill="#FFFFFF" font-weight="600">Downstream Datasets</text>
+    <!-- Count badge -->
+    <rect x="228" y="298" width="56" height="22" rx="3" fill="#3CBBEB"/>
+    <text x="256" y="313" font-family="'Geist', sans-serif" font-size="12" fill="#002131" font-weight="600" text-anchor="middle">247</text>
+
+    <!-- Dataset rows -->
+    <rect x="64" y="340" width="216" height="24" rx="3" fill="#F2F1EE"/>
+    <rect x="68" y="347" width="6" height="10" rx="1" fill="#3CBBEB"/>
+    <text x="82" y="357" font-family="'Geist', sans-serif" font-size="10" fill="#1E1E1E" font-weight="400">analytics.daily_revenue</text>
+    <text x="264" y="357" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="400" text-anchor="end">hop 1</text>
+
+    <rect x="64" y="370" width="216" height="24" rx="3" fill="#F2F1EE"/>
+    <rect x="68" y="377" width="6" height="10" rx="1" fill="#3CBBEB"/>
+    <text x="82" y="387" font-family="'Geist', sans-serif" font-size="10" fill="#1E1E1E" font-weight="400">finance.monthly_summary</text>
+    <text x="264" y="387" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="400" text-anchor="end">hop 2</text>
+
+    <rect x="64" y="400" width="216" height="24" rx="3" fill="#F2F1EE"/>
+    <rect x="68" y="407" width="6" height="10" rx="1" fill="#3CBBEB"/>
+    <text x="82" y="417" font-family="'Geist', sans-serif" font-size="10" fill="#1E1E1E" font-weight="400">warehouse.fact_orders</text>
+    <text x="264" y="417" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="400" text-anchor="end">hop 2</text>
+
+    <rect x="64" y="430" width="216" height="24" rx="3" fill="#F2F1EE"/>
+    <rect x="68" y="437" width="6" height="10" rx="1" fill="#3CBBEB" opacity="0.5"/>
+    <text x="82" y="447" font-family="'Geist', sans-serif" font-size="10" fill="#767473" font-weight="400">+ 244 more datasets</text>
+
+    <!-- Column lineage indicator -->
+    <rect x="64" y="462" width="216" height="36" rx="3" fill="#B0EAFC" opacity="0.4"/>
+    <text x="172" y="477" font-family="'Geist', sans-serif" font-size="9" fill="#002131" font-weight="600" text-anchor="middle" letter-spacing="0.5">COLUMN-LEVEL LINEAGE</text>
+    <text x="172" y="491" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="400" text-anchor="middle">amount → revenue → net_revenue</text>
   </g>
 
-  <!-- ── HOP 2 LABEL ── -->
-  <rect x="440" y="108" width="60" height="20" rx="4" fill="#0A4170"/>
-  <text x="470" y="122" font-family="'Geist', sans-serif" font-size="10" fill="#B0EAFC" font-weight="500" text-anchor="middle" letter-spacing="0.6">HOP 2</text>
+  <!-- Column B: Dashboards (15) -->
+  <g id="downstream-dashboards">
+    <rect x="356" y="292" width="248" height="220" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.5"/>
+    <!-- Header -->
+    <rect x="356" y="292" width="248" height="36" rx="6" fill="#0A4170"/>
+    <rect x="356" y="316" width="248" height="12" fill="#0A4170"/>
+    <!-- icon: chart bars -->
+    <rect x="372" y="304" width="4" height="12" rx="1" fill="#3CBBEB"/>
+    <rect x="379" y="308" width="4" height="8" rx="1" fill="#3CBBEB" opacity="0.7"/>
+    <rect x="386" y="306" width="4" height="10" rx="1" fill="#3CBBEB" opacity="0.5"/>
+    <text x="398" y="316" font-family="'Geist', sans-serif" font-size="12" fill="#FFFFFF" font-weight="600">BI Dashboards</text>
+    <!-- Count badge -->
+    <rect x="536" y="298" width="56" height="22" rx="3" fill="#3CBBEB"/>
+    <text x="564" y="313" font-family="'Geist', sans-serif" font-size="12" fill="#002131" font-weight="600" text-anchor="middle">15</text>
 
-  <!-- ── HOP 2 NODES ── -->
-  <!-- Node 2a: revenue_metrics -->
-  <g id="hop2-a">
-    <rect x="440" y="128" width="140" height="64" rx="6" fill="#F2F1EE" stroke="#0A4170" stroke-width="1.5"/>
-    <rect x="456" y="142" width="20" height="16" rx="2" fill="none" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="456" y1="148" x2="476" y2="148" stroke="#0A4170" stroke-width="1"/>
-    <line x1="456" y1="153" x2="476" y2="153" stroke="#0A4170" stroke-width="1"/>
-    <text x="484" y="152" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="500">revenue_metrics</text>
-    <text x="484" y="165" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="300">Airflow DAG · Redshift</text>
-    <text x="510" y="183" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="400" text-anchor="middle">DATASET</text>
-  </g>
-
-  <!-- Node 2b: customer_ltv -->
-  <g id="hop2-b">
-    <rect x="440" y="212" width="140" height="64" rx="6" fill="#F2F1EE" stroke="#0A4170" stroke-width="1.5"/>
-    <rect x="456" y="226" width="20" height="16" rx="2" fill="none" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="456" y1="232" x2="476" y2="232" stroke="#0A4170" stroke-width="1"/>
-    <line x1="456" y1="237" x2="476" y2="237" stroke="#0A4170" stroke-width="1"/>
-    <text x="484" y="236" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="500">customer_ltv</text>
-    <text x="484" y="249" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="300">dbt model · Snowflake</text>
-    <text x="510" y="267" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="400" text-anchor="middle">DATASET</text>
-  </g>
-
-  <!-- Node 2c: order_trends -->
-  <g id="hop2-c">
-    <rect x="440" y="296" width="140" height="64" rx="6" fill="#F2F1EE" stroke="#0A4170" stroke-width="1.5"/>
-    <rect x="456" y="310" width="20" height="16" rx="2" fill="none" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="456" y1="316" x2="476" y2="316" stroke="#0A4170" stroke-width="1"/>
-    <line x1="456" y1="321" x2="476" y2="321" stroke="#0A4170" stroke-width="1"/>
-    <text x="484" y="320" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" font-weight="500">order_trends</text>
-    <text x="484" y="333" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="300">Airflow DAG · BigQuery</text>
-    <text x="510" y="351" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="400" text-anchor="middle">DATASET</text>
-  </g>
-
-  <!-- ── HOP 3 LABEL ── -->
-  <rect x="640" y="108" width="60" height="20" rx="4" fill="#002131"/>
-  <text x="670" y="122" font-family="'Geist', sans-serif" font-size="10" fill="#3CBBEB" font-weight="500" text-anchor="middle" letter-spacing="0.6">HOP 3</text>
-
-  <!-- ── HOP 3 NODES — Dashboards + ML ── -->
-  <!-- Node 3a: Revenue Dashboard -->
-  <g id="hop3-a">
-    <rect x="640" y="128" width="148" height="64" rx="6" fill="#B0EAFC" stroke="#3CBBEB" stroke-width="1.5"/>
-    <!-- chart icon -->
-    <rect x="656" y="142" width="20" height="16" rx="2" fill="none" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="660" y1="155" x2="660" y2="150" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="664" y1="155" x2="664" y2="147" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="668" y1="155" x2="668" y2="152" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="672" y1="155" x2="672" y2="145" stroke="#0A4170" stroke-width="1.5"/>
-    <text x="684" y="152" font-family="'Geist', sans-serif" font-size="11" fill="#002131" font-weight="600">Revenue Dashboard</text>
-    <text x="684" y="165" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="300">Looker · Finance team</text>
-    <text x="714" y="183" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="500" text-anchor="middle">DASHBOARD</text>
-  </g>
-
-  <!-- Node 3b: Exec KPI Report -->
-  <g id="hop3-b">
-    <rect x="640" y="212" width="148" height="64" rx="6" fill="#B0EAFC" stroke="#3CBBEB" stroke-width="1.5"/>
-    <rect x="656" y="226" width="20" height="16" rx="2" fill="none" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="660" y1="239" x2="660" y2="234" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="664" y1="239" x2="664" y2="231" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="668" y1="239" x2="668" y2="236" stroke="#0A4170" stroke-width="1.5"/>
-    <line x1="672" y1="239" x2="672" y2="229" stroke="#0A4170" stroke-width="1.5"/>
-    <text x="684" y="236" font-family="'Geist', sans-serif" font-size="11" fill="#002131" font-weight="600">Exec KPI Report</text
+    <!-- Dashboard rows -->
+    <rect x="372" y="340" width="216" height="24" rx="3" fill="#F2F1EE"/>
+    <rect x="376" y="347" width="6" height="10" rx="1" fill="#0A4170"/>
+    <text x="390" y="357" font-family="'Ge
