@@ -545,8 +545,9 @@ async def generate_full_lp(
         page_html = html_match.group(0)
 
     seo = writer_json.get("seo_json", {})
+    raw_slug = (seo.get("slug") or slugify(fields["search_term"])).strip("/")
     metadata = {
-        "slug": seo.get("slug") or slugify(fields["search_term"]),
+        "slug": raw_slug or slugify(fields["search_term"]),
         "primary_search_term": fields["search_term"],
         "intent_type": seo.get("intent_type") or fields.get("intent", ""),
         "cta_type": seo.get("cta_type") or fields.get("primary_cta", ""),
