@@ -769,16 +769,27 @@ async def claude_text(prompt: str, max_tokens: int = 3500) -> str:
 def parse_slack_thread_link(link: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Extract (channel_id, thread_ts) from a Slack thread link.
-    Link format: https://workspace.slack.com/archives/CHANNEL_ID/p1234567890123456
-    Returns (None, None) if parsing fails.
+    Handles both root message links and reply links (which carry thread_ts as a query param).
     """
-    match = re.search(r'/archives/([A-Z0-9]+)/p(\d+)', link)
-    if not match:
+    # Extract channel ID
+    channel_match = re.search(r'/archives/([A-Z0-9]+)', link)
+    if not channel_match:
         return None, None
-    channel_id = match.group(1)
-    raw_ts = match.group(2)          # e.g. "1741234567890123" (no dot)
-    thread_ts = raw_ts[:-6] + "." + raw_ts[-6:]  # → "1741234567.890123"
-    return channel_id, thread_ts
+    channel_id = channel_match.group(1)
+
+    # Prefer thread_ts query param (present when link is copied from a reply)
+    qs_match = re.search(r'thread_ts=(\d+\.\d+)', link)
+    if qs_match:
+        return channel_id, qs_match.group(1)
+
+    # Fall back to the p... path segment (root message link)
+    p_match = re.search(r'/p(\d{16})', link)
+    if p_match:
+        raw_ts = p_match.group(1)
+        thread_ts = raw_ts[:-6] + "." + raw_ts[-6:]
+        return channel_id, thread_ts
+
+    return None, None
 
 def build_build_modal_view(channel_id: str = "") -> Dict[str, Any]:
     """Modal for /sem-lp-build — manual pipeline trigger."""
@@ -991,11 +1002,26 @@ async def _handle_build_modal(payload: dict, view: dict) -> JSONResponse:
 
             # Fetch and accumulate full Bart brief from the thread
             messages = await fetch_thread_messages(bart_channel, thread_ts)
+            logger.info("MANUAL BUILD thread_ts=%s channel=%s messages_found=%s user_ids=%s",
+                        thread_ts, bart_channel, len(messages),
+                        [m.get("user") for m in messages])
+
             bart_brief = accumulate_bart_brief(messages, BART_USER_ID)
+
+            # Fallback: if BART_USER_ID doesn't match, use all non-bot messages in the thread
+            if not bart_brief:
+                logger.warning("No Bart messages found by user ID — falling back to all thread messages")
+                parts = [
+                    (m.get("text") or "").strip()
+                    for m in messages
+                    if (m.get("text") or "").strip() and not m.get("bot_id")
+                ]
+                bart_brief = "\n\n---\n\n".join(parts)
+
             if not bart_brief:
                 await post_message(
                     requester_channel,
-                    f"⚠️ No messages from Bart found in that thread. Check the link and try again."
+                    f"⚠️ No messages found in that thread. Double-check the link and try again."
                 )
                 return
 
