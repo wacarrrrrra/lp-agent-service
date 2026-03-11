@@ -509,7 +509,7 @@ async def generate_full_lp(
     secondary_keywords: List[str],
 ) -> Dict[str, str]:
     writer_prompt = build_copywriter_prompt(fields, bart_brief, secondary_keywords)
-    writer_raw = await claude_text(writer_prompt, max_tokens=4500)
+    writer_raw = await claude_text(writer_prompt, max_tokens=8000)
 
     try:
         writer_json = json.loads(writer_raw)
