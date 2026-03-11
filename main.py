@@ -46,10 +46,24 @@ GITHUB_REPO = os.getenv("GITHUB_REPO", "")
 GITHUB_BRANCH = os.getenv("GITHUB_BRANCH", "main")
 
 # ----------------------------
-# In-memory job state
+# Job state — persisted to disk so restarts don't lose in-flight jobs
 # Keyed by bart_thread_ts (the thread in the private Bart channel)
 # ----------------------------
-JOBS: Dict[str, Dict[str, Any]] = {}
+JOBS_FILE = Path("jobs.json")
+
+def _load_jobs() -> Dict[str, Dict[str, Any]]:
+    try:
+        return json.loads(JOBS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _save_jobs() -> None:
+    try:
+        JOBS_FILE.write_text(json.dumps(JOBS, indent=2), encoding="utf-8")
+    except Exception as e:
+        logger.warning("Could not save jobs.json: %s", e)
+
+JOBS: Dict[str, Dict[str, Any]] = _load_jobs()
 
 # ----------------------------
 # Repo doc loading
@@ -756,6 +770,10 @@ async def claude_text(prompt: str, max_tokens: int = 3500) -> str:
 async def health():
     return {"ok": True}
 
+@app.get("/debug/jobs")
+async def debug_jobs():
+    return {"count": len(JOBS), "jobs": {k: {**v, "fields": "(omitted)"} for k, v in JOBS.items()}}
+
 @app.get("/anthropic/models")
 async def anthropic_models():
     if not ANTHROPIC_API_KEY:
@@ -882,6 +900,7 @@ async def _handle_interactivity(request: Request):
                     "awaiting": "bart",
                     "bart_output": None,
                 }
+                _save_jobs()
 
                 await post_message(
                     bart_channel,
@@ -939,6 +958,7 @@ async def slack_events(request: Request):
         job["bart_output"] = text
         job["awaiting"] = "generating"
         JOBS[thread_ts] = job
+        _save_jobs()
 
         bart_channel = job["bart_channel"]
         requester_channel = job["requester_channel"]
@@ -1023,6 +1043,7 @@ async def slack_events(request: Request):
 
                 job["awaiting"] = "done"
                 JOBS[thread_ts] = job
+                _save_jobs()
 
             except Exception as e:
                 logger.exception("Pipeline continuation failed: %s", e)
@@ -1033,6 +1054,7 @@ async def slack_events(request: Request):
                     pass
                 job["awaiting"] = "error"
                 JOBS[thread_ts] = job
+                _save_jobs()
 
         asyncio.create_task(continue_pipeline())
 
