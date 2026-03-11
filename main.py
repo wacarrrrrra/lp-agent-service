@@ -174,10 +174,17 @@ def parse_secondary_keywords(raw: Optional[str]) -> List[str]:
 # ----------------------------
 async def fetch_thread_messages(channel: str, thread_ts: str) -> List[Dict[str, Any]]:
     try:
-        data = await slack_api(
-            "conversations.replies",
-            {"channel": channel, "ts": thread_ts, "limit": 200},
-        )
+        url = f"{SLACK_API_BASE}/conversations.replies"
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(
+                url,
+                headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+                params={"channel": channel, "ts": thread_ts, "limit": "200"},
+            )
+        data = resp.json()
+        if not data.get("ok"):
+            logger.warning("conversations.replies failed channel=%s ts=%s error=%s", channel, thread_ts, data)
+            return []
         return data.get("messages", [])
     except Exception as e:
         logger.warning("Could not fetch thread %s: %s", thread_ts, e)
