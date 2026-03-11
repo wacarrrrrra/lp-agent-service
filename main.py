@@ -3,10 +3,12 @@ import time
 import hmac
 import hashlib
 import json
+import base64
 import logging
 import asyncio
+import re
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
 
 import httpx
@@ -21,7 +23,7 @@ app = FastAPI()
 logger = logging.getLogger("uvicorn.error")
 
 # ----------------------------
-# Env Vars
+# Env Vars — existing
 # ----------------------------
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET", "")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
@@ -33,6 +35,14 @@ CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
 anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
 SLACK_API_BASE = "https://slack.com/api"
+
+# ----------------------------
+# Env Vars — new
+# ----------------------------
+SEM_LP_BUILD_KITS_CHANNEL = os.getenv("SEM_LP_BUILD_KITS_CHANNEL", "")  # public results channel
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+GITHUB_REPO = os.getenv("GITHUB_REPO", "")   # e.g. wacarrrrrra/lp-agent-service
+GITHUB_BRANCH = os.getenv("GITHUB_BRANCH", "main")
 
 # ----------------------------
 # In-memory job state (v1)
@@ -51,12 +61,17 @@ def load_text(path: str, max_chars: int) -> str:
         logger.warning("Could not load %s: %s", path, e)
         return f"[Missing file: {path}]"
 
+# Existing docs (keep for backward compatibility)
 SEM_STRUCTURE = load_text("SEM-LP-Structure.md", 18000)
 SEO_RULES = load_text("SEO-Best-Practices.md", 14000)
 EDITORIAL_STYLE = load_text("datahub-editorial-style.md", 14000)
 GARTNER_SNIPPETS = load_text("datahub-gartner-peer-insights.md", 9000)
 BRAND_GUIDELINES = load_text("brand-guidelines.md", 14000)
 HTML_TEMPLATE = load_text("datahub-observability-final.html", 20000)
+
+# DataHub brand system docs (add these files to the lp-agent-service repo)
+BRAND_SKILL_MD = load_text(".claude/skills/front-end-design/SKILL.md", 22000)
+SAMPLE_LP_HTML = load_text("templates/datahub-governance-lp1.html", 28000)
 
 # ----------------------------
 # Slack signature verification
@@ -133,15 +148,8 @@ def safe_truncate(s: str, n: int = 3500) -> str:
     return s if len(s) <= n else s[:n] + "\n...(truncated)"
 
 def parse_secondary_keywords(raw: Optional[str]) -> List[str]:
-    """
-    Accepts:
-    - one per line
-    - comma separated
-    Returns unique, stripped, ordered list.
-    """
     if not raw:
         return []
-    # normalize commas to newlines
     raw = raw.replace(",", "\n")
     out: List[str] = []
     seen = set()
@@ -155,6 +163,393 @@ def parse_secondary_keywords(raw: Optional[str]) -> List[str]:
         seen.add(lk)
         out.append(k)
     return out
+
+# ----------------------------
+# Thread accumulation (multi-part BartBot messages)
+# ----------------------------
+async def fetch_thread_messages(channel: str, thread_ts: str) -> List[Dict[str, Any]]:
+    """Fetch all messages in a Slack thread."""
+    try:
+        data = await slack_api(
+            "conversations.replies",
+            {"channel": channel, "ts": thread_ts, "limit": 200},
+        )
+        return data.get("messages", [])
+    except Exception as e:
+        logger.warning("Could not fetch thread %s: %s", thread_ts, e)
+        return []
+
+def accumulate_bart_brief(messages: List[Dict[str, Any]], bart_user_id: str) -> str:
+    """Join all BartBot messages from a thread into a single brief string."""
+    parts = []
+    for msg in messages:
+        if msg.get("user") == bart_user_id:
+            text = (msg.get("text") or "").strip()
+            if text:
+                parts.append(text)
+    return "\n\n---\n\n".join(parts) if parts else ""
+
+# ----------------------------
+# Image reference parsing
+# ----------------------------
+def parse_image_refs(bart_brief: str) -> List[Dict[str, str]]:
+    """
+    Extract image references from a BartBot brief.
+    Returns list of {filename, description, path} dicts.
+    """
+    images: List[Dict[str, str]] = []
+    seen: set = set()
+
+    # Markdown images: ![alt text](path/to/image.png)
+    for alt, path in re.findall(
+        r'!\[([^\]]*)\]\(([^)]+\.(?:png|jpg|jpeg))\)', bart_brief, re.IGNORECASE
+    ):
+        name = Path(path).name
+        if name not in seen:
+            seen.add(name)
+            images.append({"filename": name, "description": alt, "path": path})
+
+    # Bare filenames like datahub-foo.png
+    for name in re.findall(r'\b([\w-]+\.png)\b', bart_brief, re.IGNORECASE):
+        if name not in seen:
+            seen.add(name)
+            images.append({
+                "filename": name,
+                "description": name.replace("-", " ").replace(".png", ""),
+                "path": f"images/{name}",
+            })
+
+    return images
+
+# ----------------------------
+# SVG generation
+# ----------------------------
+def build_svg_prompt(image_info: Dict[str, str], bart_brief: str, slug: str) -> str:
+    fname = image_info["filename"].lower()
+    if "workflow" in fname or "process" in fname or "policy" in fname:
+        diagram_type = "Explainer (horizontal workflow)"
+        viewbox = '0 0 960 540'
+    elif "ui" in fname or "screenshot" in fname:
+        diagram_type = "Stylized UI"
+        viewbox = '0 0 960 680'
+    else:
+        diagram_type = "Explainer (architecture)"
+        viewbox = '0 0 960 680'
+
+    svg_name = image_info["filename"].replace(".png", ".svg")
+
+    return f"""You are operating in SVG Conversion Mode from the DataHub brand system.
+
+[DATAHUB BRAND SYSTEM]
+{BRAND_SKILL_MD}
+
+[SOURCE BRIEF — use this as the source of truth for diagram content]
+{bart_brief[:6000]}
+
+Task: Generate a brand-compliant DataHub SVG illustration for the following image.
+
+Image reference:
+- Original filename: {image_info["filename"]}
+- Description: {image_info["description"]}
+- Diagram type: {diagram_type}
+- Output filename: {svg_name}
+- Page slug: {slug}
+
+SVG requirements (non-negotiable):
+- Opening tag: <svg xmlns="http://www.w3.org/2000/svg" viewBox="{viewbox}" role="img">
+- Must include <title> and <desc> elements immediately after the opening tag
+- Import Castoro + Geist from Google Fonts inside a <defs><style> block
+- Brand colors only: #002131, #0A4170, #3CBBEB, #B0EAFC, #F2F1EE, #1E1E1E, #767473
+- Minimum font-size attribute: 9 — no text below this value
+- Flat tile-and-frame layout; no drop shadows, gradients, or glow
+- Arrow markers using fill="#3CBBEB"
+- Page background: <rect width="100%" height="100%" fill="#F2F1EE"/>
+
+Run the SVG Conversion QA Checklist from the brand system before outputting.
+
+Return ONLY the complete SVG markup — starting with <svg and ending with </svg>.
+No code fences, no explanation, no preamble.
+""".strip()
+
+async def generate_svgs(bart_brief: str, slug: str) -> Dict[str, str]:
+    """Generate brand-compliant SVGs for every image referenced in the brief."""
+    image_refs = parse_image_refs(bart_brief)
+    if not image_refs:
+        return {}
+
+    async def gen_one(img_info: Dict[str, str]) -> Tuple[str, str]:
+        prompt = build_svg_prompt(img_info, bart_brief, slug)
+        try:
+            svg_content = await claude_text(prompt, max_tokens=4500)
+            # Strip any accidental code fences
+            match = re.search(r'<svg[\s\S]*?</svg>', svg_content, re.DOTALL)
+            if match:
+                svg_content = match.group(0)
+            svg_name = img_info["filename"].replace(".png", ".svg")
+            return svg_name, svg_content
+        except Exception as e:
+            logger.warning("SVG generation failed for %s: %s", img_info["filename"], e)
+            return img_info["filename"].replace(".png", ".svg"), ""
+
+    results = await asyncio.gather(*[gen_one(img) for img in image_refs])
+    return {name: content for name, content in results if content}
+
+# ----------------------------
+# LP package generation
+# ----------------------------
+def _hubspot_form_id(cta_type: str) -> str:
+    return {
+        "Demo": "ed2447d6-e6f9-4771-8f77-825b114a9421",
+        "Free Trial": "42182785-f711-40b4-92e7-11468579321b",
+        "Bi-weekly Demo": "2bf16106-3e8e-4dc3-9ae4-5b0bce901d88",
+        "Product Tour": "aa56e90c-044a-46d8-a92f-cb905ad662f8",
+    }.get(cta_type, "ed2447d6-e6f9-4771-8f77-825b114a9421")
+
+def build_lp_writer_prompt(
+    fields: dict, bart_brief: str, secondary_keywords: List[str]
+) -> str:
+    secondary_block = (
+        "\n".join(f"- {k}" for k in secondary_keywords) if secondary_keywords else "(none)"
+    )
+    form_id = _hubspot_form_id(fields.get("primary_cta", "Demo"))
+    return f"""You are the SEM Landing Page Writer for DataHub.
+
+HARD CONSTRAINTS — follow these documents exactly:
+
+[SEM PAGE STRUCTURE]
+{SEM_STRUCTURE}
+
+[SEO BEST PRACTICES]
+{SEO_RULES}
+
+[EDITORIAL STYLE]
+{EDITORIAL_STYLE}
+
+[GARTNER PEER INSIGHTS — use sparingly, never fabricate]
+{GARTNER_SNIPPETS}
+
+Inputs:
+- search_term (primary keyword, exact): "{fields["search_term"]}"
+- secondary_keywords:
+{secondary_block}
+- primary_cta: "{fields.get("primary_cta","Demo")}"
+- intent: "{fields.get("intent","Commercial")}"
+- primary_audience: "{fields.get("primary_audience","")}"
+- offer: "{fields.get("offer","")}"
+- must_include: "{fields.get("must_include","")}"
+- must_not_say: "{fields.get("must_not_say","")}"
+
+BART_VALIDATED_OUTPUT — technical source of truth (only use claims from here):
+{bart_brief[:8000]}
+
+Rules:
+- Page word count: 900–1,500 words
+- Primary keyword must appear verbatim in: title tag (≤60 chars), H1 (≤80 chars, Title Case),
+  first 100 words, meta description (≤140 chars), and at least one H2
+- Each secondary keyword must appear in at least one H2/H3/H4
+- 30–50% of H2s phrased as questions where natural
+- Sentence case for all headings except H1
+- No exclamation marks. Active voice. No weasel words — quantify or omit
+- Never invent technical claims — only use facts from BART_VALIDATED_OUTPUT
+- Required section order (10 sections):
+  Hero → Trust Strip → Problem → Solution → How It Works →
+  Technical Credibility → Visual → Social Proof → FAQ (3–6 Qs) → Final CTA
+- HubSpot portal ID: 14552909, region: na1
+- HubSpot form ID for "{fields.get("primary_cta","Demo")}": {form_id}
+
+Return ONLY valid JSON with exactly these keys:
+{{
+  "seo_json": {{
+    "title_tag": "",
+    "meta_description": "",
+    "slug": "",
+    "h1": "",
+    "hubspot_form_id": "{form_id}",
+    "intent_type": "",
+    "cta_type": ""
+  }},
+  "outline_md": "",
+  "copy_md": "",
+  "image_briefs_md": "",
+  "qa_checklist_md": ""
+}}""".strip()
+
+def build_lp_html_prompt(
+    fields: dict,
+    writer_json: dict,
+    svgs: Dict[str, str],
+    secondary_keywords: List[str],
+) -> str:
+    secondary_block = (
+        "\n".join(f"- {k}" for k in secondary_keywords) if secondary_keywords else "(none)"
+    )
+
+    picture_elements = ""
+    for svg_name in svgs:
+        png_name = svg_name.replace(".svg", ".png")
+        picture_elements += (
+            f'\n<picture>\n'
+            f'  <source srcset="images/{svg_name}" type="image/svg+xml">\n'
+            f'  <img src="images/{png_name}" alt="[descriptive alt text]" loading="lazy">\n'
+            f'</picture>'
+        )
+
+    form_id = writer_json.get("seo_json", {}).get(
+        "hubspot_form_id", _hubspot_form_id(fields.get("primary_cta", "Demo"))
+    )
+
+    return f"""You are the HTML Builder. This is the final build step.
+
+HARD CONSTRAINTS — follow these documents exactly:
+
+[DATAHUB BRAND SYSTEM]
+{BRAND_SKILL_MD}
+
+[SAMPLE LANDING PAGE TEMPLATE — replicate this structure and style]
+{SAMPLE_LP_HTML}
+
+Inputs:
+- primary keyword: "{fields["search_term"]}"
+- secondary keywords:
+{secondary_block}
+
+Content to use exactly (no new claims, no invented product assertions):
+
+SEO_JSON:
+{json.dumps(writer_json.get("seo_json", {}), indent=2)}
+
+OUTLINE_MD:
+{writer_json.get("outline_md", "")}
+
+COPY_MD:
+{writer_json.get("copy_md", "")}
+
+IMAGE_BRIEFS_MD:
+{writer_json.get("image_briefs_md", "")}
+
+Available SVG images — use <picture> with SVG primary source and PNG fallback:
+{picture_elements if picture_elements else "(none)"}
+
+Non-negotiable design rules:
+- Single complete HTML document: <!doctype html> … </html>
+- Title tag and meta description verbatim from SEO_JSON
+- H1 must include primary keyword verbatim: "{fields["search_term"]}"
+- Header: background #F2F1EE, border-bottom 1px solid #DDDBD6
+  Logo: <img src="images/dataHub_logo_color_black.svg" alt="DataHub"> — no text logo
+- Hero: background #F2F1EE — never dark; all hero text in dark neutrals
+- No italic text anywhere — font-style: normal throughout; no <em> or <i> tags
+- Visual section: grid-template-columns: 1fr (stacked vertically, never side by side)
+- HubSpot form embedded in hero AND final CTA section
+  portalId: '14552909', formId: '{form_id}', region: 'na1'
+- No global navigation — header contains only logo + one CTA button
+- Full DataHub footer: 4 nav columns, social links (LinkedIn/GitHub/Twitter/Slack), legal bar
+  matching the sample template footer exactly
+- CSS variables only (--dh-*), Google Fonts Castoro + Geist — no system fonts, no Arial/Inter
+- No invented metrics, logos, or social proof
+
+Return ONLY the HTML — no code fences, no preamble, no explanation.
+""".strip()
+
+async def generate_full_lp(
+    fields: dict,
+    bart_brief: str,
+    svgs: Dict[str, str],
+    secondary_keywords: List[str],
+) -> Dict[str, str]:
+    """Two-stage LP generation: writer then HTML builder."""
+    writer_prompt = build_lp_writer_prompt(fields, bart_brief, secondary_keywords)
+    writer_raw = await claude_text(writer_prompt, max_tokens=4000)
+
+    try:
+        writer_json = json.loads(writer_raw)
+    except Exception:
+        match = re.search(r'\{[\s\S]*\}', writer_raw)
+        if match:
+            writer_json = json.loads(match.group(0))
+        else:
+            raise ValueError(f"Writer did not return valid JSON: {writer_raw[:500]}")
+
+    html_prompt = build_lp_html_prompt(fields, writer_json, svgs, secondary_keywords)
+    page_html = await claude_text(html_prompt, max_tokens=5000)
+
+    # Strip accidental code fences from HTML
+    html_match = re.search(r'<!doctype html[\s\S]*</html>', page_html, re.IGNORECASE | re.DOTALL)
+    if html_match:
+        page_html = html_match.group(0)
+
+    # Build metadata.json
+    seo = writer_json.get("seo_json", {})
+    metadata = {
+        "slug": seo.get("slug") or slugify(fields["search_term"]),
+        "primary_search_term": fields["search_term"],
+        "intent_type": seo.get("intent_type") or fields.get("intent", ""),
+        "cta_type": seo.get("cta_type") or fields.get("primary_cta", ""),
+        "hubspot_form_id": seo.get("hubspot_form_id") or _hubspot_form_id(fields.get("primary_cta", "Demo")),
+        "title_tag": seo.get("title_tag") or "",
+        "meta_description": seo.get("meta_description") or "",
+        "h1": seo.get("h1") or "",
+        "generated_date": datetime.now().strftime("%Y-%m-%d"),
+        "bart_done": True,
+    }
+
+    return {
+        "html": page_html,
+        "metadata_json": json.dumps(metadata, indent=2),
+        "writer_json": writer_json,
+        "slug": metadata["slug"],
+    }
+
+# ----------------------------
+# GitHub commit helpers
+# ----------------------------
+async def github_commit_file(
+    repo: str, path: str, content: str, message: str, branch: str
+) -> bool:
+    """Commit a single file to GitHub via the Contents API."""
+    if not GITHUB_TOKEN or not repo:
+        logger.warning("GitHub commit skipped — GITHUB_TOKEN or GITHUB_REPO not set")
+        return False
+
+    encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        # Get existing file SHA (needed for updates)
+        r = await client.get(url, headers=headers, params={"ref": branch})
+        sha = r.json().get("sha") if r.status_code == 200 else None
+
+        payload: Dict[str, Any] = {
+            "message": message,
+            "content": encoded,
+            "branch": branch,
+        }
+        if sha:
+            payload["sha"] = sha
+
+        resp = await client.put(url, headers=headers, json=payload)
+        if resp.status_code not in (200, 201):
+            logger.error("GitHub commit failed for %s: %s %s", path, resp.status_code, resp.text[:300])
+            return False
+        return True
+
+async def github_commit_files(
+    repo: str,
+    files: Dict[str, str],
+    commit_message: str,
+    branch: str,
+) -> Tuple[bool, List[str]]:
+    """Commit multiple files sequentially. Returns (all_succeeded, failed_paths)."""
+    failed: List[str] = []
+    for path, content in files.items():
+        ok = await github_commit_file(repo, path, content, commit_message, branch)
+        if not ok:
+            failed.append(path)
+    return (len(failed) == 0, failed)
 
 # ----------------------------
 # Modal helpers
@@ -179,7 +574,6 @@ def build_modal_view(initial_search_term: str = "", channel_id: str = "") -> Dic
                     "placeholder": {"type": "plain_text", "text": "e.g., datahub lineage"},
                 },
             },
-            # NEW: Secondary keywords
             {
                 "type": "input",
                 "optional": True,
@@ -276,7 +670,7 @@ def extract_modal_values(view_state: Dict[str, Any]) -> Dict[str, Any]:
 
     return {
         "search_term": get_value("search_term_block", "search_term"),
-        "secondary_keywords": get_value("secondary_keywords_block", "secondary_keywords"),  # NEW
+        "secondary_keywords": get_value("secondary_keywords_block", "secondary_keywords"),
         "primary_cta": get_value("primary_cta_block", "primary_cta"),
         "intent": get_value("intent_block", "intent"),
         "primary_audience": get_value("primary_audience_block", "primary_audience"),
@@ -336,6 +730,9 @@ def claude_text_sync(prompt: str, max_tokens: int = 3500) -> str:
 async def claude_text(prompt: str, max_tokens: int = 3500) -> str:
     return await asyncio.to_thread(claude_text_sync, prompt, max_tokens)
 
+# ----------------------------
+# Legacy writer/HTML prompts (kept for reference)
+# ----------------------------
 def build_writer_prompt(fields: dict, bart_output: str, secondary_keywords: List[str]) -> str:
     secondary_block = "\n".join(f"- {k}" for k in secondary_keywords) if secondary_keywords else "(none)"
     return f"""
@@ -370,17 +767,14 @@ BART_VALIDATED_OUTPUT (technical source of truth):
 
 Rules:
 - Only use claims validated in BART_VALIDATED_OUTPUT.
-- Primary keyword requirements:
-  - must appear in Title tag, H1, first 100 words, and at least one H2.
-- Secondary keyword requirements:
-  - each secondary keyword MUST appear in at least one heading (H2, H3, or H4).
-  - do not force secondary keywords into Title tag or H1.
+- Primary keyword must appear in Title tag, H1, first 100 words, and at least one H2.
+- Each secondary keyword MUST appear in at least one heading (H2, H3, or H4).
 - CTA above the fold and repeated near the bottom.
 - Scannable formatting, short paragraphs + bullets.
 
 Return ONLY valid JSON with keys:
 - "seo_json" (object: title_tag, meta_description, slug, h1)
-- "outline_md" (string)  # include H2/H3/H4 headings
+- "outline_md" (string)
 - "copy_md" (string)
 - "image_briefs_md" (string)
 - "qa_checklist_md" (string)
@@ -420,8 +814,6 @@ Requirements:
 - Output a single complete semantic HTML document (<!doctype html> ...).
 - Title/meta from SEO_JSON.
 - H1 must include the primary keyword verbatim: "{fields["search_term"]}"
-- Ensure headings reflect OUTLINE_MD (including H2/H3/H4).
-- Ensure each secondary keyword appears in at least one heading (H2/H3/H4) (already satisfied in outline; do not remove).
 - CTA appears above the fold and at the bottom.
 - Add alt text based on IMAGE_BRIEFS_MD.
 - Preserve template structure, but swap content with the provided copy.
@@ -553,7 +945,7 @@ async def _handle_interactivity(request: Request):
                     "bart_output": None,
                 }
 
-                await post_message(channel_id, "🧠 Step 1/3: asking Bart…", thread_ts=thread_ts)
+                await post_message(channel_id, "🧠 Step 1/4: Asking Bart…", thread_ts=thread_ts)
                 await post_message(
                     channel_id,
                     bart_prompt(fields["search_term"], fields["primary_cta"], fields["intent"], secondary_keywords),
@@ -561,7 +953,7 @@ async def _handle_interactivity(request: Request):
                 )
                 await post_message(
                     channel_id,
-                    "⏳ Waiting for Bart reply… I’ll continue automatically after Bart posts `BART_DONE`.",
+                    "⏳ Waiting for Bart… I'll continue automatically after Bart posts `BART_DONE`.",
                     thread_ts=thread_ts,
                 )
 
@@ -610,7 +1002,7 @@ async def slack_events(request: Request):
     # Only proceed if waiting for Bart AND it's Bart AND it contains BART_DONE
     if job.get("awaiting") == "bart" and user_id == BART_USER_ID and "BART_DONE" in text:
         job["bart_output"] = text
-        job["awaiting"] = "writer"
+        job["awaiting"] = "generating"
         JOBS[thread_ts] = job
 
         channel_id = job["channel_id"]
@@ -621,68 +1013,97 @@ async def slack_events(request: Request):
 
         async def continue_pipeline():
             try:
-                await post_message(channel_id, "✍️ Step 2/3: Claude Writer…", thread_ts=thread_ts)
+                # Step 1 — Fetch full thread to accumulate multi-part BartBot brief
+                await post_message(
+                    channel_id, "📖 Step 2/4: Collecting full brief from thread…", thread_ts=thread_ts
+                )
+                messages = await fetch_thread_messages(channel_id, thread_ts)
+                bart_brief = accumulate_bart_brief(messages, BART_USER_ID)
+                if not bart_brief:
+                    bart_brief = text  # fallback: use the BART_DONE message itself
 
-                writer_prompt = build_writer_prompt(fields, text, secondary_keywords)
-                writer_raw = await claude_text(writer_prompt, max_tokens=3800)
-
-                try:
-                    writer_json = json.loads(writer_raw)
-                except Exception:
+                # Step 2 — Generate brand-compliant SVGs for each image in the brief
+                image_refs = parse_image_refs(bart_brief)
+                svgs: Dict[str, str] = {}
+                if image_refs:
                     await post_message(
                         channel_id,
-                        f"❌ Writer did not return JSON.\n```{safe_truncate(writer_raw, 3000)}```",
+                        f"🎨 Step 3/4: Generating {len(image_refs)} brand-compliant SVG(s)…",
                         thread_ts=thread_ts,
                     )
-                    job["awaiting"] = "error"
-                    JOBS[thread_ts] = job
-                    return
+                    svgs = await generate_svgs(bart_brief, slug)
 
-                await post_message(channel_id, "🧱 Step 3/3: Claude HTML Builder (LAST)…", thread_ts=thread_ts)
-                html_prompt = build_html_prompt(fields, writer_json, secondary_keywords)
-                page_html = await claude_text(html_prompt, max_tokens=4200)
+                # Step 3 — Generate full LP package (writer → HTML builder)
+                await post_message(
+                    channel_id, "✍️ Step 4/4: Building landing page package…", thread_ts=thread_ts
+                )
+                lp_package = await generate_full_lp(fields, bart_brief, svgs, secondary_keywords)
+                final_slug = lp_package["slug"]
 
-                await post_message(channel_id, f"✅ Build kit ready: *{request_id}* (`{slug}`)", thread_ts=thread_ts)
+                # Step 4 — Commit all files to GitHub
+                files_to_commit: Dict[str, str] = {
+                    f"generated-pages/{final_slug}/index.html": lp_package["html"],
+                    f"generated-pages/{final_slug}/metadata.json": lp_package["metadata_json"],
+                    f"generated-pages/{final_slug}/brief.md": bart_brief,
+                }
+                for svg_name, svg_content in svgs.items():
+                    files_to_commit[f"generated-pages/{final_slug}/images/{svg_name}"] = svg_content
 
-                await post_message(
-                    channel_id,
-                    f"FILE: 05_Build/seo.json\n```json\n{json.dumps(writer_json['seo_json'], indent=2)}\n```",
-                    thread_ts=thread_ts,
-                )
-                await post_message(
-                    channel_id,
-                    f"FILE: 02_Outline/outline.md\n```md\n{safe_truncate(writer_json['outline_md'], 3300)}\n```",
-                    thread_ts=thread_ts,
-                )
-                await post_message(
-                    channel_id,
-                    f"FILE: 03_Copy/copy.md\n```md\n{safe_truncate(writer_json['copy_md'], 3300)}\n```",
-                    thread_ts=thread_ts,
-                )
-                await post_message(
-                    channel_id,
-                    f"FILE: 04_Images/image-briefs.md\n```md\n{safe_truncate(writer_json['image_briefs_md'], 3300)}\n```",
-                    thread_ts=thread_ts,
-                )
-                await post_message(
-                    channel_id,
-                    f"FILE: 05_Build/qa_checklist.md\n```md\n{safe_truncate(writer_json['qa_checklist_md'], 3300)}\n```",
-                    thread_ts=thread_ts,
-                )
+                if GITHUB_TOKEN and GITHUB_REPO:
+                    await post_message(
+                        channel_id, "📤 Committing files to GitHub…", thread_ts=thread_ts
+                    )
+                    all_ok, failed_paths = await github_commit_files(
+                        GITHUB_REPO,
+                        files_to_commit,
+                        f"Add LP package: {final_slug}",
+                        GITHUB_BRANCH,
+                    )
+                    kit_url = (
+                        f"https://github.com/{GITHUB_REPO}/tree/{GITHUB_BRANCH}"
+                        f"/generated-pages/{final_slug}"
+                    )
+                    if all_ok:
+                        status_msg = f"✅ *LP package ready* — `{final_slug}`\n{kit_url}"
+                    else:
+                        status_msg = (
+                            f"⚠️ *LP generated* — `{final_slug}` — some files failed to commit:\n"
+                            + "\n".join(f"• `{p}`" for p in failed_paths)
+                        )
+                else:
+                    kit_url = "(GitHub not configured — set GITHUB_TOKEN and GITHUB_REPO)"
+                    status_msg = (
+                        f"✅ *LP package generated* — `{final_slug}`\n"
+                        f"_(GitHub commit skipped — env vars not set)_"
+                    )
 
-                # HTML last
-                await post_message(
-                    channel_id,
-                    f"FILE: 05_Build/page.html\n```html\n{safe_truncate(page_html, 3300)}\n```",
-                    thread_ts=thread_ts,
-                )
+                # Confirmation in the original thread
+                await post_message(channel_id, status_msg, thread_ts=thread_ts)
+
+                # Announce in #sem-lp-build-kits
+                if SEM_LP_BUILD_KITS_CHANNEL:
+                    metadata = json.loads(lp_package["metadata_json"])
+                    kits_msg = (
+                        f"🚀 *New LP package ready*\n"
+                        f"*Search term:* {fields['search_term']}\n"
+                        f"*Slug:* `{final_slug}`\n"
+                        f"*CTA:* {fields.get('primary_cta','Demo')} | "
+                        f"*Intent:* {fields.get('intent','Commercial')}\n"
+                        f"*Files:* {kit_url}"
+                    )
+                    await post_message(SEM_LP_BUILD_KITS_CHANNEL, kits_msg)
 
                 job["awaiting"] = "done"
                 JOBS[thread_ts] = job
 
             except Exception as e:
                 logger.exception("Pipeline continuation failed: %s", e)
-                await post_message(channel_id, f"❌ Pipeline failed: `{e}`", thread_ts=thread_ts)
+                try:
+                    await post_message(
+                        channel_id, f"❌ Pipeline failed: `{e}`", thread_ts=thread_ts
+                    )
+                except Exception:
+                    pass
                 job["awaiting"] = "error"
                 JOBS[thread_ts] = job
 

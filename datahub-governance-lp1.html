@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="DataHub is open source data governance software built for platform engineers. Deploy lineage, access control, data quality, and observability across 80+ sources.">
+<title>Data Governance Software Built for Modern Data Platforms | DataHub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Castoro:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ─────────────────────────────────────────────── */
+:root {
+  --color-surface-default: #F2F1EE;
+  --color-surface-subtle:  #E3E1D6;
+  --color-surface-white:   #FFFFFF;
+  --color-surface-dark:    #002131;
+  --color-surface-dark-deeper: #001828;
+  --color-text-primary:    #000000;
+  --color-text-secondary:  #3F3F3F;
+  --color-text-muted:      #767473;
+  --color-text-inverse:    #FFFFFF;
+  --color-blue-01: #002131;
+  --color-blue-02: #0A4170;
+  --color-blue-03: #006DCD;
+  --color-blue-04: #3CBBEB;
+  --color-blue-05: #B0EAFC;
+  --color-green-03: #008070;
+  --color-green-04: #0FC691;
+  --color-green-05: #AAF1BB;
+  --color-neutral-02: #3F3F3F;
+  --color-neutral-03: #767473;
+  --color-neutral-04: #B2AEA7;
+  --color-neutral-05: #E3E1D6;
+  --color-off-white: #F2F1EE;
+  --color-basic-black: #000000;
+  --color-basic-white: #FFFFFF;
+  --color-border-default: #E3E1D6;
+  --color-border-active:  #006DCD;
+  --color-border-dark:    #0A4170;
+  --font-headline: 'Castoro', Georgia, serif;
+  --font-body: 'Geist', 'Helvetica Neue', Arial, sans-serif;
+  --radius-tile: 8px;
+  --radius-card: 10px;
+  --radius-pill: 100px;
+}
+
+/* ─── RESET ───────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-body);font-size:16px;line-height:1.6;color:var(--color-text-secondary);background:var(--color-surface-default);overflow-x:hidden}
+img{max-width:100%;height:auto;display:block}
+a{text-decoration:none;color:inherit}
+:focus-visible{outline:2px solid var(--color-blue-03);outline-offset:2px;border-radius:2px}
+
+/* ─── SCROLL PROGRESS ─────────────────────────────────────── */
+.scroll-prog{position:fixed;top:0;left:0;width:0%;height:2px;background:var(--color-blue-03);z-index:2000;transition:width 40ms linear}
+
+/* ─── LAYOUT ──────────────────────────────────────────────── */
+.container{max-width:1160px;margin:0 auto;padding:0 24px}
+.container-narrow{max-width:800px;margin:0 auto;padding:0 24px}
+main{display:flex;flex-direction:column;gap:60px}
+@media(min-width:1024px){main{gap:120px}}
+
+/* ─── ANIMATION — THREE TIERS ─────────────────────────────── */
+/* Tier 1: hover — 100ms ease-out (on elements directly) */
+/* Tier 2: nav — 300ms cubic-bezier(0.75,0,0.25,1) */
+/* Tier 3: scroll-on — 600ms cubic-bezier(0.75,0,0.25,1) */
+.animate-in{
+  transition:opacity 600ms cubic-bezier(0.75,0,0.25,1),
+             transform 600ms cubic-bezier(0.75,0,0.25,1);
+}
+.animate-in.is-hidden{opacity:0;transform:translateY(24px)}
+.animate-in.is-visible{opacity:1;transform:none}
+.animate-in:nth-child(1){transition-delay:0ms}
+.animate-in:nth-child(2){transition-delay:80ms}
+.animate-in:nth-child(3){transition-delay:160ms}
+.animate-in:nth-child(4){transition-delay:240ms}
+
+/* ─── BUTTONS ─────────────────────────────────────────────── */
+.button{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;font-family:var(--font-body);font-size:14px;font-weight:500;border-radius:var(--radius-tile);border:none;cursor:pointer;white-space:nowrap;text-decoration:none;position:relative;overflow:hidden}
+/* Primary — 150ms roll-over */
+.button-primary{background:var(--color-blue-03);color:var(--color-basic-white);transition:color 150ms ease-out}
+.button-primary::before{content:'';position:absolute;inset:0;background:var(--color-blue-02);transform:translateX(-100%);transition:transform 150ms ease-out;z-index:0}
+.button-primary:hover::before{transform:translateX(0)}
+.button-primary span{position:relative;z-index:1;display:flex;align-items:center;gap:8px}
+.button-ghost{background:transparent;color:var(--color-text-primary);border:1.5px solid var(--color-neutral-04);transition:border-color 100ms ease-out,color 100ms ease-out}
+.button-ghost:hover{border-color:var(--color-blue-03);color:var(--color-blue-03)}
+.button-inverse{background:transparent;color:var(--color-basic-white);border:1.5px solid rgba(255,255,255,.25);transition:background 100ms ease-out}
+.button-inverse:hover{background:rgba(255,255,255,.08)}
+.button-sm{padding:9px 18px;font-size:13px}
+.button-lg{padding:16px 32px;font-size:15px}
+.btn-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+/* ─── SECTION LABEL ───────────────────────────────────────── */
+.sec-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--color-blue-03);margin-bottom:10px;display:block}
+.sec-header{margin-bottom:56px}
+.sec-header.centered{text-align:center}
+.sec-header.centered p{margin-left:auto;margin-right:auto}
+.sec-header h2{font-family:var(--font-headline);font-size:clamp(1.8rem,3.5vw,2.6rem);color:var(--color-text-primary);margin-bottom:14px;line-height:1.2}
+.sec-header p{font-size:16px;color:var(--color-text-muted);max-width:600px;line-height:1.65}
+
+/* ─── NAV ─────────────────────────────────────────────────── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(242,241,238,.93);backdrop-filter:blur(10px);border-bottom:1px solid transparent;transition:border-color 300ms cubic-bezier(0.75,0,0.25,1),box-shadow 300ms cubic-bezier(0.75,0,0.25,1)}
+.nav.scrolled{border-bottom-color:var(--color-neutral-05);box-shadow:0 1px 8px rgba(0,0,0,.06)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:68px}
+.nav-logo img{height:26px;width:auto}
+.nav-links{display:none;align-items:center;gap:32px}
+@media(min-width:1024px){.nav-links{display:flex}}
+.nav-top{font-size:14px;font-weight:400;color:var(--color-text-secondary);position:relative;padding:3px 0;transition:color 100ms ease-out}
+.nav-top::after{content:'';position:absolute;bottom:0;left:0;width:0;height:1.5px;background:var(--color-blue-03);transition:width 100ms ease-out}
+.nav-top:hover{color:var(--color-blue-03)}
+.nav-top:hover::after{width:100%}
+.nav-cta{display:flex;align-items:center;gap:10px}
+
+/* ─── HERO ────────────────────────────────────────────────── */
+.hero{padding:130px 0 72px;background:var(--color-surface-white);border-bottom:1px solid var(--color-border-default)}
+.hero-inner{display:flex;flex-direction:column;gap:48px}
+@media(min-width:1024px){.hero-inner{flex-direction:row;gap:72px;align-items:center}}
+.hero-text{flex:1}
+.hero-text h1{font-family:var(--font-headline);font-size:clamp(2.2rem,4vw,3.2rem);color:var(--color-text-primary);line-height:1.1;margin-bottom:20px}
+.hero-text h1 em{font-style:normal;color:var(--color-blue-03)}
+.hero-sub{font-size:17px;color:var(--color-text-secondary);line-height:1.65;margin-bottom:28px;max-width:500px}
+.hero-bullets{list-style:none;margin-bottom:32px;display:flex;flex-direction:column;gap:9px}
+.hero-bullets li{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--color-text-secondary)}
+.hero-bullets li svg{flex-shrink:0;color:var(--color-blue-03);margin-top:3px}
+/* Hero visual — architecture diagram framed */
+.hero-visual{flex:1;min-width:0}
+.framed-image{border:1.5px solid var(--color-border-default);border-radius:var(--radius-card);overflow:hidden;background:var(--color-surface-white)}
+.framed-image img{width:100%;height:auto;display:block}
+.framed-image figcaption{padding:12px 16px;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);border-top:1px solid var(--color-border-default)}
+
+/* ─── LOGO SCROLLER ──────────────────────────────────────── */
+.logo-scroller{padding:40px 0;background:var(--color-surface-default);border-bottom:1px solid var(--color-border-default)}
+.logo-scroller-label{text-align:center;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:22px}
+.marquee{overflow:hidden;position:relative}
+.marquee::before,.marquee::after{content:'';position:absolute;top:0;bottom:0;width:80px;z-index:2;pointer-events:none}
+.marquee::before{left:0;background:linear-gradient(90deg,var(--color-surface-default),transparent)}
+.marquee::after{right:0;background:linear-gradient(90deg,transparent,var(--color-surface-default))}
+.marquee-track{display:flex;gap:52px;animation:scroll-logos 30s linear infinite}
+@keyframes scroll-logos{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.marquee-item{flex-shrink:0;font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--color-neutral-03);white-space:nowrap;transition:color 100ms ease-out}
+.marquee-item:hover{color:var(--color-blue-03)}
+
+/* ─── HOVER TILE GRID ────────────────────────────────────── */
+.hover-tile-grid-section{padding:0}
+.hover-tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(min-width:1024px){.hover-tile-grid{grid-template-columns:repeat(4,1fr)}}
+.hover-tile{background:var(--color-surface-dark);border:1.5px solid var(--color-border-dark);border-radius:var(--radius-card);padding:28px 24px;position:relative;overflow:hidden;transition:border-color 100ms ease-out}
+.hover-tile::before{content:'';position:absolute;inset:0;background:var(--color-blue-03);opacity:0;transition:opacity 100ms ease-out;z-index:0}
+.hover-tile:hover{border-color:var(--color-blue-04)}
+.hover-tile:hover::before{opacity:.07}
+.hover-tile-content{position:relative;z-index:1}
+.hover-tile-icon{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--color-blue-02);display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--color-blue-04)}
+.hover-tile h4{font-family:var(--font-headline);font-size:16px;color:var(--color-basic-white);margin-bottom:10px;line-height:1.25}
+.hover-tile p{font-size:13px;color:var(--color-blue-05);line-height:1.6}
+
+/* ─── CONTENT HIGHLIGHT ──────────────────────────────────── */
+.content-highlight{padding:0}
+.content-highlight-inner{display:flex;flex-direction:column;gap:40px}
+@media(min-width:1024px){.content-highlight-inner{flex-direction:row;gap:72px;align-items:center}}
+.content-highlight-inner.reverse{flex-direction:column}
+@media(min-width:1024px){.content-highlight-inner.reverse{flex-direction:row-reverse}}
+.ch-text{flex:1}
+.ch-text h2{font-family:var(--font-headline);font-size:clamp(1.6rem,3vw,2.2rem);color:var(--color-text-primary);margin-bottom:14px;line-height:1.2}
+.ch-text p{font-size:15px;color:var(--color-text-secondary);line-height:1.65;margin-bottom:22px}
+.feature-list{list-style:none;display:flex;flex-direction:column;gap:10px}
+.feature-list li{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--color-text-secondary)}
+.feature-list li svg{flex-shrink:0;color:var(--color-blue-03);margin-top:3px}
+.ch-visual{flex:1;min-width:0}
+
+/* ─── LIST TITLE (Integration Architecture) ──────────────── */
+.list-title-section{background:var(--color-surface-white);border-radius:var(--radius-card);border:1.5px solid var(--color-border-default);padding:48px}
+.list-title-grid{display:grid;grid-template-columns:1fr;gap:32px}
+@media(min-width:1024px){.list-title-grid{grid-template-columns:repeat(3,1fr)}}
+.list-item-group h4{font-family:var(--font-headline);font-size:17px;color:var(--color-text-primary);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.list-item-group h4 svg{color:var(--color-blue-03);flex-shrink:0}
+.list-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--color-text-secondary);margin-bottom:8px;line-height:1.5}
+.list-item svg{flex-shrink:0;color:var(--color-blue-04);margin-top:3px}
+
+/* ─── CUSTOMER FACTS ─────────────────────────────────────── */
+.customer-facts{background:var(--color-surface-dark);border-radius:var(--radius-card);padding:56px 48px}
+.customer-facts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:32px}
+@media(min-width:1024px){.customer-facts-grid{grid-template-columns:repeat(4,1fr)}}
+.fact{text-align:center}
+.fact-val{font-family:var(--font-headline);font-size:clamp(2rem,4vw,2.8rem);color:var(--color-blue-04);line-height:1;margin-bottom:8px}
+.fact-lbl{font-size:12px;color:var(--color-blue-05);font-weight:500;line-height:1.4}
+
+/* ─── QUOTE ──────────────────────────────────────────────── */
+.quote-section{padding:0}
+.quote-inner{background:var(--color-surface-white);border:1.5px solid var(--color-border-default);border-radius:var(--radius-card);padding:48px;display:grid;grid-template-columns:1fr;gap:32px}
+@media(min-width:1024px){.quote-inner{grid-template-columns:1fr 2fr;gap:48px;align-items:start}}
+.quote-co{font-family:var(--font-headline);font-size:26px;color:var(--color-blue-01);margin-bottom:8px}
+.quote-co-role{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:20px}
+.quote-result{background:var(--color-surface-default);border-radius:6px;padding:14px 16px}
+.quote-result-lbl{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--color-blue-03);margin-bottom:5px}
+.quote-result-val{font-family:var(--font-headline);font-size:14px;color:var(--color-text-primary)}
+blockquote{font-family:var(--font-headline);font-size:clamp(1.1rem,2vw,1.4rem);color:var(--color-text-primary);line-height:1.55;font-style:normal;margin-bottom:24px}
+.quote-author{display:flex;align-items:center;gap:12px}
+.quote-avatar{width:40px;height:40px;border-radius:50%;background:var(--color-blue-02);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--color-basic-white);flex-shrink:0}
+.quote-name{font-size:14px;font-weight:600;color:var(--color-text-primary)}
+.quote-role{font-size:12px;color:var(--color-text-muted)}
+
+/* ─── FAQ ────────────────────────────────────────────────── */
+.faq-section{padding:0}
+.faq-tile-list{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.faq-tile{background:var(--color-surface-white);border:1.5px solid var(--color-border-default);border-radius:var(--radius-tile);overflow:hidden;transition:border-color 100ms ease-out}
+.faq-tile.open{border-color:var(--color-blue-04)}
+.faq-header{width:100%;padding:20px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;font-family:var(--font-body);font-size:15px;font-weight:500;color:var(--color-text-primary);background:none;border:none;cursor:pointer;text-align:left}
+.faq-icon{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--color-neutral-04);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 100ms ease-out}
+.faq-tile.open .faq-icon{background:var(--color-blue-03);border-color:var(--color-blue-03);transform:rotate(180deg)}
+.faq-icon svg{width:12px;height:12px;color:var(--color-text-muted);transition:color 100ms ease-out}
+.faq-tile.open .faq-icon svg{color:var(--color-basic-white)}
+.faq-answer{max-height:0;overflow:hidden;transition:max-height 300ms cubic-bezier(0.75,0,0.25,1)}
+.faq-tile.open .faq-answer{max-height:400px}
+.faq-answer-inner{padding:0 22px 22px;font-size:14px;color:var(--color-text-secondary);line-height:1.7}
+
+/* ─── FRAME CTA ──────────────────────────────────────────── */
+.frame-cta{background:var(--color-blue-01);border-radius:var(--radius-card);padding:72px 48px;text-align:center}
+.frame-cta h2{font-family:var(--font-headline);font-size:clamp(1.9rem,3.5vw,2.7rem);color:var(--color-basic-white);margin-bottom:16px;line-height:1.2}
+.frame-cta p{font-size:16px;color:var(--color-blue-05);margin-bottom:36px;line-height:1.65;max-width:580px;margin-left:auto;margin-right:auto}
+.frame-cta .btn-row{justify-content:center;margin-bottom:36px}
+.cta-trust{display:flex;justify-content:center;gap:24px;flex-wrap:wrap}
+.cta-trust-item{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--color-blue-05)}
+.cta-trust-item svg{color:var(--color-blue-04)}
+.demo-chip{margin-top:32px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-tile);padding:16px 22px;display:inline-flex;align-items:center;gap:12px}
+.demo-chip svg{color:var(--color-blue-04);flex-shrink:0}
+.demo-chip p{font-size:13px;color:var(--color-blue-05);text-align:left}
+.demo-chip strong{color:var(--color-basic-white)}
+
+/* ─── PRODUCT BADGE ──────────────────────────────────────── */
+.product-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;background:var(--color-blue-05);border-radius:var(--radius-pill);font-size:12px;font-weight:600;color:var(--color-blue-02);margin-bottom:20px}
+.product-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--color-blue-03)}
+
+/* ─── FOOTER ─────────────────────────────────────────────── */
+.dh-footer{font-family:var(--font-body);background-color:var(--color-surface-dark);border:1.5px solid var(--color-border-dark);border-radius:var(--radius-card)}
+.dh-footer__main{display:flex;flex-direction:column;gap:18px;padding:32px 32px 40px}
+@media(min-width:1024px){.dh-footer__main{flex-direction:row}}
+.dh-footer__brand{display:flex;flex-direction:column;gap:20px;min-width:160px;flex-shrink:0}
+.dh-footer__logo img{height:22px;width:auto}
+.dh-footer__social{display:flex;gap:14px;align-items:center}
+.dh-footer__social a{color:var(--color-blue-04);transition:color 100ms ease-out}
+.dh-footer__social a:hover{color:var(--color-blue-05)}
+.dh-footer__social svg{width:18px;height:18px;fill:currentColor}
+.dh-footer__nav-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;flex:1}
+@media(min-width:1024px){.dh-footer__nav-grid{grid-template-columns:repeat(4,1fr)}}
+.dh-footer__nav-col h3{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--color-blue-05);margin:0 0 14px}
+.dh-footer__nav-col ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+.dh-footer__nav-col li a{font-size:13px;font-weight:400;color:var(--color-blue-04);text-decoration:none;transition:color 100ms ease-out}
+.dh-footer__nav-col li a:hover{color:var(--color-basic-white)}
+.dh-footer__bottom{background-color:var(--color-surface-dark-deeper);border-top:1px solid var(--color-border-dark);border-radius:0 0 8px 8px;display:flex;align-items:center;justify-content:space-between;padding:14px 32px;flex-wrap:wrap;gap:12px}
+.dh-footer__copyright{font-size:12px;color:var(--color-neutral-03);margin:0}
+.dh-footer__legal{display:flex;gap:20px}
+.dh-footer__legal a{font-size:12px;color:var(--color-neutral-03);text-decoration:none;transition:color 100ms ease-out}
+.dh-footer__legal a:hover{color:var(--color-basic-white)}
+
+/* ─── MOBILE CTA ─────────────────────────────────────────── */
+.mobile-cta{display:none;position:fixed;bottom:0;left:0;right:0;padding:14px 20px;background:rgba(242,241,238,.97);backdrop-filter:blur(10px);border-top:1px solid var(--color-neutral-05);z-index:999}
+@media(max-width:768px){.mobile-cta{display:block}}
+.mobile-cta .button{width:100%;justify-content:center}
+
+/* ─── HUBSPOT FORM ───────────────────────────────────────── */
+.hs-form-section{background:var(--color-surface-white);border:1.5px solid var(--color-border-default);border-radius:var(--radius-card);padding:48px;max-width:640px;margin:0 auto}
+.hs-form-section h3{font-family:var(--font-headline);font-size:1.6rem;color:var(--color-text-primary);margin-bottom:8px}
+.hs-form-section p{font-size:14px;color:var(--color-text-muted);margin-bottom:28px}
+</style>
+</head>
+<body>
+
+<div class="scroll-prog" id="sp"></div>
+
+<!-- ── NAV ─────────────────────────────────────────────────── -->
+<header class="nav" id="nav" role="banner">
+  <div class="container">
+    <div class="nav-inner">
+      <a class="nav-logo" href="https://datahub.com" aria-label="DataHub home">
+        <img src="https://cdn.jsdelivr.net/gh/wacarrrrrra/lp-agent-service@main/dataHub_logo_color_black.png" alt="DataHub" height="26">
+      </a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="https://datahub.com/products/" class="nav-top">Product</a>
+        <a href="https://datahub.com/products/data-governance/" class="nav-top">Governance</a>
+        <a href="https://datahub.com/resources/" class="nav-top">Resources</a>
+        <a href="https://docs.datahub.com" class="nav-top">Docs</a>
+        <a href="https://datahub.com/company/" class="nav-top">Company</a>
+      </nav>
+      <div class="nav-cta">
+        <a href="https://datahub.com/demos/bi-weekly-demo/" class="button button-ghost button-sm">Join a live demo</a>
+        <a href="#product-tour" class="button button-primary button-sm"><span>See it in action →</span></a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ── HERO ─────────────────────────────────────────────────── -->
+<section class="hero" aria-labelledby="hero-h1">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-text animate-in">
+        <div class="product-badge">
+          <span class="product-badge-dot"></span>
+          Data Governance · Open Source
+        </div>
+        <h1 id="hero-h1">Data governance software built for modern data platforms</h1>
+        <p class="hero-sub">Platform engineers need enterprise-grade data governance without vendor lock-in. DataHub delivers production-ready governance — lineage, access control, data quality, and observability — across 80+ data sources, fully open source and API-first.</p>
+        <ul class="hero-bullets" aria-label="Key capabilities">
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Apache 2.0 licensed — deploy on your infrastructure, no vendor lock-in</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>80+ pre-built connectors — Snowflake, BigQuery, Databricks, dbt, and more</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Extend via GraphQL &amp; OpenAPI — 12K+ GitHub stars</li>
+        </ul>
+        <div class="btn-row">
+          <a href="#product-tour" class="button button-primary button-lg"><span>See it in action →</span></a>
+          <a href="https://docs.datahub.com" class="button button-ghost">Read the docs</a>
+        </div>
+      </div>
+
+      <div class="hero-visual animate-in" style="transition-delay:120ms">
+        <figure class="framed-image">
+          <img src="https://datahub.com/wp-content/uploads/2024/03/datahub-platform-architecture.png"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='block'"
+               alt="Technical architecture diagram of DataHub platform showing four quadrants — Discovery, Governance, Quality, Lineage — with 80+ data source connectors and API layer">
+          <!-- SVG fallback — brand-compliant explainer diagram -->
+          <svg style="display:none;width:100%;height:auto" viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DataHub platform architecture showing four capability quadrants and data source integrations">
+            <title>DataHub Platform Architecture</title>
+            <defs>
+              <style>@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;600&display=swap');</style>
+              <marker id="arr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#3CBBEB"/></marker>
+            </defs>
+            <!-- Outer frame -->
+            <rect x="8" y="8" width="544" height="364" rx="10" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.5"/>
+            <!-- API tile -->
+            <rect x="170" y="18" width="220" height="52" rx="6" fill="#B0EAFC" stroke="#006DCD" stroke-width="1.2"/>
+            <text x="280" y="38" text-anchor="middle" font-family="Geist,sans-serif" font-size="9" font-weight="600" letter-spacing=".08em" fill="#0A4170" text-transform="uppercase">API LAYER</text>
+            <text x="230" y="54" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#0A4170">GraphQL</text>
+            <text x="330" y="54" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#0A4170">OpenAPI / REST</text>
+            <!-- Center hex -->
+            <polygon points="280,120 310,138 310,173 280,191 250,173 250,138" fill="#006DCD" stroke="#3CBBEB" stroke-width="1.5"/>
+            <text x="280" y="152" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" font-weight="600" fill="#FFFFFF">DATAHUB</text>
+            <text x="280" y="164" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" font-weight="600" fill="#FFFFFF">PLATFORM</text>
+            <text x="280" y="178" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#B0EAFC">Core Metadata Engine</text>
+            <!-- Q1: Discovery -->
+            <rect x="18" y="88" width="218" height="100" rx="6" fill="#F2F1EE" stroke="#3CBBEB" stroke-width="1.2"/>
+            <text x="30" y="104" font-family="Geist,sans-serif" font-size="8" font-weight="600" letter-spacing=".07em" fill="#0A4170">DISCOVERY &amp; CATALOG</text>
+            <circle cx="60" cy="148" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="60" y="144" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Meta</text>
+            <text x="60" y="154" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Search</text>
+            <line x1="82" y1="148" x2="105" y2="148" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="127" cy="148" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="127" y="144" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Data</text>
+            <text x="127" y="154" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Catalog</text>
+            <line x1="149" y1="148" x2="172" y2="148" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="194" cy="148" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="194" y="144" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Asset</text>
+            <text x="194" y="154" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Discovery</text>
+            <!-- Q2: Governance -->
+            <rect x="324" y="88" width="218" height="100" rx="6" fill="#F2F1EE" stroke="#3CBBEB" stroke-width="1.2"/>
+            <text x="336" y="104" font-family="Geist,sans-serif" font-size="8" font-weight="600" letter-spacing=".07em" fill="#0A4170">GOVERNANCE &amp; COMPLIANCE</text>
+            <circle cx="360" cy="148" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="360" y="148" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Policies</text>
+            <line x1="382" y1="148" x2="405" y2="148" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="427" cy="148" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="427" y="148" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Access</text>
+            <line x1="449" y1="148" x2="472" y2="148" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="494" cy="148" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="494" y="144" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Audit</text>
+            <text x="494" y="154" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Trails</text>
+            <!-- Q3: Quality -->
+            <rect x="18" y="202" width="218" height="100" rx="6" fill="#F2F1EE" stroke="#3CBBEB" stroke-width="1.2"/>
+            <text x="30" y="218" font-family="Geist,sans-serif" font-size="8" font-weight="600" letter-spacing=".07em" fill="#0A4170">QUALITY &amp; OBSERVABILITY</text>
+            <circle cx="60" cy="260" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="60" y="256" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Quality</text>
+            <text x="60" y="266" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Checks</text>
+            <line x1="82" y1="260" x2="105" y2="260" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="127" cy="260" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="127" y="256" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Monitors</text>
+            <text x="127" y="266" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">&amp; Alerts</text>
+            <line x1="149" y1="260" x2="172" y2="260" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="194" cy="260" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="194" y="256" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">SLA</text>
+            <text x="194" y="266" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Tracking</text>
+            <!-- Q4: Lineage -->
+            <rect x="324" y="202" width="218" height="100" rx="6" fill="#F2F1EE" stroke="#3CBBEB" stroke-width="1.2"/>
+            <text x="336" y="218" font-family="Geist,sans-serif" font-size="8" font-weight="600" letter-spacing=".07em" fill="#0A4170">LINEAGE &amp; IMPACT</text>
+            <circle cx="370" cy="260" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="370" y="256" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Lineage</text>
+            <text x="370" y="266" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Graph</text>
+            <line x1="392" y1="260" x2="422" y2="260" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="444" cy="260" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="444" y="256" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Impact</text>
+            <text x="444" y="266" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Analysis</text>
+            <line x1="466" y1="260" x2="496" y2="260" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="518" cy="260" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="518" y="256" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Depend.</text>
+            <text x="518" y="266" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Tracking</text>
+            <!-- Data Sources bottom -->
+            <rect x="18" y="316" width="524" height="48" rx="6" fill="#B0EAFC" stroke="#006DCD" stroke-width="1.2" stroke-dasharray="5 3"/>
+            <text x="280" y="332" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" font-weight="600" letter-spacing=".07em" fill="#0A4170">DATA SOURCES &amp; INTEGRATIONS — 80+ CONNECTORS</text>
+            <text x="90" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">RELATIONAL</text>
+            <text x="170" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">WAREHOUSE</text>
+            <text x="240" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">LAKE</text>
+            <text x="300" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">BI</text>
+            <text x="355" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">STREAMING</text>
+            <text x="420" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">APPS</text>
+            <text x="480" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">SaaS</text>
+            <!-- Connectors from API down to center -->
+            <line x1="280" y1="70" x2="280" y2="120" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arr)"/>
+            <!-- From quadrants to center -->
+            <line x1="236" y1="148" x2="250" y2="155" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <line x1="324" y1="148" x2="310" y2="155" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <line x1="236" y1="260" x2="252" y2="178" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <line x1="324" y1="260" x2="308" y2="178" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <!-- Sources to center -->
+            <line x1="280" y1="316" x2="280" y2="191" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arr)"/>
+          </svg>
+          <figcaption>DataHub platform architecture — four core governance capabilities with 80+ connectors</figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── LOGO SCROLLER ─────────────────────────────────────────── -->
+<section class="logo-scroller" aria-label="Trusted by">
+  <div class="logo-scroller-label">Trusted by modern data teams</div>
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track">
+      <span class="marquee-item">Netflix</span><span class="marquee-item">Visa</span><span class="marquee-item">Slack</span><span class="marquee-item">Notion</span><span class="marquee-item">Chime</span><span class="marquee-item">Pinterest</span><span class="marquee-item">MYOB</span><span class="marquee-item">Airtel</span><span class="marquee-item">DoorDash</span><span class="marquee-item">Etsy</span><span class="marquee-item">Deutsche Telekom</span><span class="marquee-item">Twilio</span>
+      <span class="marquee-item">Netflix</span><span class="marquee-item">Visa</span><span class="marquee-item">Slack</span><span class="marquee-item">Notion</span><span class="marquee-item">Chime</span><span class="marquee-item">Pinterest</span><span class="marquee-item">MYOB</span><span class="marquee-item">Airtel</span><span class="marquee-item">DoorDash</span><span class="marquee-item">Etsy</span><span class="marquee-item">Deutsche Telekom</span><span class="marquee-item">Twilio</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── WHY PLATFORM ENGINEERS — HOVER TILE GRID ──────────────── -->
+<section aria-labelledby="why-h2">
+  <div class="container">
+    <div class="sec-header animate-in">
+      <span class="sec-label">Why platform engineers choose DataHub</span>
+      <h2 id="why-h2">Governance that ships with your platform — not against it</h2>
+      <p>Built code-first, deployed on your infrastructure, extended through APIs your team already knows.</p>
+    </div>
+    <div class="hover-tile-grid" role="list">
+      <div class="hover-tile animate-in" role="listitem">
+        <div class="hover-tile-content">
+          <div class="hover-tile-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          </div>
+          <h4>Open source &amp; extensible</h4>
+          <p>Apache 2.0 licensed. Deploy on-prem, cloud, or hybrid. Extend via GraphQL &amp; OpenAPI. 12K+ GitHub stars and growing.</p>
+        </div>
+      </div>
+      <div class="hover-tile animate-in" role="listitem">
+        <div class="hover-tile-content">
+          <div class="hover-tile-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+          </div>
+          <h4>Universal data connectivity</h4>
+          <p>80+ pre-built connectors for Snowflake, BigQuery, Databricks, dbt, Airflow, and more. Custom connector SDK for proprietary systems.</p>
+        </div>
+      </div>
+      <div class="hover-tile animate-in" role="listitem">
+        <div class="hover-tile-content">
+          <div class="hover-tile-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h4>Production-grade governance</h4>
+          <p>Policy-based RBAC, automated lineage, business glossary, domain-driven organization, and compliance-ready audit trails.</p>
+        </div>
+      </div>
+      <div class="hover-tile animate-in" role="listitem">
+        <div class="hover-tile-content">
+          <div class="hover-tile-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <h4>Data quality &amp; observability</h4>
+          <p>Configurable quality assertions, SLA monitoring, real-time dashboards, and impact analysis for breaking changes.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CORE CAPABILITIES — CONTENT HIGHLIGHT ─────────────────── -->
+<section aria-labelledby="capabilities-h2">
+  <div class="container">
+    <div class="sec-header centered animate-in">
+      <span class="sec-label">Core data governance capabilities</span>
+      <h2 id="capabilities-h2">Every governance capability your platform needs</h2>
+      <p>From metadata discovery to compliance-ready access control — unified in a single open source platform.</p>
+    </div>
+
+    <!-- Capability 1: Discovery -->
+    <div class="content-highlight" style="margin-bottom:64px">
+      <div class="content-highlight-inner animate-in">
+        <div class="ch-text">
+          <span class="sec-label">Metadata discovery &amp; search</span>
+          <h2>Find any data asset, instantly</h2>
+          <p>Unified search across all data assets with AI-powered semantic search. Column-level metadata and automatic schema inference mean your team always knows what data exists and where it came from.</p>
+          <ul class="feature-list" aria-label="Discovery features">
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Unified search across all data assets</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>AI-powered semantic search</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Column-level metadata and automatic schema inference</li>
+          </ul>
+        </div>
+        <div class="ch-visual">
+          <!-- Stylized UI: search panel -->
+          <div style="background:var(--color-surface-default);border:1.5px solid var(--color-border-default);border-radius:var(--radius-card);padding:20px">
+            <div style="background:var(--color-surface-white);border:1px solid var(--color-border-default);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:14px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#767473" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>
+              <span style="font-size:13px;color:var(--color-text-muted)">Search 48,231 data assets…</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="background:var(--color-surface-white);border:1px solid var(--color-border-default);border-radius:6px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
+                <div><div style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:3px">orders.daily_revenue</div><div style="font-size:11px;color:var(--color-text-muted)">Snowflake · prod_warehouse · 24 columns</div></div>
+                <span style="font-size:10px;font-weight:600;background:var(--color-blue-05);color:var(--color-blue-02);padding:3px 8px;border-radius:4px">Certified</span>
+              </div>
+              <div style="background:var(--color-surface-white);border:1px solid var(--color-border-default);border-radius:6px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
+                <div><div style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:3px">customers.profile</div><div style="font-size:11px;color:var(--color-text-muted)">BigQuery · analytics · 18 columns</div></div>
+                <span style="font-size:10px;font-weight:600;background:var(--color-blue-05);color:var(--color-blue-02);padding:3px 8px;border-radius:4px">Certified</span>
+              </div>
+              <div style="background:var(--color-surface-white);border:1px solid var(--color-border-default);border-radius:6px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
+                <div><div style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:3px">events.session_data</div><div style="font-size:11px;color:var(--color-text-muted)">Databricks · streaming · 31 columns</div></div>
+                <span style="font-size:10px;font-weight:600;background:#e6faf5;color:var(--color-green-03);padding:3px 8px;border-radius:4px">PII flagged</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Capability 2: Lineage -->
+    <div class="content-highlight" style="margin-bottom:64px">
+      <div class="content-highlight-inner reverse animate-in">
+        <div class="ch-text">
+          <span class="sec-label">Lineage &amp; impact analysis</span>
+          <h2>Know what breaks before it breaks</h2>
+          <p>End-to-end data lineage graphs with column-level tracking across your entire stack. Downstream impact visualization shows affected models, reports, and teams before changes merge.</p>
+          <ul class="feature-list" aria-label="Lineage features">
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Column-level lineage across all platforms</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Downstream impact visualization before changes</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Cross-platform lineage: source → pipeline → dashboard</li>
+          </ul>
+        </div>
+        <div class="ch-visual">
+          <figure class="framed-image">
+            <img src="https://datahub.com/wp-content/uploads/2024/03/datahub-lineage.png"
+                 onerror="this.style.display='none'"
+                 alt="DataHub data governance workflow showing four stages: Connect, Organize, Govern, Monitor with icons for each capability">
+            <!-- Inline workflow diagram fallback -->
+            <svg style="width:100%;height:auto" viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Four-stage data governance workflow: Connect, Organize, Govern, Monitor">
+              <title>Data Governance Workflow</title>
+              <rect x="0" y="0" width="500" height="160" rx="8" fill="#F2F1EE"/>
+              <rect x="12" y="20" width="100" height="120" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+              <text x="62" y="52" text-anchor="middle" font-family="Geist,sans-serif" font-size="11" font-weight="600" fill="#002131">Connect</text>
+              <text x="62" y="70" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#767473">80+ sources</text>
+              <text x="62" y="84" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#767473">Auto ingestion</text>
+              <text x="62" y="98" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#767473">SDK for custom</text>
+              <line x1="114" y1="80" x2="130" y2="80" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arr)"/>
+              <rect x="132" y="20" width="100" height="120" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+              <text x="182" y="52" text-anchor="middle" font-family="Geist,sans-serif" font-size="11" font-weight="600" fill="#002131">Organize</text>
+              <text x="182" y="70" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#767473">Glossaries</text>
+              <text x="182" y="84" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#767473">Tags &amp; domains</text>
+              <text x="182" y="98" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#767473">Ownership</text>
+              <line x1="234" y1="80" x2="250" y2="80" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arr)"/>
+              <rect x="252" y="20" width="100" height="120" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+              <text x="302" y="52" text-anchor="middle" font-family="Geist,sans-serif" font-size="11" font-weight="600" fill="#002131">Govern</text>
+              <text x="302" y="70" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#767473">RBAC policies</text>
+              <text x="302" y="84" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#767473">Compliance</text>
+              <text x="302" y="98" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#767473">Audit trails</text>
+              <line x1="354" y1="80" x2="370" y2="80" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arr)"/>
+              <rect x="372" y="20" width="116" height="120" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+              <text x="430" y="52" text-anchor="middle" font-family="Geist,sans-serif" font-size="11" font-weight="600" fill="#002131">Monitor</text>
+              <text x="430" y="70" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#767473">Quality checks</text>
+              <text x="430" y="84" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#767473">SLA tracking</text>
+              <text x="430" y="98" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#767473">Lineage viz</text>
+            </svg>
+            <figcaption>Four-stage governance workflow — Connect → Organize → Govern → Monitor</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <!-- Capability 3: Access Control -->
+    <div class="content-highlight">
+      <div class="content-highlight-inner animate-in">
+        <div class="ch-text">
+          <span class="sec-label">Access control &amp; compliance</span>
+          <h2>Fine-grained control, compliance-ready by default</h2>
+          <p>Fine-grained RBAC policies, PII detection and classification, and comprehensive audit logging. DataHub's open source nature also enables custom compliance workflows specific to your requirements.</p>
+          <ul class="feature-list" aria-label="Compliance features">
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Role and group-based permissions at dataset level</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>PII detection and automated classification</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Audit logging for GDPR, CCPA, and HIPAA frameworks</li>
+          </ul>
+        </div>
+        <div class="ch-visual">
+          <div style="background:var(--color-surface-default);border:1.5px solid var(--color-border-default);border-radius:var(--radius-card);padding:20px;display:flex;flex-direction:column;gap:10px">
+            <div style="background:var(--color-surface-white);border:1px solid var(--color-border-default);border-radius:6px;padding:14px">
+              <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:10px">Access policy</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <span style="font-size:12px;color:var(--color-text-primary)">Data engineers</span>
+                <span style="font-size:11px;font-weight:600;background:var(--color-blue-05);color:var(--color-blue-02);padding:2px 8px;border-radius:4px">Read + Write</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <span style="font-size:12px;color:var(--color-text-primary)">Analysts</span>
+                <span style="font-size:11px;font-weight:600;background:#e6faf5;color:var(--color-green-03);padding:2px 8px;border-radius:4px">Read only</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:12px;color:var(--color-text-primary)">External partners</span>
+                <span style="font-size:11px;font-weight:600;background:var(--color-neutral-05);color:var(--color-text-muted);padding:2px 8px;border-radius:4px">No access</span>
+              </div>
+            </div>
+            <div style="background:var(--color-surface-white);border:1px solid var(--color-border-default);border-radius:6px;padding:14px">
+              <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:8px">PII classification</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <span style="font-size:11px;font-weight:600;background:#fff0f0;color:#820D00;padding:3px 9px;border-radius:4px">email_address</span>
+                <span style="font-size:11px;font-weight:600;background:#fff0f0;color:#820D00;padding:3px 9px;border-radius:4px">phone_number</span>
+                <span style="font-size:11px;font-weight:600;background:#fff0f0;color:#820D00;padding:3px 9px;border-radius:4px">ssn</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── INTEGRATION ARCHITECTURE — LIST TITLE ─────────────────── -->
+<section aria-labelledby="arch-h2">
+  <div class="container">
+    <div class="sec-header centered animate-in">
+      <span class="sec-label">Integration architecture</span>
+      <h2 id="arch-h2">API-first. Deploy anywhere. Built to scale.</h2>
+    </div>
+    <div class="list-title-section animate-in">
+      <div class="list-title-grid">
+        <div class="list-item-group">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            API-first design
+          </h4>
+          <div class="list-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>GraphQL for flexible metadata queries</div>
+          <div class="list-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>OpenAPI for RESTful integration</div>
+          <div class="list-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>Python SDK for automation</div>
+          <div class="list-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>Event-driven architecture via Kafka</div>
+        </div>
+        <div class="list-item-group">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            Deploy anywhere
+          </h4>
+          <div class="list-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>Kubernetes-native with Helm charts</div>
+          <div class="list-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>Docker Compose for local quick start</div>
+          <div class="list-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>AWS, GCP, Azure marketplace listings</div>
+          <div class="list-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>Terraform modules available</div>
+        </div>
+        <div class="list-item-group">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+            Scalable by design
+          </h4>
+          <div class="list-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>Microservices architecture</div>
+          <div class="list-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>Elasticsearch-backed search</div>
+          <div class="list-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>Kafka for event streaming</div>
+          <div class="list-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>PostgreSQL / MySQL / MariaDB support</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CUSTOMER FACTS ─────────────────────────────────────────── -->
+<section aria-label="Platform statistics">
+  <div class="container">
+    <div class="customer-facts animate-in">
+      <div class="sec-header" style="margin-bottom:40px;text-align:center">
+        <span class="sec-label" style="color:var(--color-blue-04)">By the numbers</span>
+        <h2 style="color:var(--color-basic-white)">Scale that matches your infrastructure</h2>
+      </div>
+      <div class="customer-facts-grid">
+        <div class="fact animate-in"><div class="fact-val">80+</div><div class="fact-lbl">Pre-built data source connectors</div></div>
+        <div class="fact animate-in"><div class="fact-val">12K+</div><div class="fact-lbl">GitHub stars — open source community</div></div>
+        <div class="fact animate-in"><div class="fact-val">3,000+</div><div class="fact-lbl">Data teams running DataHub</div></div>
+        <div class="fact animate-in"><div class="fact-val">10K+</div><div class="fact-lbl">Community Slack members</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── QUOTE ─────────────────────────────────────────────────── -->
+<section class="quote-section" aria-labelledby="quote-label">
+  <div class="container">
+    <div class="quote-inner animate-in">
+      <div>
+        <div class="quote-co">MYOB</div>
+        <div class="quote-co-role">Engineering Manager</div>
+        <div class="quote-result">
+          <div class="quote-result-lbl">Key result</div>
+          <div class="quote-result-val">Breaking changes: multiple per week → zero</div>
+        </div>
+      </div>
+      <div>
+        <blockquote id="quote-label">"Before bringing DataHub on board, our data teams would see multiple breaking changes per week. Since integrating DataHub into our workflow, DataHub has helped us significantly reduce the number of breaking changes, to the extent that they are no longer a burden on all teams."</blockquote>
+        <div class="quote-author">
+          <div class="quote-avatar" aria-hidden="true">AN</div>
+          <div>
+            <div class="quote-name">Asad Naveed</div>
+            <div class="quote-role">Engineering Manager, MYOB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRODUCT TOUR FORM ──────────────────────────────────────── -->
+<section id="product-tour" aria-labelledby="form-h3">
+  <div class="container">
+    <div class="sec-header centered animate-in">
+      <span class="sec-label">Get started</span>
+      <h2 id="form-h2">See data governance software in action</h2>
+      <p>Take a self-guided product tour and see how DataHub handles your specific governance challenges.</p>
+    </div>
+    <div class="hs-form-section animate-in">
+      <h3 id="form-h3">See it in action</h3>
+      <p>Takes 5 minutes. No sales call required.</p>
+      <script charset="utf-8" type="text/javascript" src="//js.hsforms.net/forms/embed/v2.js"></script>
+      <script>
+        hbspt.forms.create({
+          portalId: "14552909",
+          formId: "aa56e90c-044a-46d8-a92f-cb905ad662f8",
+          region: "na1"
+        });
+      </script>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ──────────────────────────────────────────────────── -->
+<section class="faq-section" aria-labelledby="faq-h2">
+  <div class="container">
+    <div class="sec-header centered animate-in">
+      <span class="sec-label">FAQ</span>
+      <h2 id="faq-h2">Frequently asked questions about data governance software</h2>
+    </div>
+    <div class="faq-tile-list animate-in" role="list">
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false">What makes DataHub different from proprietary data governance software?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-answer" role="region"><div class="faq-answer-inner">DataHub is fully open source (Apache 2.0), giving you complete control over your governance infrastructure. Unlike proprietary tools, you can deploy on your own infrastructure, customize the platform, contribute features, and avoid vendor lock-in. With 80+ pre-built connectors and active community support, you get enterprise features without enterprise licensing costs.</div></div>
+      </div>
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false">Can DataHub integrate with our existing data stack?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-answer" role="region"><div class="faq-answer-inner">Yes. DataHub supports 80+ data sources including Snowflake, BigQuery, Databricks, Redshift, dbt, Airflow, Tableau, Looker, and more. The platform uses automated metadata ingestion pipelines and provides a custom connector SDK for proprietary systems. APIs (GraphQL &amp; OpenAPI) enable seamless integration with existing tools.</div></div>
+      </div>
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false">How does DataHub handle data lineage across different platforms?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-answer" role="region"><div class="faq-answer-inner">DataHub automatically tracks end-to-end lineage across your entire data stack — from source databases through transformation pipelines to BI dashboards. It supports column-level lineage, cross-platform tracking, and provides impact analysis to show downstream dependencies before making changes.</div></div>
+      </div>
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false">Is DataHub suitable for compliance requirements (GDPR, SOC2, etc.)?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-answer" role="region"><div class="faq-answer-inner">Yes. DataHub provides audit trails, PII detection and classification, fine-grained access controls (RBAC), and comprehensive metadata tracking. These features support compliance frameworks including GDPR, CCPA, and HIPAA. The open source nature also enables custom compliance workflows specific to your requirements.</div></div>
+      </div>
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false">What's the difference between DataHub OSS and DataHub Cloud?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-answer" role="region"><div class="faq-answer-inner">DataHub OSS is the fully-featured open source platform you can self-host. DataHub Cloud is a managed service that includes additional enterprise features like advanced RBAC, SSO integration, 24/7 support, and SLA guarantees. Both share the same core governance capabilities.</div></div>
+      </div>
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false">How scalable is DataHub for large enterprises?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-answer" role="region"><div class="faq-answer-inner">DataHub is built for scale with a microservices architecture, Elasticsearch-backed search, and Kafka event streaming. It powers data governance at companies managing petabytes of data across thousands of datasets. The platform scales horizontally and integrates with enterprise Kubernetes infrastructure.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FRAME CTA ─────────────────────────────────────────────── -->
+<section aria-labelledby="cta-h2">
+  <div class="container">
+    <div class="frame-cta animate-in">
+      <span class="sec-label" style="color:var(--color-blue-04)">Ready to govern with confidence</span>
+      <h2 id="cta-h2">Deploy data governance software your platform engineers will actually use</h2>
+      <p>Open source, API-first, and built for the way modern data platforms are built. Join 3,000+ data teams who've moved from spreadsheet governance to production-grade control with DataHub.</p>
+      <div class="btn-row" style="justify-content:center;margin-bottom:32px">
+        <a href="#product-tour" class="button button-primary button-lg"><span>See it in action →</span></a>
+        <a href="https://datahub.com/demos/bi-weekly-demo/" class="button-inverse button button-lg">Join a live demo</a>
+      </div>
+      <div class="cta-trust">
+        <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Apache 2.0 — no vendor lock-in</div>
+        <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Deploy on your infrastructure</div>
+        <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Technical onboarding included</div>
+      </div>
+      <div class="demo-chip">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <p><strong>Live group demo every Thursday</strong> — See DataHub data governance in action with open Q&amp;A from the engineering team</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────── -->
+<div class="container" style="padding-bottom:48px;padding-top:0">
+  <footer class="dh-footer" id="colophon" aria-label="Site footer">
+    <div class="dh-footer__main">
+      <div class="dh-footer__brand">
+        <a class="dh-footer__logo" href="https://datahub.com/" aria-label="DataHub home">
+          <img src="https://cdn.jsdelivr.net/gh/wacarrrrrra/lp-agent-service@main/dataHub_logo_color_white.png" alt="DataHub" height="22" width="auto">
+        </a>
+        <div class="dh-footer__social">
+          <a href="https://www.linkedin.com/company/datahub-cloud/" aria-label="DataHub on LinkedIn" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 448 512" aria-hidden="true"><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg></a>
+          <a href="https://github.com/datahub-project" aria-label="DataHub on GitHub" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 496 512" aria-hidden="true"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8z"/></svg></a>
+          <a href="https://x.com/DataHubCloud" aria-label="DataHub on X" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 512 512" aria-hidden="true"><path d="M389.2 48h70.6L305.6 224.2 487 464H345L233.7 318.6 106.5 464H35.8L200.7 275.5 26.8 48H172.4L272.9 180.9 389.2 48zM364.4 421.8h39.1L151.1 88h-42L364.4 421.8z"/></svg></a>
+          <a href="https://datahub.com/slack/" aria-label="Join DataHub on Slack" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 448 512" aria-hidden="true"><path d="M94.12 315.1c0 25.9-21.16 47.06-47.06 47.06S0 341 0 315.1c0-25.9 21.16-47.06 47.06-47.06h47.06v47.06zm23.72 0c0-25.9 21.16-47.06 47.06-47.06s47.06 21.16 47.06 47.06v117.84c0 25.9-21.16 47.06-47.06 47.06s-47.06-21.16-47.06-47.06V315.1zm47.06-188.98c-25.9 0-47.06-21.16-47.06-47.06S139 32 164.9 32s47.06 21.16 47.06 47.06v47.06H164.9zm0 23.72c25.9 0 47.06 21.16 47.06 47.06s-21.16 47.06-47.06 47.06H47.06C21.16 244 0 222.84 0 196.94s21.16-47.06 47.06-47.06H164.9zm188.98 47.06c0-25.9 21.16-47.06 47.06-47.06 25.9 0 47.06 21.16 47.06 47.06s-21.16 47.06-47.06 47.06h-47.06V196.9zm-23.72 0c0 25.9-21.16 47.06-47.06 47.06-25.9 0-47.06-21.16-47.06-47.06V79.06C283.04 53.16 304.2 32 330.1 32s47.06 21.16 47.06 47.06V196.9zM330.1 385.88c25.9 0 47.06 21.16 47.06 47.06 0 25.9-21.16 47.06-47.06 47.06-25.9 0-47.06-21.16-47.06-47.06v-47.06h47.06zm0-23.72c-25.9 0-47.06-21.16-47.06-47.06 0-25.9 21.16-47.06 47.06-47.06h117.84c25.9 0 47.06 21.16 47.06 47.06 0 25.9-21.16 47.06-47.06 47.06H330.1z"/></svg></a>
+        </div>
+      </div>
+      <div class="dh-footer__nav-grid">
+        <div class="dh-footer__nav-col">
+          <h3>Product</h3>
+          <ul>
+            <li><a href="https://datahub.com/products/">Product Overview</a></li>
+            <li><a href="https://datahub.com/products/data-discovery/">Discovery</a></li>
+            <li><a href="https://datahub.com/products/data-observability/">Observability</a></li>
+            <li><a href="https://datahub.com/products/data-governance/">Governance</a></li>
+            <li><a href="https://datahub.com/products/data-lineage/">Lineage</a></li>
+            <li><a href="https://datahub.com/products/ai-data-management/">AI Data Management</a></li>
+          </ul>
+        </div>
+        <div class="dh-footer__nav-col">
+          <h3>Community</h3>
+          <ul>
+            <li><a href="https://datahub.com/community/">Join the Community</a></li>
+            <li><a href="https://docs.datahub.com/">Docs</a></li>
+            <li><a href="https://datahub.com/slack/">Slack</a></li>
+            <li><a href="http://youtube.com/channel/UC3qFQC5IiwR5fvWEqi_tJ5w">YouTube</a></li>
+            <li><a href="https://datahub.com/events/">Events</a></li>
+          </ul>
+        </div>
+        <div class="dh-footer__nav-col">
+          <h3>Resources</h3>
+          <ul>
+            <li><a href="https://datahub.com/resources/?2004611554=dh-stories">Customer Stories</a></li>
+            <li><a href="https://datahub.com/blog/">Blog</a></li>
+            <li><a href="https://datahub.com/resources/?2004611554=dh-webinars">Webinars</a></li>
+            <li><a href="https://support.datahub.com/hc/en-us">Get Support</a></li>
+            <li><a href="https://datahub.com/demos/bi-weekly-demo/">Live Group Demo</a></li>
+          </ul>
+        </div>
+        <div class="dh-footer__nav-col">
+          <h3>Company</h3>
+          <ul>
+            <li><a href="https://datahub.com/company/#where-it-began">About Us</a></li>
+            <li><a href="https://datahub.com/company/#leadership">Leadership</a></li>
+            <li><a href="https://datahub.com/news/">News</a></li>
+            <li><a href="https://datahub.com/datahub-careers/">Careers</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="dh-footer__bottom">
+      <p class="dh-footer__copyright">© 2026 Acryl Data, Inc.</p>
+      <nav class="dh-footer__legal" aria-label="Legal links">
+        <a href="https://datahub.com/privacy-policy/">Privacy Policy</a>
+        <a href="https://datahub.com/terms-of-service/">Terms of Service</a>
+        <a href="https://datahub.com/security/">Security</a>
+      </nav>
+    </div>
+  </footer>
+</div>
+
+<!-- Mobile sticky CTA -->
+<div class="mobile-cta" aria-hidden="true">
+  <a href="#product-tour" class="button button-primary">See it in action →</a>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Scroll progress
+  const sp = document.getElementById('sp');
+  window.addEventListener('scroll', () => {
+    const p = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+    sp.style.width = p + '%';
+  }, { passive: true });
+
+  // Nav scroll state — Tier 2 (300ms cubic-bezier)
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 40), { passive: true });
+
+  // Tier 3 scroll-on animations — IntersectionObserver
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.remove('is-hidden');
+        e.target.classList.add('is-visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.animate-in').forEach(el => {
+    el.classList.add('is-hidden');
+    observer.observe(el);
+  });
+
+  // FAQ accordion — Tier 2 (max-height transition set in CSS)
+  document.querySelectorAll('.faq-tile').forEach(tile => {
+    tile.querySelector('.faq-header').addEventListener('click', () => {
+      const open = tile.classList.contains('open');
+      document.querySelectorAll('.faq-tile').forEach(t => {
+        t.classList.remove('open');
+        t.querySelector('.faq-header').setAttribute('aria-expanded', 'false');
+      });
+      if (!open) {
+        tile.classList.add('open');
+        tile.querySelector('.faq-header').setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+});
+</script>
+</body>
+</html>
