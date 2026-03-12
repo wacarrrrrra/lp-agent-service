@@ -117,6 +117,17 @@ TRUST_STRIP_HTML = """<!-- ── LOGO SCROLLER ──────────�
 # Logo SVG loaded at startup — committed with every generated page
 LOGO_SVG_BLACK = load_text("templates/dataHub_logo_color_black.svg", 50000)
 
+# Footer + scripts extracted from template — injected verbatim if Claude truncates
+_footer_match = re.search(r'<!-- ── FOOTER[\s\S]*?</script>', SAMPLE_LP_HTML, re.IGNORECASE)
+TEMPLATE_FOOTER_HTML = _footer_match.group(0) if _footer_match else ""
+
+# GitHub Pages base URL — derived from GITHUB_REPO at startup
+_repo_parts = GITHUB_REPO.split("/", 1)
+GITHUB_PAGES_BASE = (
+    f"https://{_repo_parts[0]}.github.io/{_repo_parts[1]}"
+    if len(_repo_parts) == 2 and all(_repo_parts) else ""
+)
+
 def build_page_head(title: str, meta_description: str) -> str:
     """Build the full <head> with correct title/meta and the template CSS."""
     return f"""<head>
@@ -478,11 +489,10 @@ def build_lp_html_prompt(
     )
     picture_elements = ""
     for svg_name in svgs:
-        png_name = svg_name.replace(".svg", ".png")
         picture_elements += (
             f'\n<picture>\n'
             f'  <source srcset="images/{svg_name}" type="image/svg+xml">\n'
-            f'  <img src="images/{png_name}" alt="[descriptive alt text]" loading="lazy">\n'
+            f'  <img src="images/{svg_name}" alt="[descriptive alt text]" loading="lazy">\n'
             f'</picture>'
         )
     form_id = writer_json.get("seo_json", {}).get(
@@ -520,7 +530,7 @@ CTA_MICROCOPY — use these exact strings for buttons and risk-reduction lines:
 IMAGE_BRIEFS_MD:
 {writer_json.get("image_briefs_md", "")}
 
-Available SVG images — use <picture> with SVG primary source and PNG fallback:
+Available diagram images — use these exact <picture> elements verbatim, do NOT write bare <img> tags or reference .png files for diagrams:
 {picture_elements if picture_elements else "(none)"}
 
 Non-negotiable output rules:
@@ -544,6 +554,7 @@ Non-negotiable output rules:
 - CSS variables only (--dh-*), Google Fonts Castoro + Geist — no system fonts, no Arial/Inter
 - No invented metrics, logos, or social proof
 - Section spacing and layout: follow the sample template exactly — use the same padding, gap, and grid values as the template; do not invent new spacing
+- Card grid headlines (How It Works steps, benefit blocks, feature tiles): keep all headlines in a grid to 4–6 words — consistent length across every card in the same section so they align at the same height
 - TRUST STRIP: Do NOT write the logo scroller / trust strip section. Instead output exactly this placeholder on its own line, immediately after the closing </section> tag of the hero:
   <!-- TRUST_STRIP_PLACEHOLDER -->
   The trust strip will be injected automatically in code.
@@ -618,6 +629,10 @@ async def generate_full_lp(
         # Fallback: insert after the first closing </section> (end of hero)
         page_html = page_html.replace('</section>', f'</section>\n{TRUST_STRIP_HTML}', 1)
 
+    # Guarantee footer — if Claude hit the token limit, append the template footer verbatim
+    if '<footer' not in page_html.lower() and TEMPLATE_FOOTER_HTML:
+        page_html = page_html + '\n' + TEMPLATE_FOOTER_HTML
+
     # Assemble metadata and full page
     seo = writer_json.get("seo_json", {})
     raw_slug = (seo.get("slug") or slugify(fields["search_term"])).strip("/")
@@ -640,11 +655,16 @@ async def generate_full_lp(
     head = build_page_head(metadata["title_tag"], metadata["meta_description"])
     full_html = f"<!doctype html>\n<html lang=\"en\">\n{head}\n<body>\n{page_html}\n</body>\n</html>"
 
+    pages_url = (
+        f"{GITHUB_PAGES_BASE}/generated-pages/{metadata['slug']}/"
+        if GITHUB_PAGES_BASE else ""
+    )
     return {
         "html": full_html,
         "metadata_json": json.dumps(metadata, indent=2),
         "writer_json": writer_json,
         "slug": metadata["slug"],
+        "pages_url": pages_url,
     }
 
 # ----------------------------
@@ -1171,11 +1191,13 @@ async def _handle_build_modal(payload: dict, view: dict) -> JSONResponse:
                     f"Add LP package: {final_slug}", GITHUB_BRANCH,
                 )
                 if all_ok:
+                    preview = lp_package.get("pages_url", "")
                     result_msg = (
                         f"✅ *LP package ready*\n"
                         f"*Search term:* {search_term}\n"
                         f"*Slug:* `{final_slug}`\n"
                         f"*Files:* {kit_url}"
+                        + (f"\n*Preview:* {preview}" if preview else "")
                     )
                 else:
                     result_msg = (
@@ -1464,6 +1486,7 @@ async def slack_events(request: Request):
                 await post_message(bart_channel, internal_status, thread_ts=thread_ts)
 
                 # Agency-facing confirmation in #sem-lp-build-kits
+                _preview = lp_package.get("pages_url", "")
                 agency_msg = (
                     f"✅ *LP package ready*\n"
                     f"*Search term:* {fields['search_term']}\n"
@@ -1471,6 +1494,7 @@ async def slack_events(request: Request):
                     f"*CTA:* {fields.get('primary_cta','Demo')} | "
                     f"*Intent:* {fields.get('intent','Commercial')}\n"
                     f"*Files:* {kit_url}"
+                    + (f"\n*Preview:* {_preview}" if _preview else "")
                 )
                 await post_message(requester_channel, agency_msg)
 
