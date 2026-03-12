@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" role="img">
+  <title>DataHub Impact Analysis — Multi-Hop Lineage Visualization</title>
+  <desc>Architecture diagram showing DataHub's impact analysis capability: a source dataset triggers downstream lineage traversal across 247 datasets, 15 dashboards, and 8 ML models through multi-hop column-level dependency paths.</desc>
+
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Castoro&amp;family=Geist:wght@300;400;500;600&amp;display=swap');
+    </style>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#3CBBEB"/>
+    </marker>
+    <marker id="arrow-blue-sm" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 z" fill="#3CBBEB"/>
+    </marker>
+    <marker id="arrow-mid" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#0A4170"/>
+    </marker>
+  </defs>
+
+  <!-- Page background -->
+  <rect width="100%" height="100%" fill="#F2F1EE"/>
+
+  <!-- Outer frame -->
+  <rect x="20" y="20" width="920" height="640" rx="10" ry="10" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.5"/>
+
+  <!-- Header tile -->
+  <rect x="20" y="20" width="920" height="64" rx="10" ry="10" fill="#002131"/>
+  <rect x="20" y="64" width="920" height="20" fill="#002131"/>
+
+  <!-- Header text -->
+  <text x="48" y="58" font-family="'Castoro', Georgia, serif" font-size="22" fill="#FFFFFF" font-weight="400">Impact Analysis</text>
+  <text x="48" y="76" font-family="'Geist', sans-serif" font-size="11" fill="#3CBBEB" font-weight="400" letter-spacing="1.5">MULTI-HOP LINEAGE TRAVERSAL — DATAHUB</text>
+  <rect x="20" y="84" width="920" height="1" fill="#3CBBEB" opacity="1"/>
+
+  <!-- ============================================================ -->
+  <!-- LEFT COLUMN: SOURCE DATASET -->
+  <!-- ============================================================ -->
+
+  <!-- Source tile background -->
+  <rect x="44" y="108" width="168" height="464" rx="8" ry="8" fill="#B0EAFC" stroke="#3CBBEB" stroke-width="1.2"/>
+
+  <!-- Source tile header -->
+  <rect x="44" y="108" width="168" height="36" rx="8" ry="8" fill="#0A4170"/>
+  <rect x="44" y="128" width="168" height="16" fill="#0A4170"/>
+  <text x="128" y="131" font-family="'Geist', sans-serif" font-size="10" fill="#B0EAFC" font-weight="500" text-anchor="middle" letter-spacing="1">SOURCE</text>
+
+  <!-- Source dataset card -->
+  <rect x="60" y="156" width="136" height="88" rx="6" ry="6" fill="#FFFFFF" stroke="#0A4170" stroke-width="1.5"/>
+
+  <!-- DB icon -->
+  <ellipse cx="128" cy="176" rx="22" ry="7" fill="none" stroke="#0A4170" stroke-width="1.5"/>
+  <line x1="106" y1="176" x2="106" y2="196" stroke="#0A4170" stroke-width="1.5"/>
+  <line x1="150" y1="176" x2="150" y2="196" stroke="#0A4170" stroke-width="1.5"/>
+  <ellipse cx="128" cy="196" rx="22" ry="7" fill="none" stroke="#0A4170" stroke-width="1.5"/>
+  <ellipse cx="128" cy="186" rx="22" ry="7" fill="none" stroke="#0A4170" stroke-width="1.2" stroke-dasharray="3 2"/>
+
+  <text x="128" y="218" font-family="'Geist', sans-serif" font-size="11" fill="#002131" font-weight="600" text-anchor="middle">orders_raw</text>
+  <text x="128" y="232" font-family="'Geist', sans-serif" font-size="9" fill="#767473" font-weight="400" text-anchor="middle">Snowflake · prod</text>
+
+  <!-- Schema change badge -->
+  <rect x="68" y="256" width="120" height="22" rx="4" ry="4" fill="#0A4170"/>
+  <text x="128" y="271" font-family="'Geist', sans-serif" font-size="9" fill="#B0EAFC" font-weight="500" text-anchor="middle" letter-spacing="0.5">SCHEMA CHANGE DETECTED</text>
+
+  <!-- Column list -->
+  <text x="68" y="300" font-family="'Geist', sans-serif" font-size="10" fill="#002131" font-weight="600">Columns modified:</text>
+
+  <rect x="68" y="308" width="8" height="8" rx="2" ry="2" fill="#3CBBEB"/>
+  <text x="82" y="317" font-family="'Geist', sans-serif" font-size="10" fill="#1E1E1E" font-weight="400">order_id</text>
+
+  <rect x="68" y="322" width="8" height="8" rx="2" ry="2" fill="#3CBBEB"/>
+  <text x="82" y="331" font-family="'Geist', sans-serif" font-size="10" fill="#1E1E1E" font-weight="400">customer_id</text>
+
+  <rect x="68" y="336" width="8" height="8" rx="2" ry="2" fill="#3CBBEB"/>
+  <text x="82" y="345" font-family="'Geist', sans-serif" font-size="10" fill="#1E1E1E" font-weight="400">total_amount</text>
+
+  <rect x="68" y="350" width="8" height="8" rx="2" ry="2" fill="#3CBBEB"/>
+  <text x="82" y="359" font-family="'Geist', sans-serif" font-size="10" fill="#1E1E1E" font-weight="400">created_at</text>
+
+  <!-- Hop count badge -->
+  <rect x="60" y="388" width="136" height="52" rx="6" ry="6" fill="#002131"/>
+  <text x="128" y="408" font-family="'Geist', sans-serif" font-size="9" fill="#3CBBEB" font-weight="500" text-anchor="middle" letter-spacing="1">MAX TRAVERSAL</text>
+  <text x="128" y="428" font-family="'Castoro', Georgia, serif" font-size="20" fill="#FFFFFF" font-weight="400" text-anchor="middle">1,000 hops</text>
+
+  <!-- Lineage type label -->
+  <text x="128" y="462" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="500" text-anchor="middle" letter-spacing="0.5">COLUMN-LEVEL LINEAGE</text>
+  <line x1="68" y1="466" x2="188" y2="466" stroke="#3CBBEB" stroke-width="1"/>
+  <text x="128" y="480" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="500" text-anchor="middle" letter-spacing="0.5">TABLE-LEVEL LINEAGE</text>
+  <line x1="68" y1="484" x2="188" y2="484" stroke="#3CBBEB" stroke-width="1"/>
+  <text x="128" y="498" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" font-weight="500" text-anchor="middle" letter-spacing="0.5">CROSS-PLATFORM STITCHING</text>
+
+  <!-- ============================================================ -->
+  <!-- CENTER COLUMN: DATAHUB ENGINE -->
+  <!-- ============================================================ -->
+
+  <!-- DataHub engine tile -->
+  <rect x="236" y="108" width="200" height="464" rx="8" ry="8" fill="#002131" stroke="#3CBBEB" stroke-width="1.2"/>
+
+  <!-- Engine tile header -->
+  <text x="336" y="135" font-family="'Geist', sans-serif" font-size="10" fill="#3CBBEB" font-weight="500" text-anchor="middle" letter-spacing="1">DATAHUB ENGINE</text>
+
+  <!-- DataHub logo mark (hexagon) -->
+  <polygon points="336,162 356,173 356,195 336,206 316,195 316,173" fill="none" stroke="#3CBBEB" stroke-width="2"/>
+  <polygon points="336,170 349,177 349,191 336,198 323,191 323,177" fill="#0A4170" stroke="#3CBBEB" stroke-width="1"/>
+  <text x="336" y="188" font-family="'Geist', sans-serif" font-size="9" fill="#3CBBEB" font-weight="600" text-anchor="middle">DH</text>
+
+  <text x="336" y="224" font-family="'Castoro', Georgia, serif" font-size="15" fill="#FFFFFF" font-weight="400" text-anchor="middle">DataHub</text>
+  <text x="336" y="240" font-family="'Geist', sans-serif" font-size="9" fill="#B0EAFC" font-weight="400" text-anchor="middle">Metadata Graph Engine</text>
+
+  <!-- Divider -->
+  <line x1="256" y1="252" x2="416" y2="252" stroke="#0A4170" stroke-width="1"/>
+
+  <!-- Engine capabilities -->
+  <text x="256" y="272" font-family="'Geist', sans-serif" font-size="9" fill="#3CBBEB" font-weight="500" letter-spacing="1">CAPABILITIES</text>
+
+  <!-- Cap 1 -->
+  <rect x="256" y="280" width="160" height="34" rx="4" ry="4" fill="#0A4170"/>
+  <!-- graph icon -->
+  <circle cx="270" cy="297" r="4" fill="none" stroke="#3CBBEB" stroke-width="1.2"/>
+  <circle cx="282" cy="291" r="3" fill="none" stroke="#3CBBEB" stroke-width="1.2"/>
+  <circle cx="282" cy="303" r="3" fill="none" stroke="#3CBBEB" stroke-width="1.2"/>
+  <line x1="274" y1="294" x2="279" y2="292" stroke="#3CBBEB" stroke-width="1"/>
+  <line x1="274" y1="300" x2="279" y2="302" stroke="#3CBBEB" stroke-width="1"/>
+  <text x="292" y="294" font-family="'Geist', sans-serif" font-size="10" fill="#FFFFFF" font-weight="500">Graph traversal</text>
+  <text x="292" y="307" font-family="'Geist', sans-serif" font-size="9" fill="#B0EAFC" font-weight="300">Multi-hop path resolution</text>
+
+  <!-- Cap 2 -->
+  <rect x="256" y="320" width="160" height="34" rx="4" ry="4" fill="#0A4170"/>
+  <!-- SQL icon -->
+  <rect x="262" y="328" width="16" height="12" rx="2" ry="2" fill="none" stroke="#3CBBEB" stroke-width="1.2"/>
+  <line x1="265" y1="332" x2="275" y2="332" stroke="#3CBBEB" stroke-width="1"/>
+  <line x1="265" y1="335" x2="273" y2="335" stroke="#3CBBEB" stroke-width="1"/>
+  <text x="292" y="334" font-family="'Geist', sans-serif" font-size="10" fill="#FFFFFF" font-weight="500">SQL parsing</text>
+  <text x="292" y="347" font-family="'Geist', sans-serif" font-size="9" fill="#B0EAFC" font-weight="300">sqlglot-powered extraction</text>
+
+  <!-- Cap 3 -->
+  <rect x="256" y="360" width="160" height="34" rx="4" ry="4" fill="#0A4170"/>
+  <!-- audit icon -->
+  <rect x="262" y="368" width="14" height="16" rx="2" ry="2" fill="none" stroke="#3CBBEB" stroke-width="1.2"/>
+  <line x1="265" y1="372" x2="273" y2="372" stroke="#3CBBEB" stroke-width="1"/>
+  <line x1="265" y1="375" x2="273" y2="375" stroke="#3CBBEB" stroke-width="1"/>
+  <line x1="265" y1="378" x2="270" y2="378" stroke="#3CBBEB" stroke-width="1"/>
+  <text x="292" y="374" font-family="'Geist', sans-serif" font-size="10" fill="#FFFFFF" font-weight="500">Audit log parsing</text>
+  <text x="292" y="387" font-family="'Geist', sans-serif" font-size="9" fill="#B0EAFC" font-weight="300">Real-time lineage updates</text>
+
+  <!-- Cap 4 -->
+  <rect x="256" y="400" width="160" height="34" rx="4" ry="4" fill="#0A4170"/>
+  <!-- column icon -->
+  <line x1="262" y1="408" x2="262" y2="424" stroke="#3CBBEB" stroke-width="1.5"/>
+  <line x1="267" y1="408" x2="267" y2="424" stroke="#3CBBEB" stroke-width="1.5"/>
+  <line x1="272" y1="408" x2="272" y2="424" stroke="#3CBBEB" stroke-width="1.5"/>
+  <text x="292" y="414" font-family="'Geist', sans-serif" font-size="10" fill="#FFFFFF" font-weight="500">Column-level lineage</text>
+  <text x="292" y="427" font-family="'Geist', sans-serif" font-size="9" fill="#B0EAFC" font-weight="300">Fine-grained dependency map</text>
+
+  <!-- Cap 5 -->
+  <rect x="256" y="440" width="160" height="34" rx="4" ry="4" fill="#0A4170"/>
+  <!-- time icon -->
+  <circle cx="270" cy="457" r="7" fill="none" stroke="#3CBBEB" stroke-width="1.2"/>
+  <line x1="270" y1="451" x2="270" y2="457" stroke="#3CBBEB" stroke-width="1.2"/>
+  <line x1="270" y1="457" x2="274" y2="460" stroke="#3CBBEB" stroke-width="1.2"/>
+  <text x="292" y="454" font-family="'Geist', sans-serif" font-size="10" fill="#FFFFFF" font-weight="500">Point-in-time queries</text>
+  <text x="292" y="467" font-family="'Geist', sans-serif" font-size="9" fill="#B0EAFC" font-weight="300">Historical lineage snapshots</text>
+
+  <!-- API badge -->
+  <rect x="256" y="488" width="72" height="22" rx="4" ry="4" fill="#3CBBEB"/>
+  <text x="292" y="503" font-family="'Geist', sans-serif" font-size="9" fill="#002131" font-weight="600" text-anchor="middle" letter-spacing="0.5">GraphQL API</text>
+  <rect x="334" y="488" width="82" height="22" rx="4" ry="4" fill="none" stroke="#3CBBEB" stroke-width="1"/>
+  <text x="375" y="503" font-family="'Geist', sans-serif" font-size="9" fill="#3CBBEB" font-weight="500" text
