@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" role="img">
+  <title>DataHub Anomaly Detection Types</title>
+  <desc>Explainer diagram showing the four types of data anomalies DataHub can detect: Volume, Freshness, Column Quality, and Custom SQL anomalies, with Smart Assertions at the center.</desc>
+
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Castoro&amp;family=Geist:wght@300;400;500;600&amp;display=swap');
+    </style>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#3CBBEB"/>
+    </marker>
+    <marker id="arrow-blue-rev" markerWidth="8" markerHeight="8" refX="2" refY="3" orient="auto">
+      <path d="M8,0 L8,6 L0,3 z" fill="#3CBBEB"/>
+    </marker>
+  </defs>
+
+  <!-- Page background -->
+  <rect width="100%" height="100%" fill="#F2F1EE"/>
+
+  <!-- Outer frame -->
+  <rect x="24" y="24" width="912" height="632" rx="10" ry="10" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.5"/>
+
+  <!-- Header area -->
+  <rect x="24" y="24" width="912" height="72" rx="10" ry="10" fill="#002131"/>
+  <rect x="24" y="72" width="912" height="24" fill="#002131"/>
+
+  <!-- Header title -->
+  <text x="480" y="58" font-family="'Castoro', Georgia, serif" font-size="22" fill="#FFFFFF" text-anchor="middle" font-weight="400">Four Types of Data Anomalies</text>
+  <text x="480" y="80" font-family="'Geist', sans-serif" font-size="12" fill="#3CBBEB" text-anchor="middle" font-weight="400" letter-spacing="2">DETECTED BY DATAHUB SMART ASSERTIONS</text>
+
+  <!-- ── CENTER HUB ── -->
+  <g id="center-hub">
+    <rect x="350" y="270" width="260" height="140" rx="8" ry="8" fill="#0A4170" stroke="#3CBBEB" stroke-width="1.5"/>
+    <!-- Hub icon: brain/ML symbol — simplified hexagon -->
+    <polygon points="480,288 494,296 494,312 480,320 466,312 466,296" fill="none" stroke="#3CBBEB" stroke-width="1.5"/>
+    <line x1="480" y1="296" x2="480" y2="312" stroke="#3CBBEB" stroke-width="1" stroke-dasharray="2 2"/>
+    <line x1="466" y1="304" x2="494" y2="304" stroke="#3CBBEB" stroke-width="1" stroke-dasharray="2 2"/>
+    <text x="480" y="340" font-family="'Castoro', Georgia, serif" font-size="15" fill="#FFFFFF" text-anchor="middle" font-weight="400">Smart Assertions</text>
+    <text x="480" y="358" font-family="'Geist', sans-serif" font-size="11" fill="#B0EAFC" text-anchor="middle" font-weight="300">AI-powered anomaly detection</text>
+    <text x="480" y="374" font-family="'Geist', sans-serif" font-size="11" fill="#B0EAFC" text-anchor="middle" font-weight="300">learns your data's normal patterns</text>
+    <text x="480" y="392" font-family="'Geist', sans-serif" font-size="10" fill="#3CBBEB" text-anchor="middle" font-weight="400" letter-spacing="1">SNOWFLAKE · REDSHIFT · BIGQUERY · DATABRICKS</text>
+  </g>
+
+  <!-- ── CONNECTOR LINES (hub to tiles) ── -->
+  <!-- Top: Volume -->
+  <line x1="480" y1="270" x2="480" y2="218" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- Bottom: Custom SQL -->
+  <line x1="480" y1="410" x2="480" y2="462" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- Left: Freshness -->
+  <line x1="350" y1="340" x2="278" y2="340" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- Right: Column Quality -->
+  <line x1="610" y1="340" x2="682" y2="340" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- ── TILE 1: VOLUME ANOMALIES (top) ── -->
+  <g id="tile-volume">
+    <rect x="310" y="118" width="340" height="152" rx="8" ry="8" fill="#B0EAFC" stroke="#3CBBEB" stroke-width="1.5"/>
+    <!-- Icon: bar chart with spike -->
+    <g transform="translate(390, 138)">
+      <rect x="0" y="20" width="10" height="14" fill="none" stroke="#0A4170" stroke-width="1.5"/>
+      <rect x="14" y="12" width="10" height="22" fill="none" stroke="#0A4170" stroke-width="1.5"/>
+      <rect x="28" y="4" width="10" height="30" fill="#3CBBEB" stroke="#0A4170" stroke-width="1.5"/>
+      <rect x="42" y="16" width="10" height="18" fill="none" stroke="#0A4170" stroke-width="1.5"/>
+      <line x1="-2" y1="34" x2="56" y2="34" stroke="#0A4170" stroke-width="1"/>
+      <!-- spike indicator -->
+      <line x1="33" y1="0" x2="33" y2="4" stroke="#0A4170" stroke-width="1.5" stroke-dasharray="2 1"/>
+      <text x="33" y="-3" font-family="'Geist', sans-serif" font-size="9" fill="#0A4170" text-anchor="middle" font-weight="500">!</text>
+    </g>
+    <text x="480" y="142" font-family="'Castoro', Georgia, serif" font-size="15" fill="#002131" text-anchor="middle" font-weight="400">Volume Anomalies</text>
+    <text x="480" y="162" font-family="'Geist', sans-serif" font-size="11" fill="#0A4170" text-anchor="middle" font-weight="400" letter-spacing="1">UNEXPECTED ROW COUNT CHANGES</text>
+    <text x="480" y="184" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" text-anchor="middle" font-weight="300">Detect unexpected row count spikes or drops</text>
+    <text x="480" y="200" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" text-anchor="middle" font-weight="300">Monitor growth rates for incremental tables</text>
+    <text x="480" y="216" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" text-anchor="middle" font-weight="300">Catch missing partitions or duplicate loads</text>
+								 <text x="480" y="232" font-family="'Geist', sans-serif" font-size="10" fill="#0A4170" text-anchor="middle" font-weight="400">Total volume · Change volume monitoring</text>
+  </g>
+
+  <!-- ── TILE 2: FRESHNESS ANOMALIES (left) ── -->
+  <g id="tile-freshness">
+    <rect x="56" y="258" width="222" height="164" rx="8" ry="8" fill="#B0EAFC" stroke="#3CBBEB" stroke-width="1.5"/>
+    <!-- Icon: clock with warning -->
+    <g transform="translate(148, 272)">
+      <circle cx="0" cy="0" r="14" fill="none" stroke="#0A4170" stroke-width="1.5"/>
+      <line x1="0" y1="-9" x2="0" y2="0" stroke="#0A4170" stroke-width="1.5"/>
+      <line x1="0" y1="0" x2="7" y2="5" stroke="#0A4170" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="1.5" fill="#0A4170"/>
+      <!-- warning badge -->
+      <circle cx="10" cy="-10" r="6" fill="#3CBBEB"/>
+      <text x="10" y="-7" font-family="'Geist', sans-serif" font-size="9" fill="#002131" text-anchor="middle" font-weight="600">!</text>
+    </g>
+    <text x="167" y="308" font-family="'Castoro', Georgia, serif" font-size="15" fill="#002131" text-anchor="middle" font-weight="400">Freshness</text>
+    <text x="167" y="326" font-family="'Castoro', Georgia, serif" font-size="15" fill="#002131" text-anchor="middle" font-weight="400">Anomalies</text>
+    <text x="167" y="346" font-family="'Geist', sans-serif" font-size="10" fill="#0A4170" text-anchor="middle" font-weight="400" letter-spacing="1">LATE / MISSING UPDATES</text>
+    <text x="167" y="366" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" text-anchor="middle" font-weight="300">Alert when tables miss schedule</text>
+    <text x="167" y="382" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" text-anchor="middle" font-weight="300">Audit log · Info schema</text>
+    <text x="167" y="398" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" text-anchor="middle" font-weight="300">High watermark column detection</text>
+  </g>
+
+  <!-- ── TILE 3: COLUMN QUALITY ANOMALIES (right) ── -->
+  <g id="tile-column">
+    <rect x="682" y="258" width="222" height="164" rx="8" ry="8" fill="#B0EAFC" stroke="#3CBBEB" stroke-width="1.5"/>
+    <!-- Icon: table with null indicator -->
+    <g transform="translate(780, 272)">
+      <rect x="-16" y="-12" width="32" height="24" rx="2" fill="none" stroke="#0A4170" stroke-width="1.5"/>
+      <line x1="-16" y1="-4" x2="16" y2="-4" stroke="#0A4170" stroke-width="1"/>
+      <line x1="-16" y1="4" x2="16" y2="4" stroke="#0A4170" stroke-width="1"/>
+      <line x1="-5" y1="-12" x2="-5" y2="12" stroke="#0A4170" stroke-width="1"/>
+      <line x1="5" y1="-12" x2="5" y2="12" stroke="#0A4170" stroke-width="1"/>
+      <!-- null spike highlight -->
+      <rect x="5" y="-12" width="11" height="8" rx="1" fill="#3CBBEB" opacity="0.8"/>
+      <text x="10" y="-6" font-family="'Geist', sans-serif" font-size="7" fill="#002131" text-anchor="middle" font-weight="600">∅</text>
+    </g>
+    <text x="793" y="308" font-family="'Castoro', Georgia, serif" font-size="15" fill="#002131" text-anchor="middle" font-weight="400">Column Quality</text>
+    <text x="793" y="326" font-family="'Castoro', Georgia, serif" font-size="15" fill="#002131" text-anchor="middle" font-weight="400">Anomalies</text>
+    <text x="793" y="346" font-family="'Geist', sans-serif" font-size="10" fill="#0A4170" text-anchor="middle" font-weight="400" letter-spacing="1">NULL SPIKES · OUTLIERS</text>
+    <text x="793" y="366" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" text-anchor="middle" font-weight="300">Detect null rate spikes and outliers</text>
+    <text x="793" y="382" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" text-anchor="middle" font-weight="300">Column value assertions</text>
+    <text x="793" y="398" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" text-anchor="middle" font-weight="300">Column metric assertions</text>
+  </g>
+
+  <!-- ── TILE 4: CUSTOM SQL ANOMALIES (bottom) ── -->
+  <g id="tile-custom-sql">
+    <rect x="310" y="462" width="340" height="152" rx="8" ry="8" fill="#B0EAFC" stroke="#3CBBEB" stroke-width="1.5"/>
+    <!-- Icon: code/SQL brackets -->
+    <g transform="translate(430, 488)">
+      <text x="0" y="0" font-family="'Geist', sans-serif" font-size="22" fill="#0A4170" text-anchor="middle" font-weight="300">&lt;/&gt;</text>
+      <!-- underline for SQL emphasis -->
+      <line x1="-14" y1="4" x2="14" y2="4" stroke="#3CBBEB" stroke-width="1.5"/>
+    </g>
+    <text x="480" y="492" font-family="'Castoro', Georgia, serif" font-size="15" fill="#002131" text-anchor="middle" font-weight="400">Custom SQL Anomalies</text>
+    <text x="480" y="512" font-family="'Geist', sans-serif" font-size="11" fill="#0A4170" text-anchor="middle" font-weight="400" letter-spacing="1">BUSINESS RULE VIOLATIONS</text>
+    <text x="480" y="534" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" text-anchor="middle" font-weight="300">Write SQL to encode any business rule</text>
+    <text x="480" y="550" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" text-anchor="middle" font-weight="300">Assert on query results across tables</text>
+    <text x="480" y="566" font-family="'Geist', sans-serif" font-size="11" fill="#1E1E1E" text-anchor="middle" font-weight="300">Catch domain-specific data violations</text>
+    <text x="480" y="582" font-family="'Geist', sans-serif" font-size="10" fill="#0A4170" text-anchor="middle" font-weight="400">Fully customizable · No threshold limits</text>
+  </g>
+
+  <!-- ── FEEDBACK LOOP TILE (bottom strip) ── -->
+  <g id="feedback-strip">
+    <rect x="56" y="462" width="222" height="164" rx="8" ry="8" fill="#0A4170" stroke="#3CBBEB" stroke-width="1.5"/>
+    <!-- Icon: refresh/loop arrows -->
+    <g transform="translate(167, 498)">
+      <path d="M-12,0 A12,12 0 0,1 12,0" fill="none" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+      <path d="M12,0 A12,12 0 0,1 -12,0" fill="none" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+    </g>
+    <text x="167" y="526" font-family="'Castoro', Georgia, serif" font-size="14" fill="#FFFFFF" text-anchor="middle" font-weight="400">Feedback Loop</text>
