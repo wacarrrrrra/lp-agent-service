@@ -256,6 +256,31 @@ def accumulate_bart_brief(messages: List[Dict[str, Any]], bart_user_id: str) -> 
 def parse_image_refs(bart_brief: str) -> List[Dict[str, str]]:
     images: List[Dict[str, str]] = []
     seen: set = set()
+
+    # Primary format: "Prompt N: Title\n<description block>"
+    # Matches everything from the title line until the next "Prompt N:" heading or end of string
+    prompt_blocks = re.findall(
+        r'Prompt\s+\d+:\s*(.+?)\n([\s\S]+?)(?=\nPrompt\s+\d+:|\Z)',
+        bart_brief,
+        re.IGNORECASE,
+    )
+    for title, description in prompt_blocks:
+        title = title.strip()
+        # Derive a clean filename slug from the title
+        slug = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
+        filename = f"{slug}.svg"
+        if filename not in seen:
+            seen.add(filename)
+            images.append({
+                "filename": filename,
+                "description": title,
+                "diagram_prompt": title + "\n\n" + description.strip(),
+            })
+
+    if images:
+        return images  # Prompt format found — skip legacy PNG parsing
+
+    # Legacy format: markdown image references ![alt](path/filename.png)
     for alt, path in re.findall(
         r'!\[([^\]]*)\]\(([^)]+\.(?:png|jpg|jpeg))\)', bart_brief, re.IGNORECASE
     ):
@@ -277,44 +302,64 @@ def parse_image_refs(bart_brief: str) -> List[Dict[str, str]]:
 # SVG generation
 # ----------------------------
 def build_svg_prompt(image_info: Dict[str, str], bart_brief: str, slug: str) -> str:
+    # Determine diagram type and viewBox from filename and prompt content
     fname = image_info["filename"].lower()
-    if "workflow" in fname or "process" in fname or "policy" in fname:
+    prompt_text = image_info.get("diagram_prompt") or image_info.get("description") or ""
+    combined = fname + " " + prompt_text.lower()
+
+    if "workflow" in combined or "process" in combined or "policy" in combined or "stage" in combined:
         diagram_type = "Explainer (horizontal workflow)"
         viewbox = "0 0 960 540"
-    elif "ui" in fname or "screenshot" in fname:
+    elif "grid" in combined or "quadrant" in combined or "2x2" in combined or "4 type" in combined:
+        diagram_type = "Explainer (2x2 grid)"
+        viewbox = "0 0 960 640"
+    elif "ui" in combined or "screenshot" in combined:
         diagram_type = "Stylized UI"
         viewbox = "0 0 960 680"
     else:
         diagram_type = "Explainer (architecture)"
         viewbox = "0 0 960 680"
 
-    svg_name = image_info["filename"].replace(".png", ".svg")
-    return f"""You are operating in SVG Conversion Mode from the DataHub brand system.
+    svg_name = image_info["filename"] if image_info["filename"].endswith(".svg") else image_info["filename"].replace(".png", ".svg")
 
-[DATAHUB BRAND SYSTEM]
+    # Use the rich diagram prompt if available, otherwise fall back to brief excerpt
+    if image_info.get("diagram_prompt"):
+        content_brief = f"""Diagram brief from subject-matter expert:
+{image_info["diagram_prompt"]}
+
+Additional technical context:
+{bart_brief[:3000]}"""
+    else:
+        content_brief = f"""Diagram description: {image_info["description"]}
+
+Technical context:
+{bart_brief[:6000]}"""
+
+    return f"""You are generating a brand-compliant DataHub SVG illustration.
+
+[DATAHUB BRAND SYSTEM — all design decisions governed by this]
 {BRAND_SKILL_MD}
 
-[SOURCE BRIEF — source of truth for diagram content]
-{bart_brief[:6000]}
+{content_brief}
 
-Task: Generate a brand-compliant DataHub SVG illustration for the following image.
+CONTENT REQUIREMENTS — implement the structure, layout, labels, and flow exactly as described in the diagram brief above.
 
-Image reference:
-- Original filename: {image_info["filename"]}
-- Description: {image_info["description"]}
-- Diagram type: {diagram_type}
-- Output filename: {svg_name}
-- Page slug: {slug}
+BRAND OVERRIDE — the brief may specify colors or styles that conflict with the DataHub brand system. The brand system always wins:
+- Ignore any color references in the brief (blue/purple gradients, orange, green, purple, etc.)
+- Use DataHub brand colors ONLY: dark #002131, rich blue #0A4170, bright blue #3CBBEB, light blue #B0EAFC, off-white #F2F1EE, near-black #1E1E1E, muted #767473
+- No gradients, no drop shadows, no glow effects — flat tile-and-frame layout only
+- No filled icons — stroke-only line icons at consistent 20×20 or 24×24 size
+- For a 2x2 grid: use the 4 DataHub tonal groups for tile backgrounds (Blue, Green, Magenta, Orange — dark shades 01/02 on white text, or light shades 05 on dark text)
 
 SVG requirements (non-negotiable):
+- Diagram type: {diagram_type}
 - Opening tag: <svg xmlns="http://www.w3.org/2000/svg" viewBox="{viewbox}" role="img">
-- Must include <title> and <desc> elements immediately after the opening tag
-- Import Castoro + Geist from Google Fonts inside a <defs><style> block
-- Brand colors only: #002131, #0A4170, #3CBBEB, #B0EAFC, #F2F1EE, #1E1E1E, #767473
-- Minimum font-size attribute: 9 — no text below this value
-- Flat tile-and-frame layout; no drop shadows, gradients, or glow
-- Arrow markers using fill="#3CBBEB"
+- <title> and <desc> immediately after the opening tag
+- Import Castoro + Geist via <defs><style>@import url(...)</style></defs>
+- Minimum font-size: 9 — no text below this value
+- Arrow markers using fill="#3CBBEB" defined in <defs>
 - Page background: <rect width="100%" height="100%" fill="#F2F1EE"/>
+- Output filename: {svg_name}
 
 Run the SVG Conversion QA Checklist from the brand system before outputting.
 
@@ -418,9 +463,9 @@ Commitment escalation (FAQ):
 SCROLL MECHANICS — every section must pull the reader to the next:
 
 Hero:
-- H1: outcome-first, primary keyword verbatim, ≤80 chars, Title Case
-- Subheadline: one sentence that names the specific pain and the specific relief
-- 3 outcome bullets: lead with the result, explain the mechanism in 6 words or fewer
+- H1: outcome-first, primary keyword verbatim, ≤55 chars, Title Case
+- Subheadline: exactly 2 sentences, 140–180 characters total — hero column balance depends on this
+- 3 outcome bullets: lead with the result, each ≤80 characters — no wrapping
 - CTA button copy: benefit-led ("See DataHub govern your data"), not action-led ("Submit")
 
 H2 cadence:
@@ -449,10 +494,19 @@ Final CTA section:
 
 ━━━ SEO RULES ━━━
 - Page word count: 900–1,500 words
-- Primary keyword verbatim in: title tag (≤60 chars), H1 (≤80 chars), first 100 words, meta description (≤140 chars), and at least one H2
+- Primary keyword verbatim in: title tag (≤60 chars), H1 (≤55 chars), first 100 words, meta description (≤140 chars), and at least one H2
 - Each secondary keyword in at least one H2/H3/H4
 - Sentence case for all headings except H1
 - No exclamation marks. Active voice. No weasel words — quantify or omit
+
+━━━ BRAND VOICE AND COPY PROHIBITIONS ━━━
+- No em-dashes (—) or en-dashes (–) anywhere — use a comma, period, or rewrite the sentence
+- No "just", "simply", "easily", "plug and play" — patronizes engineers
+- No urgency language: no "limited", "act now", "don't miss"
+- No invented metrics — only claims from BART_VALIDATED_OUTPUT
+- Emotional register: top of page = confident and direct; middle = specific and substantive; bottom = warm and clear
+- Scroll momentum: every section must end with a forward pull (implied question, partially resolved tension, or bridge to the next section)
+- Apply specificity as empathy in the hero: name the role, the moment, the failure mode — not the generic category of problem
 
 ━━━ OUTPUT FORMAT ━━━
 Return ONLY valid JSON — no code fences, no preamble. All string values must be properly escaped (double quotes inside strings use \", newlines use \n). Return ONLY valid JSON with exactly these keys:
@@ -478,6 +532,44 @@ Return ONLY valid JSON — no code fences, no preamble. All string values must b
   "qa_checklist_md": ""
 }}""".strip()
 
+def build_copy_qa_prompt(writer_json: dict, fields: dict) -> str:
+    """Brand and copy QA pass — validates character counts, voice, and strips prohibited patterns."""
+    return f"""You are a senior brand editor for DataHub. Review the copy below against the constraints and return a corrected version of the same JSON — same structure, same keys, values fixed.
+
+COPY CONSTRAINTS (hard limits — correct any violations):
+- h1: max 55 characters including spaces
+- hero sub: 140–180 characters, 2 sentences max
+- hero bullets: exactly 3, each max 80 characters
+- sec-label / badge: max 22 characters
+- section h2s: max 55 characters
+- feature body paragraphs: max 200 characters
+- feature bullets: each max 65 characters, exactly 3 per feature
+- hover-tile titles: max 35 characters
+- hover-tile body: max 120 characters
+- How It Works step headings: 5–7 words
+
+BRAND VOICE PROHIBITIONS — fix any violation:
+- No em-dashes (—) or en-dashes (–) — replace with a comma or rewrite
+- No "just", "simply", "easily", "plug and play", "powerful", "robust", "seamless"
+- No exclamation marks
+- No urgency/scarcity language
+- No invented metrics not validated by Bart
+- Sentence case for all headings except H1
+
+EMOTIONAL REGISTER:
+- Hero and top-of-page: confident, direct, reader-first (open with their problem, not DataHub)
+- Middle sections: specific and substantive — give evidence, not claims
+- Bottom of page and CTA: warm, clear, friction-reducing
+
+Primary keyword: "{fields["search_term"]}"
+CTA type: "{fields.get("primary_cta","Demo")}"
+
+COPY TO REVIEW:
+{json.dumps(writer_json, indent=2)[:6000]}
+
+Return ONLY valid JSON with the exact same structure — corrected values only, no commentary, no code fences.
+""".strip()
+
 def build_lp_html_prompt(
     fields: dict,
     writer_json: dict,
@@ -502,8 +594,14 @@ def build_lp_html_prompt(
 
 HARD CONSTRAINTS — follow these documents exactly:
 
-[DATAHUB BRAND SYSTEM]
+[DATAHUB BRAND SYSTEM — layout integrity rules and component patterns]
 {BRAND_SKILL_MD}
+
+[SEM PAGE STRUCTURE — section order, class names, copy constraints]
+{SEM_STRUCTURE}
+
+[BRAND VOICE]
+{BRAND_VOICE_MD}
 
 [SAMPLE LANDING PAGE TEMPLATE — replicate this structure and style]
 {SAMPLE_LP_HTML}
@@ -555,6 +653,11 @@ Non-negotiable output rules:
 - No invented metrics, logos, or social proof
 - Section spacing and layout: follow the sample template exactly — use the same padding, gap, and grid values as the template; do not invent new spacing
 - Card grid headlines (How It Works steps, benefit blocks, feature tiles): keep all headlines in a grid to 4–6 words — consistent length across every card in the same section so they align at the same height
+- Section order and classes: follow the SECTION ORDER AND CLASS REQUIREMENTS exactly — 9 content sections + footer in the specified order with the specified classes
+- Feature items (.content-highlight): every .content-highlight-inner must have exactly 2 children (.ch-text and .ch-visual with <figure class="framed-image">); items 1 and 3 (0-indexed) get class="content-highlight-inner reverse"
+- No bare section {{ }} CSS rules — target inner component classes only (.sec-header, .hover-tile-grid, .content-highlight, etc.)
+- No margin-top or margin-bottom on <section> elements — vertical rhythm comes from main gap only
+- No em-dashes (—) or en-dashes (–) anywhere in the HTML — rewrite any copy that uses them
 - TRUST STRIP: Do NOT write the logo scroller / trust strip section. Instead output exactly this placeholder on its own line, immediately after the closing </section> tag of the hero:
   <!-- TRUST_STRIP_PLACEHOLDER -->
   The trust strip will be injected automatically in code.
@@ -610,6 +713,16 @@ async def generate_full_lp(
         else:
             raise ValueError(f"Writer did not return valid JSON: {writer_raw[:500]}")
 
+    # Copy QA pass — validate character counts, strip em-dashes, enforce brand voice
+    qa_prompt = build_copy_qa_prompt(writer_json, fields)
+    qa_raw = await claude_text(qa_prompt, max_tokens=8000)
+    qa_raw = re.sub(r'^```(?:json)?\s*', '', qa_raw.strip(), flags=re.IGNORECASE)
+    qa_raw = re.sub(r'\s*```$', '', qa_raw.strip())
+    try:
+        writer_json = json.loads(qa_raw)
+    except Exception:
+        logger.warning("Copy QA returned invalid JSON — proceeding with original writer output")
+
     html_prompt = build_lp_html_prompt(fields, writer_json, svgs, secondary_keywords)
     page_html = await claude_text(html_prompt, max_tokens=8000)
 
@@ -621,6 +734,10 @@ async def generate_full_lp(
     # Strip accidental <body> / </body> wrapper tags
     page_html = re.sub(r'(?i)<body[^>]*>', '', page_html).strip()
     page_html = re.sub(r'(?i)</body>', '', page_html).strip()
+
+    # Strip em-dashes and en-dashes — hard safety net regardless of prompt compliance
+    page_html = page_html.replace('\u2014', ' ').replace('\u2013', '-')  # — and –
+    page_html = page_html.replace('&mdash;', ' ').replace('&ndash;', '-')
 
     # Inject hardcoded trust strip — replace placeholder if present, otherwise insert after first </section>
     if '<!-- TRUST_STRIP_PLACEHOLDER -->' in page_html:
@@ -862,10 +979,22 @@ For each claim include: ✅/⚠️/❌ + evidence (file paths/settings).
 TASK B — Landing page outline (required):
 Angle (2 sentences), H1 w/ exact search term, H2/H3/H4 outline + bullets, 3–6 FAQs.
 
-TASK C — Image generation (required):
-Generate 1–2 visuals (diagram preferred). Upload images to this thread with captions + alt text.
+TASK C — Diagram briefs (required):
+Write 1–2 diagram briefs for visuals that would support this page. Do NOT generate or upload images.
+Use exactly this format for each — the LP builder will generate brand-compliant SVGs from your brief:
 
-When you're fully done (claims validated + images uploaded), reply with exactly: BART_DONE
+Prompt 1: [Descriptive diagram title]
+[Layout type: workflow / architecture / 2x2 grid / etc.]
+[Describe: exact stages or sections, what each contains, flow direction, labels to include, connections between elements]
+[List every text label verbatim — the builder uses these exactly]
+
+Prompt 2: [Descriptive diagram title]
+[Same format]
+
+Diagram types that work well: horizontal workflow (left-to-right stages), architecture diagram (hub + connected systems), 2x2 grid (4 categories with titles + bullets).
+Focus on structure and labels. Do not specify colors or visual style — the builder applies the brand system.
+
+When you're fully done (claims validated + diagram briefs written), reply with exactly: BART_DONE
 """
 
 # ----------------------------
