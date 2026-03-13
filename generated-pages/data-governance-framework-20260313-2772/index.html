@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="DataHub's data governance framework enforces policies, validates data quality, and tracks lineage across 75+ sources. See it in action.">
+<title>Data Governance Framework for Enterprise Teams | DataHub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Castoro:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ─────────────────────────────────────────────── */
+:root {
+  --color-surface-default: #F2F1EE;
+  --color-surface-subtle:  #E3E1D6;
+  --color-surface-white:   #FFFFFF;
+  --color-surface-dark:    #002131;
+  --color-surface-dark-deeper: #001828;
+  --color-text-primary:    #000000;
+  --color-text-secondary:  #3F3F3F;
+  --color-text-muted:      #767473;
+  --color-text-inverse:    #FFFFFF;
+  --color-blue-01: #002131;
+  --color-blue-02: #0A4170;
+  --color-blue-03: #006DCD;
+  --color-blue-04: #3CBBEB;
+  --color-blue-05: #B0EAFC;
+  --color-green-03: #008070;
+  --color-green-04: #0FC691;
+  --color-green-05: #AAF1BB;
+  --color-neutral-02: #3F3F3F;
+  --color-neutral-03: #767473;
+  --color-neutral-04: #B2AEA7;
+  --color-neutral-05: #E3E1D6;
+  --color-off-white: #F2F1EE;
+  --color-basic-black: #000000;
+  --color-basic-white: #FFFFFF;
+  --color-border-default: #E3E1D6;
+  --color-border-active:  #006DCD;
+  --color-border-dark:    #0A4170;
+  --font-headline: 'Castoro', Georgia, serif;
+  --font-body: 'Geist', 'Helvetica Neue', Arial, sans-serif;
+  --radius-tile: 8px;
+  --radius-card: 10px;
+  --radius-pill: 100px;
+}
+
+/* ─── RESET ───────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-body);font-size:16px;line-height:1.6;color:var(--color-text-secondary);background:var(--color-surface-default);overflow-x:hidden}
+img{max-width:100%;height:auto;display:block}
+a{text-decoration:none;color:inherit}
+:focus-visible{outline:2px solid var(--color-blue-03);outline-offset:2px;border-radius:2px}
+
+/* ─── SCROLL PROGRESS ─────────────────────────────────────── */
+.scroll-prog{position:fixed;top:0;left:0;width:0%;height:2px;background:var(--color-blue-03);z-index:2000;transition:width 40ms linear}
+
+/* ─── LAYOUT ──────────────────────────────────────────────── */
+.container{max-width:1160px;margin:0 auto;padding:0 24px}
+.container-narrow{max-width:800px;margin:0 auto;padding:0 24px}
+main{display:flex;flex-direction:column;gap:60px}
+@media(min-width:1024px){main{gap:120px}}
+
+/* ─── ANIMATION — THREE TIERS ─────────────────────────────── */
+/* Tier 1: hover — 100ms ease-out (on elements directly) */
+/* Tier 2: nav — 300ms cubic-bezier(0.75,0,0.25,1) */
+/* Tier 3: scroll-on — 600ms cubic-bezier(0.75,0,0.25,1) */
+.animate-in{
+  transition:opacity 600ms cubic-bezier(0.75,0,0.25,1),
+             transform 600ms cubic-bezier(0.75,0,0.25,1);
+}
+.animate-in.is-hidden{opacity:1;transform:none}
+.animate-in.is-visible{opacity:1;transform:none}
+.animate-in:nth-child(1){transition-delay:0ms}
+.animate-in:nth-child(2){transition-delay:80ms}
+.animate-in:nth-child(3){transition-delay:160ms}
+.animate-in:nth-child(4){transition-delay:240ms}
+
+/* ─── BUTTONS ─────────────────────────────────────────────── */
+.button{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;font-family:var(--font-body);font-size:14px;font-weight:500;border-radius:var(--radius-tile);border:none;cursor:pointer;white-space:nowrap;text-decoration:none;position:relative;overflow:hidden}
+/* Primary — 150ms roll-over */
+.button-primary{background:var(--color-blue-03);color:var(--color-basic-white);transition:color 150ms ease-out}
+.button-primary::before{content:'';position:absolute;inset:0;background:var(--color-blue-02);transform:translateX(-100%);transition:transform 150ms ease-out;z-index:0}
+.button-primary:hover::before{transform:translateX(0)}
+.button-primary span{position:relative;z-index:1;display:flex;align-items:center;gap:8px}
+.button-ghost{background:transparent;color:var(--color-text-primary);border:1.5px solid var(--color-neutral-04);transition:border-color 100ms ease-out,color 100ms ease-out}
+.button-ghost:hover{border-color:var(--color-blue-03);color:var(--color-blue-03)}
+.button-inverse{background:transparent;color:var(--color-basic-white);border:1.5px solid rgba(255,255,255,.25);transition:background 100ms ease-out}
+.button-inverse:hover{background:rgba(255,255,255,.08)}
+.button-sm{padding:9px 18px;font-size:13px}
+.button-lg{padding:16px 32px;font-size:15px}
+.btn-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+/* ─── SECTION LABEL ───────────────────────────────────────── */
+.sec-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--color-blue-03);margin-bottom:10px;display:block}
+.sec-header{margin-bottom:56px}
+.sec-header.centered{text-align:center}
+.sec-header.centered p{margin-left:auto;margin-right:auto}
+.sec-header h2{font-family:var(--font-headline);font-size:clamp(1.8rem,3.5vw,2.6rem);color:var(--color-text-primary);margin-bottom:14px;line-height:1.2}
+.sec-header p{font-size:16px;color:var(--color-text-muted);max-width:600px;line-height:1.65}
+
+/* ─── NAV ─────────────────────────────────────────────────── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(242,241,238,.93);backdrop-filter:blur(10px);border-bottom:1px solid transparent;transition:border-color 300ms cubic-bezier(0.75,0,0.25,1),box-shadow 300ms cubic-bezier(0.75,0,0.25,1)}
+.nav.scrolled{border-bottom-color:var(--color-neutral-05);box-shadow:0 1px 8px rgba(0,0,0,.06)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:68px}
+.nav-logo img{height:26px;width:auto}
+.nav-links{display:none;align-items:center;gap:32px}
+@media(min-width:1024px){.nav-links{display:flex}}
+.nav-top{font-size:14px;font-weight:400;color:var(--color-text-secondary);position:relative;padding:3px 0;transition:color 100ms ease-out}
+.nav-top::after{content:'';position:absolute;bottom:0;left:0;width:0;height:1.5px;background:var(--color-blue-03);transition:width 100ms ease-out}
+.nav-top:hover{color:var(--color-blue-03)}
+.nav-top:hover::after{width:100%}
+.nav-cta{display:flex;align-items:center;gap:10px}
+
+/* ─── HERO ────────────────────────────────────────────────── */
+.hero{padding:130px 0 72px;background:var(--color-surface-white);border-bottom:1px solid var(--color-border-default)}
+.hero-inner{display:flex;flex-direction:column;gap:48px}
+@media(min-width:1024px){.hero-inner{flex-direction:row;gap:72px;align-items:center}}
+.hero-text{flex:1}
+.hero-text h1{font-family:var(--font-headline);font-size:clamp(2.2rem,4vw,3.2rem);color:var(--color-text-primary);line-height:1.1;margin-bottom:20px}
+.hero-text h1 em{font-style:normal;color:var(--color-blue-03)}
+.hero-sub{font-size:17px;color:var(--color-text-secondary);line-height:1.65;margin-bottom:28px;max-width:500px}
+.hero-bullets{list-style:none;margin-bottom:32px;display:flex;flex-direction:column;gap:9px}
+.hero-bullets li{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--color-text-secondary)}
+.hero-bullets li svg{flex-shrink:0;color:var(--color-blue-03);margin-top:3px}
+/* Hero visual — architecture diagram framed */
+.hero-visual{flex:1;min-width:0}
+.framed-image{border:1.5px solid var(--color-border-default);border-radius:var(--radius-card);overflow:hidden;background:var(--color-surface-white)}
+.framed-image img{width:100%;height:auto;display:block}
+.framed-image figcaption{padding:12px 16px;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);border-top:1px solid var(--color-border-default)}
+
+/* ─── LOGO SCROLLER ──────────────────────────────────────── */
+.logo-scroller{padding:40px 0;background:var(--color-surface-default);border-bottom:1px solid var(--color-border-default)}
+.logo-scroller-label{text-align:center;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:22px}
+.marquee{overflow:hidden;position:relative}
+.marquee::before,.marquee::after{content:'';position:absolute;top:0;bottom:0;width:80px;z-index:2;pointer-events:none}
+.marquee::before{left:0;background:linear-gradient(90deg,var(--color-surface-default),transparent)}
+.marquee::after{right:0;background:linear-gradient(90deg,transparent,var(--color-surface-default))}
+.marquee-track{display:flex;gap:52px;animation:scroll-logos 30s linear infinite}
+@keyframes scroll-logos{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.marquee-item{flex-shrink:0;font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--color-neutral-03);white-space:nowrap;transition:color 100ms ease-out}
+.marquee-item:hover{color:var(--color-blue-03)}
+
+/* ─── HOVER TILE GRID ────────────────────────────────────── */
+.hover-tile-grid-section{padding:0}
+.hover-tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(min-width:1024px){.hover-tile-grid{grid-template-columns:repeat(4,1fr)}}
+.hover-tile{background:var(--color-surface-dark);border:1.5px solid var(--color-border-dark);border-radius:var(--radius-card);padding:28px 24px;position:relative;overflow:hidden;transition:border-color 100ms ease-out}
+.hover-tile::before{content:'';position:absolute;inset:0;background:var(--color-blue-03);opacity:0;transition:opacity 100ms ease-out;z-index:0}
+.hover-tile:hover{border-color:var(--color-blue-04)}
+.hover-tile:hover::before{opacity:.07}
+.hover-tile-content{position:relative;z-index:1}
+.hover-tile-icon{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--color-blue-02);display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--color-blue-04)}
+.hover-tile h4{font-family:var(--font-headline);font-size:16px;color:var(--color-basic-white);margin-bottom:10px;line-height:1.25}
+.hover-tile p{font-size:13px;color:var(--color-blue-05);line-height:1.6}
+
+/* ─── CONTENT HIGHLIGHT ──────────────────────────────────── */
+.content-highlight{padding:0}
+.content-highlight-inner{display:flex;flex-direction:column;gap:40px}
+@media(min-width:1024px){.content-highlight-inner{flex-direction:row;gap:72px;align-items:center}}
+.content-highlight-inner.reverse{flex-direction:column}
+@media(min-width:1024px){.content-highlight-inner.reverse{flex-direction:row-reverse}}
+.ch-text{flex:1}
+.ch-text h2{font-family:var(--font-headline);font-size:clamp(1.6rem,3vw,2.2rem);color:var(--color-text-primary);margin-bottom:14px;line-height:1.2}
+.ch-text p{font-size:15px;color:var(--color-text-secondary);line-height:1.65;margin-bottom:22px}
+.feature-list{list-style:none;display:flex;flex-direction:column;gap:10px}
+.feature-list li{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--color-text-secondary)}
+.feature-list li svg{flex-shrink:0;color:var(--color-blue-03);margin-top:3px}
+.ch-visual{flex:1;min-width:0}
+
+/* ─── LIST TITLE (Integration Architecture) ──────────────── */
+.list-title-section{background:var(--color-surface-white);border-radius:var(--radius-card);border:1.5px solid var(--color-border-default);padding:48px}
+.list-title-grid{display:grid;grid-template-columns:1fr;gap:32px}
+@media(min-width:1024px){.list-title-grid{grid-template-columns:repeat(3,1fr)}}
+.list-item-group h4{font-family:var(--font-headline);font-size:17px;color:var(--color-text-primary);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.list-item-group h4 svg{color:var(--color-blue-03);flex-shrink:0}
+.list-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--color-text-secondary);margin-bottom:8px;line-height:1.5}
+.list-item svg{flex-shrink:0;color:var(--color-blue-04);margin-top:3px}
+
+/* ─── CUSTOMER FACTS ─────────────────────────────────────── */
+.customer-facts{background:var(--color-surface-dark);border-radius:var(--radius-card);padding:56px 48px}
+.customer-facts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:32px}
+@media(min-width:1024px){.customer-facts-grid{grid-template-columns:repeat(4,1fr)}}
+.fact{text-align:center}
+.fact-val{font-family:var(--font-headline);font-size:clamp(2rem,4vw,2.8rem);color:var(--color-blue-04);line-height:1;margin-bottom:8px}
+.fact-lbl{font-size:12px;color:var(--color-blue-05);font-weight:500;line-height:1.4}
+
+/* ─── QUOTE ──────────────────────────────────────────────── */
+.quote-section{padding:0}
+.quote-inner{background:var(--color-surface-white);border:1.5px solid var(--color-border-default);border-radius:var(--radius-card);padding:48px;display:grid;grid-template-columns:1fr;gap:32px}
+@media(min-width:1024px){.quote-inner{grid-template-columns:1fr 2fr;gap:48px;align-items:start}}
+.quote-co{font-family:var(--font-headline);font-size:26px;color:var(--color-blue-01);margin-bottom:8px}
+.quote-co-role{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:20px}
+.quote-result{background:var(--color-surface-default);border-radius:6px;padding:14px 16px}
+.quote-result-lbl{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--color-blue-03);margin-bottom:5px}
+.quote-result-val{font-family:var(--font-headline);font-size:14px;color:var(--color-text-primary)}
+blockquote{font-family:var(--font-headline);font-size:clamp(1.1rem,2vw,1.4rem);color:var(--color-text-primary);line-height:1.55;font-style:normal;margin-bottom:24px}
+.quote-author{display:flex;align-items:center;gap:12px}
+.quote-avatar{width:40px;height:40px;border-radius:50%;background:var(--color-blue-02);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--color-basic-white);flex-shrink:0}
+.quote-name{font-size:14px;font-weight:600;color:var(--color-text-primary)}
+.quote-role{font-size:12px;color:var(--color-text-muted)}
+
+/* ─── FAQ ────────────────────────────────────────────────── */
+.faq-section{padding:0}
+.faq-tile-list{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.faq-tile{background:var(--color-surface-white);border:1.5px solid var(--color-border-default);border-radius:var(--radius-tile);overflow:hidden;transition:border-color 100ms ease-out}
+.faq-tile.open{border-color:var(--color-blue-04)}
+.faq-header{width:100%;padding:20px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;font-family:var(--font-body);font-size:15px;font-weight:500;color:var(--color-text-primary);background:none;border:none;cursor:pointer;text-align:left}
+.faq-icon{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--color-neutral-04);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 100ms ease-out}
+.faq-tile.open .faq-icon{background:var(--color-blue-03);border-color:var(--color-blue-03);transform:rotate(180deg)}
+.faq-icon svg{width:12px;height:12px;color:var(--color-text-muted);transition:color 100ms ease-out}
+.faq-tile.open .faq-icon svg{color:var(--color-basic-white)}
+.faq-answer{max-height:0;overflow:hidden;transition:max-height 300ms cubic-bezier(0.75,0,0.25,1)}
+.faq-tile.open .faq-answer{max-height:400px}
+.faq-answer-inner{padding:0 22px 22px;font-size:14px;color:var(--color-text-secondary);line-height:1.7}
+
+/* ─── FRAME CTA ──────────────────────────────────────────── */
+.frame-cta{background:var(--color-blue-01);border-radius:var(--radius-card);padding:72px 48px;text-align:center}
+.frame-cta h2{font-family:var(--font-headline);font-size:clamp(1.9rem,3.5vw,2.7rem);color:var(--color-basic-white);margin-bottom:16px;line-height:1.2}
+.frame-cta p{font-size:16px;color:var(--color-blue-05);margin-bottom:36px;line-height:1.65;max-width:580px;margin-left:auto;margin-right:auto}
+.frame-cta .btn-row{justify-content:center;margin-bottom:36px}
+.cta-trust{display:flex;justify-content:center;gap:24px;flex-wrap:wrap}
+.cta-trust-item{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--color-blue-05)}
+.cta-trust-item svg{color:var(--color-blue-04)}
+.demo-chip{margin-top:32px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-tile);padding:16px 22px;display:inline-flex;align-items:center;gap:12px}
+.demo-chip svg{color:var(--color-blue-04);flex-shrink:0}
+.demo-chip p{font-size:13px;color:var(--color-blue-05);text-align:left}
+.demo-chip strong{color:var(--color-basic-white)}
+
+/* ─── PRODUCT BADGE ──────────────────────────────────────── */
+.product-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;background:var(--color-blue-05);border-radius:var(--radius-pill);font-size:12px;font-weight:600;color:var(--color-blue-02);margin-bottom:20px}
+.product-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--color-blue-03)}
+
+/* ─── FOOTER ─────────────────────────────────────────────── */
+.dh-footer{font-family:var(--font-body);background-color:var(--color-surface-dark);border:1.5px solid var(--color-border-dark);border-radius:var(--radius-card)}
+.dh-footer__main{display:flex;flex-direction:column;gap:18px;padding:32px 32px 40px}
+@media(min-width:1024px){.dh-footer__main{flex-direction:row}}
+.dh-footer__brand{display:flex;flex-direction:column;gap:20px;min-width:160px;flex-shrink:0}
+.dh-footer__logo img{height:22px;width:auto}
+.dh-footer__social{display:flex;gap:14px;align-items:center}
+.dh-footer__social a{color:var(--color-blue-04);transition:color 100ms ease-out}
+.dh-footer__social a:hover{color:var(--color-blue-05)}
+.dh-footer__social svg{width:18px;height:18px;fill:currentColor}
+.dh-footer__nav-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;flex:1}
+@media(min-width:1024px){.dh-footer__nav-grid{grid-template-columns:repeat(4,1fr)}}
+.dh-footer__nav-col h3{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--color-blue-05);margin:0 0 14px}
+.dh-footer__nav-col ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+.dh-footer__nav-col li a{font-size:13px;font-weight:400;color:var(--color-blue-04);text-decoration:none;transition:color 100ms ease-out}
+.dh-footer__nav-col li a:hover{color:var(--color-basic-white)}
+.dh-footer__bottom{background-color:var(--color-surface-dark-deeper);border-top:1px solid var(--color-border-dark);border-radius:0 0 8px 8px;display:flex;align-items:center;justify-content:space-between;padding:14px 32px;flex-wrap:wrap;gap:12px}
+.dh-footer__copyright{font-size:12px;color:var(--color-neutral-03);margin:0}
+.dh-footer__legal{display:flex;gap:20px}
+.dh-footer__legal a{font-size:12px;color:var(--color-neutral-03);text-decoration:none;transition:color 100ms ease-out}
+.dh-footer__legal a:hover{color:var(--color-basic-white)}
+
+/* ─── MOBILE CTA ─────────────────────────────────────────── */
+.mobile-cta{display:none;position:fixed;bottom:0;left:0;right:0;padding:14px 20px;background:rgba(242,241,238,.97);backdrop-filter:blur(10px);border-top:1px solid var(--color-neutral-05);z-index:999}
+@media(max-width:768px){.mobile-cta{display:block}}
+.mobile-cta .button{width:100%;justify-content:center}
+
+/* ─── HUBSPOT FORM ───────────────────────────────────────── */
+.hs-form-section{background:var(--color-surface-white);border:1.5px solid var(--color-border-default);border-radius:var(--radius-card);padding:48px;max-width:640px;margin:0 auto}
+.hs-form-section h3{font-family:var(--font-headline);font-size:1.6rem;color:var(--color-text-primary);margin-bottom:8px}
+.hs-form-section p{font-size:14px;color:var(--color-text-muted);margin-bottom:28px}
+</style>
+</head>
+<body>
+<div class="scroll-prog" id="sp"></div>
+
+<header class="nav" id="nav" role="banner">
+  <div class="container">
+    <div class="nav-inner">
+      <a class="nav-logo" href="https://datahub.com" aria-label="DataHub home">
+        <img src="images/dataHub_logo_color_black.svg" alt="DataHub" height="26">
+      </a>
+      <div class="nav-cta">
+        <a href="#product-tour" class="button button-primary button-sm"><span>See it in action</span></a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ── 1. HERO ─────────────────────────────────────────────── -->
+<section class="hero" aria-labelledby="hero-h1">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-text animate-in">
+        <div class="product-badge">
+          <span class="product-badge-dot"></span>
+          Data Governance Platform
+        </div>
+        <h1 id="hero-h1">The data governance framework that enforces itself</h1>
+        <p class="hero-sub">Your governance policies exist. Your data still breaks trust. DataHub turns your data governance framework into an automated enforcement layer.</p>
+        <ul class="hero-bullets" aria-label="Key capabilities">
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            Fine-grained RBAC policies enforced at the resource level
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            Automated quality assertions across volume, freshness, and schema
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            End-to-end lineage across 75+ sources, warehouses, and BI tools
+          </li>
+        </ul>
+        <div class="btn-row">
+          <a href="#product-tour" class="button button-primary button-lg"><span>See it in action</span></a>
+          <a href="https://docs.datahub.com" class="button button-ghost">Read the docs</a>
+        </div>
+      </div>
+
+      <div class="hero-visual animate-in" style="transition-delay:120ms">
+        <div class="hs-form-section" id="hero-form">
+          <h3>See your governance framework in action</h3>
+          <p>A 20-minute self-guided tour. No sales call required.</p>
+          <script charset="utf-8" type="text/javascript" src="//js.hsforms.net/forms/embed/v2.js"></script>
+          <script>
+            hbspt.forms.create({
+              portalId: "14552909",
+              formId: "aa56e90c-044a-46d8-a92f-cb905ad662f8",
+              region: "na1"
+            });
+          </script>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── LOGO SCROLLER ─────────────────────────────────────────── -->
+<section class="logo-scroller" aria-label="Trusted by">
+  <div class="logo-scroller-label">Trusted by modern data teams</div>
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track">
+      <span class="marquee-item">Netflix</span><span class="marquee-item">Visa</span><span class="marquee-item">Slack</span><span class="marquee-item">Notion</span><span class="marquee-item">Chime</span><span class="marquee-item">Pinterest</span><span class="marquee-item">MYOB</span><span class="marquee-item">Airtel</span><span class="marquee-item">DoorDash</span><span class="marquee-item">Etsy</span><span class="marquee-item">Deutsche Telekom</span><span class="marquee-item">Twilio</span>
+      <span class="marquee-item">Netflix</span><span class="marquee-item">Visa</span><span class="marquee-item">Slack</span><span class="marquee-item">Notion</span><span class="marquee-item">Chime</span><span class="marquee-item">Pinterest</span><span class="marquee-item">MYOB</span><span class="marquee-item">Airtel</span><span class="marquee-item">DoorDash</span><span class="marquee-item">Etsy</span><span class="marquee-item">Deutsche Telekom</span><span class="marquee-item">Twilio</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── 3. CHALLENGE ───────────────────────────────────────── -->
+<section aria-labelledby="challenge-h2">
+  <div class="container">
+    <div class="sec-header">
+      <span class="sec-label">The real cost</span>
+      <h2 id="challenge-h2">What does a broken data governance framework cost?</h2>
+      <p>Governance gaps do not announce themselves. They surface in audits, board meetings, and the incidents your team finds out about in standup.</p>
+    </div>
+    <div class="hover-tile-grid" role="list">
+      <div class="hover-tile animate-in" role="listitem">
+        <div class="hover-tile-content">
+          <div class="hover-tile-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h4"/></svg>
+          </div>
+          <h4>Policies that exist on paper</h4>
+          <p>Access rules live in spreadsheets. No enforcement layer means no audit trail and no accountability when data moves.</p>
+        </div>
+      </div>
+      <div class="hover-tile animate-in" role="listitem">
+        <div class="hover-tile-content">
+          <div class="hover-tile-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
+          </div>
+          <h4>Quality failures with no owner</h4>
+          <p>Dashboards break. Pipelines pass. No one knows which dataset failed or who is responsible for fixing it.</p>
+        </div>
+      </div>
+      <div class="hover-tile animate-in" role="listitem">
+        <div class="hover-tile-content">
+          <div class="hover-tile-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+          </div>
+          <h4>Lineage gaps at the worst moment</h4>
+          <p>A compliance question arrives. You cannot trace where the data came from or who touched it last.</p>
+        </div>
+      </div>
+      <div class="hover-tile animate-in" role="listitem">
+        <div class="hover-tile-content">
+          <div class="hover-tile-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          </div>
+          <h4>Governance slows the data team</h4>
+          <p>Manual tagging, ownership requests, and access reviews consume engineering hours that should go to building.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 4. SOLUTION ────────────────────────────────────────── -->
+<section aria-labelledby="solution-h2">
+  <div class="container">
+    <div class="sec-header">
+      <span class="sec-label">How DataHub solves it</span>
+      <h2 id="solution-h2">A better way to enforce your governance framework</h2>
+      <p>Four integrated capabilities that turn governance policy into automated, auditable enforcement across your entire data stack.</p>
+    </div>
+
+    <!-- Feature 0: no reverse -->
+    <div class="content-highlight">
+      <div class="content-highlight-inner">
+        <div class="ch-text">
+          <span class="sec-label">Access control</span>
+          <h2>Enforce policies at the resource level</h2>
+          <p>DataHub's policy engine applies fine-grained RBAC by resource, domain, tag, or owner. Every access decision is logged. Every policy change creates an audit event.</p>
+          <ul class="feature-list" aria-label="Access control capabilities">
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Resource-level, privilege-based, and actor-based policies
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              GraphQL and REST APIs for programmatic policy management
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Full audit log: CreatePolicy, UpdatePolicy, DeletePolicy events
+            </li>
+          </ul>
+        </div>
+        <div class="ch-visual">
+          <figure class="framed-image">
+            <picture>
+              <source srcset="images/data-governance-framework-architecture.svg" type="image/svg+xml">
+              <img src="images/data-governance-framework-architecture.svg" alt="DataHub policy engine UI showing fine-grained RBAC rules applied to a Snowflake dataset" loading="lazy">
+            </picture>
+            <figcaption>Policy engine   resource-level access control</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 1: reverse -->
+    <div class="content-highlight">
+      <div class="content-highlight-inner reverse">
+        <div class="ch-text">
+          <span class="sec-label">Data quality</span>
+          <h2>Turn data contracts into quality gates</h2>
+          <p>Define contracts for schema, freshness, volume, and custom SQL assertions. DataHub monitors them continuously and alerts your team before downstream consumers notice.</p>
+          <ul class="feature-list" aria-label="Data quality capabilities">
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Assertion types: volume, freshness, schema, field-level, SQL
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Data contracts with SLA, schema, and quality enforcement
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Alerts routed to Slack or PagerDuty on contract violations
+            </li>
+          </ul>
+        </div>
+        <div class="ch-visual">
+          <figure class="framed-image">
+            <picture>
+              <source srcset="images/data-governance-framework-architecture.svg" type="image/svg+xml">
+              <img src="images/data-governance-framework-architecture.svg" alt="DataHub data contracts UI showing assertion pass rates and freshness SLA status for a BigQuery table" loading="lazy">
+            </picture>
+            <figcaption>Data contracts -- assertion pass rates and SLA status</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 2: no reverse -->
+    <div class="content-highlight">
+      <div class="content-highlight-inner">
+        <div class="ch-text">
+          <span class="sec-label">Lineage tracking</span>
+          <h2>Trace every dataset to its source</h2>
+          <p>Column-level lineage connects your warehouses, transformation layers, and BI tools into a single traceable graph. Impact analysis runs before a breaking change ships.</p>
+          <ul class="feature-list" aria-label="Lineage tracking capabilities">
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              End-to-end lineage across datasets, jobs, and flows
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Column-level lineage for Snowflake, BigQuery, dbt, and Looker
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Upstream impact analysis before schema changes deploy
+            </li>
+          </ul>
+        </div>
+        <div class="ch-visual">
+          <figure class="framed-image">
+            <picture>
+              <source srcset="images/data-governance-framework-architecture.svg" type="image/svg+xml">
+              <img src="images/data-governance-framework-architecture.svg" alt="DataHub lineage graph showing column-level data flow from Snowflake through dbt to a Looker dashboard" loading="lazy">
+            </picture>
+            <figcaption>Column-level lineage -- source to dashboard</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 3: reverse -->
+    <div class="content-highlight">
+      <div class="content-highlight-inner reverse">
+        <div class="ch-text">
+          <span class="sec-label">Data governance metrics</span>
+          <h3>Measure governance health across every domain</h3>
+          <p>Track ownership coverage, assertion pass rates, and policy adoption by domain or team. Governance metrics surface in dashboards your leads already use.</p>
+          <ul class="feature-list" aria-label="Governance metrics capabilities">
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Ownership coverage tracked by domain and asset type
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Assertion pass rates trended over time by dataset
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Policy adoption reported by team and resource group
+            </li>
+          </ul>
+        </div>
+        <div class="ch-visual">
+          <figure class="framed-image">
+            <picture>
+              <source srcset="images/data-governance-framework-architecture.svg" type="image/svg+xml">
+              <img src="images/data-governance-framework-architecture.svg" alt="DataHub governance metrics dashboard showing ownership coverage and assertion pass rates by domain" loading="lazy">
+            </picture>
+            <figcaption>Governance metrics -- ownership and assertion coverage by domain</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── 5. HOW IT WORKS ────────────────────────────────────── -->
+<section aria-labelledby="hiw-h2">
+  <div class="container">
+    <div class="sec-header centered">
+      <span class="sec-label">How it works</span>
+      <h2 id="hiw-h2">A data governance model built to scale</h2>
+      <p>Three steps from first ingestion to active enforcement. Works with the infrastructure you already run.</p>
+    </div>
+    <div class="list-title-section">
+      <div class="list-title-grid">
+        <div class="list-item-group">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            Connect your sources
+          </h4>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>75+ pre-built connectors, no custom pipelines</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Snowflake, BigQuery, dbt, Airflow, and Looker</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>First ingestion run completes within a day</span>
+          </div>
+        </div>
+        <div class="list-item-group">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+            Contextualize with ownership
+          </h4>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Assign owners, domains, and glossary terms</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Tags propagate automatically through lineage</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Classifications applied at ingestion or manually</span>
+          </div>
+        </div>
+        <div class="list-item-group">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Activate policies at scale
+          </h4>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Apply RBAC policies and define data contracts</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Quality assertions run continuously, not on demand</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Every enforcement decision is logged and auditable</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 6. ENTERPRISE / INTEGRATION ───────────────────────── -->
+<section aria-labelledby="enterprise-h2">
+  <div class="container">
+    <div class="sec-header">
+      <span class="sec-label">Built for your stack</span>
+      <h2 id="enterprise-h2">A data governance framework for big data teams</h2>
+      <p>DataHub connects to the warehouses, orchestrators, and BI tools your team already runs. Governance travels with your data, not against it.</p>
+    </div>
+    <div class="list-title-section">
+      <div class="list-title-grid">
+        <div class="list-item-group">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            Warehouses
+          </h4>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Snowflake</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>BigQuery</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Redshift</span>
+          </div>
+        </div>
+        <div class="list-item-group">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            Transformation and orchestration
+          </h4>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>dbt</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Airflow</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Spark</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Kafka</span>
+          </div>
+        </div>
+        <div class="list-item-group">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+            BI and analytics
+          </h4>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Looker</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Tableau</span>
+          </div>
+          <div class="list-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Power BI</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 7. SOCIAL PROOF ────────────────────────────────────── -->
+<section aria-labelledby="proof-h2">
+  <div class="container">
+    <div class="sec-header centered">
+      <span class="sec-label">Peer validation</span>
+      <h2 id="proof-h2">Trusted by modern data teams</h2>
+    </div>
+    <div class="quote-inner">
+      <div>
+        <div class="quote-co">Enterprise financial services</div>
+        <div class="quote-co-role">Head of Data Platform</div>
+        <div class="quote-result">
+          <div class="quote-result-lbl">Outcome</div>
+          <div class="quote-result-val">Compliance reviews: days to hours</div>
+        </div>
+      </div>
+      <div>
+        <blockquote>
+          "DataHub gave us a single place to enforce access policies and track lineage. Our compliance reviews went from days to hours."
+        </blockquote>
+        <div class="quote-author">
+          <div class="quote-avatar" aria-hidden="true">HP</div>
+          <div>
+            <div class="quote-name">Head of Data Platform</div>
+            <div class="quote-role">Enterprise financial services firm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 8. FAQ ──────────────────────────────────────────────── -->
+<section class="faq-section" aria-labelledby="faq-h2">
+  <div class="container">
+    <div class="sec-header centered">
+      <span class="sec-label">Common questions</span>
+      <h2 id="faq-h2">Questions about the governance framework</h2>
+    </div>
+    <div class="faq-tile-list" role="list">
+
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false" aria-controls="faq-a1" id="faq-q1">
+          How long does initial setup take?
+          <span class="faq-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
+        </button>
+        <div class="faq-answer" id="faq-a1" role="region" aria-labelledby="faq-q1">
+          <div class="faq-answer-inner">
+            Most teams complete their first ingestion run within a day. Connectors for Snowflake, BigQuery, and dbt are pre-built and configurable without custom code.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false" aria-controls="faq-a2" id="faq-q2">
+          Does DataHub replace our existing access controls?
+          <span class="faq-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill
+</body>
+</html>
