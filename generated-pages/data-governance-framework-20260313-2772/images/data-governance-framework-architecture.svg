@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img">
+  <title>Data Governance Framework Architecture</title>
+  <desc>Hub-and-spoke architecture diagram showing DataHub Governance Platform at center, connected to four surrounding layers: Data Sources (left), Governance Controls (top), Orchestration and Transformation (right), and Observability and Action (bottom).</desc>
+
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Castoro&amp;family=Geist:wght@300;400;500;600&amp;display=swap');
+    </style>
+    <marker id="arrow-right" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#3CBBEB"/>
+    </marker>
+    <marker id="arrow-left" markerWidth="8" markerHeight="8" refX="2" refY="3" orient="auto">
+      <path d="M8,0 L8,6 L0,3 z" fill="#3CBBEB"/>
+    </marker>
+    <marker id="arrow-down" markerWidth="8" markerHeight="8" refX="3" refY="6" orient="auto">
+      <path d="M0,0 L6,0 L3,8 z" fill="#3CBBEB"/>
+    </marker>
+    <marker id="arrow-up" markerWidth="8" markerHeight="8" refX="3" refY="2" orient="auto">
+      <path d="M0,8 L6,8 L3,0 z" fill="#3CBBEB"/>
+    </marker>
+    <marker id="arrow-end" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#3CBBEB"/>
+    </marker>
+    <marker id="arrow-start" markerWidth="8" markerHeight="8" refX="2" refY="3" orient="auto-start-reverse">
+      <path d="M0,0 L0,6 L8,3 z" fill="#3CBBEB"/>
+    </marker>
+  </defs>
+
+  <!-- Page background -->
+  <rect width="100%" height="100%" fill="#F2F1EE"/>
+
+  <!-- Outer frame -->
+  <rect x="20" y="20" width="920" height="500" rx="10" ry="10" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.5"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- CENTER HUB — DataHub Governance Platform -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <g id="center-hub">
+    <rect x="370" y="195" width="220" height="110" rx="8" ry="8" fill="#002131" stroke="#3CBBEB" stroke-width="1.5"/>
+    <!-- Hub icon: hexagon outline -->
+    <polygon points="480,210 492,217 492,231 480,238 468,231 468,217" fill="none" stroke="#3CBBEB" stroke-width="1.5"/>
+    <text x="480" y="258" font-family="'Castoro', Georgia, serif" font-size="13" font-weight="400" fill="#FFFFFF" text-anchor="middle">DataHub Governance</text>
+    <text x="480" y="274" font-family="'Castoro', Georgia, serif" font-size="13" font-weight="400" fill="#FFFFFF" text-anchor="middle">Platform</text>
+    <text x="480" y="293" font-family="'Geist', sans-serif" font-size="9" font-weight="300" fill="#3CBBEB" text-anchor="middle" letter-spacing="1">CENTRAL HUB</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- LEFT LAYER — Data Sources -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <g id="data-sources">
+    <!-- Section tile -->
+    <rect x="40" y="130" width="190" height="240" rx="8" ry="8" fill="#0A4170" stroke="none"/>
+    <!-- Section label -->
+    <text x="135" y="155" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#B0EAFC" text-anchor="middle" letter-spacing="1.2">DATA SOURCES</text>
+    <!-- Divider -->
+    <line x1="55" y1="162" x2="215" y2="162" stroke="#3CBBEB" stroke-width="0.75" opacity="0.5"/>
+
+    <!-- Snowflake -->
+    <rect x="55" y="170" width="160" height="26" rx="4" ry="4" fill="#002131" stroke="#3CBBEB" stroke-width="1"/>
+    <!-- snowflake icon -->
+    <line x1="71" y1="177" x2="71" y2="189" stroke="#3CBBEB" stroke-width="1.5"/>
+    <line x1="65" y1="183" x2="77" y2="183" stroke="#3CBBEB" stroke-width="1.5"/>
+    <line x1="66" y1="178" x2="76" y2="188" stroke="#3CBBEB" stroke-width="1"/>
+    <line x1="76" y1="178" x2="66" y2="188" stroke="#3CBBEB" stroke-width="1"/>
+    <text x="84" y="187" font-family="'Geist', sans-serif" font-size="11" font-weight="400" fill="#FFFFFF">Snowflake</text>
+
+    <!-- BigQuery -->
+    <rect x="55" y="202" width="160" height="26" rx="4" ry="4" fill="#002131" stroke="#3CBBEB" stroke-width="1"/>
+    <!-- database icon -->
+    <ellipse cx="71" cy="211" rx="7" ry="3" fill="none" stroke="#3CBBEB" stroke-width="1.5"/>
+    <line x1="64" y1="211" x2="64" y2="219" stroke="#3CBBEB" stroke-width="1.5"/>
+    <line x1="78" y1="211" x2="78" y2="219" stroke="#3CBBEB" stroke-width="1.5"/>
+    <ellipse cx="71" cy="219" rx="7" ry="3" fill="none" stroke="#3CBBEB" stroke-width="1.5"/>
+    <text x="84" y="219" font-family="'Geist', sans-serif" font-size="11" font-weight="400" fill="#FFFFFF">BigQuery</text>
+
+    <!-- Databricks -->
+    <rect x="55" y="234" width="160" height="26" rx="4" ry="4" fill="#002131" stroke="#3CBBEB" stroke-width="1"/>
+    <!-- lightning icon -->
+    <polyline points="73,242 68,251 72,251 69,260 76,249 72,249 75,242" fill="none" stroke="#3CBBEB" stroke-width="1.5" stroke-linejoin="round"/>
+    <text x="84" y="251" font-family="'Geist', sans-serif" font-size="11" font-weight="400" fill="#FFFFFF">Databricks</text>
+
+    <!-- Redshift -->
+    <rect x="55" y="266" width="160" height="26" rx="4" ry="4" fill="#002131" stroke="#3CBBEB" stroke-width="1"/>
+    <!-- layers icon -->
+    <polyline points="64,277 71,273 78,277 71,281" fill="none" stroke="#3CBBEB" stroke-width="1.5" stroke-linejoin="round"/>
+    <polyline points="64,281 71,285 78,281" fill="none" stroke="#3CBBEB" stroke-width="1.5" stroke-linejoin="round"/>
+    <text x="84" y="283" font-family="'Geist', sans-serif" font-size="11" font-weight="400" fill="#FFFFFF">Redshift</text>
+
+    <!-- Kafka -->
+    <rect x="55" y="298" width="160" height="26" rx="4" ry="4" fill="#002131" stroke="#3CBBEB" stroke-width="1"/>
+    <!-- stream icon -->
+    <path d="M64,311 Q68,305 72,311 Q76,317 80,311" fill="none" stroke="#3CBBEB" stroke-width="1.5"/>
+    <text x="84" y="315" font-family="'Geist', sans-serif" font-size="11" font-weight="400" fill="#FFFFFF">Kafka</text>
+  </g>
+
+  <!-- Arrow: Data Sources → Hub (with label) -->
+  <line x1="232" y1="250" x2="366" y2="250" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-end)"/>
+  <rect x="248" y="234" width="102" height="18" rx="3" ry="3" fill="#F2F1EE"/>
+  <text x="299" y="246" font-family="'Geist', sans-serif" font-size="9" font-weight="500" fill="#0A4170" text-anchor="middle" letter-spacing="0.5">Metadata Ingestion</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- TOP LAYER — Governance Controls -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <g id="governance-controls">
+    <!-- Section tile -->
+    <rect x="310" y="38" width="340" height="120" rx="8" ry="8" fill="#004843" stroke="none"/>
+    <!-- Section label -->
+    <text x="480" y="60" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#AAF1BB" text-anchor="middle" letter-spacing="1.2">GOVERNANCE CONTROLS</text>
+    <!-- Divider -->
+    <line x1="325" y1="67" x2="635" y2="67" stroke="#0FC691" stroke-width="0.75" opacity="0.5"/>
+
+    <!-- Policy Engine -->
+    <rect x="322" y="74" width="148" height="26" rx="4" ry="4" fill="#0A261E" stroke="#0FC691" stroke-width="1"/>
+    <!-- shield icon -->
+    <path d="M334,80 L334,88 Q334,92 338,93 Q342,92 342,88 L342,80 L338,78 Z" fill="none" stroke="#0FC691" stroke-width="1.5"/>
+    <text x="348" y="91" font-family="'Geist', sans-serif" font-size="11" font-weight="400" fill="#FFFFFF">Policy Engine</text>
+
+    <!-- Access Control -->
+    <rect x="478" y="74" width="148" height="26" rx="4" ry="4" fill="#0A261E" stroke="#0FC691" stroke-width="1"/>
+    <!-- lock icon -->
+    <rect x="490" y="84" width="12" height="9" rx="2" ry="2" fill="none" stroke="#0FC691" stroke-width="1.5"/>
+    <path d="M492,84 L492,80 Q492,76 496,76 Q500,76 500,80 L500,84" fill="none" stroke="#0FC691" stroke-width="1.5"/>
+    <text x="508" y="91" font-family="'Geist', sans-serif" font-size="11" font-weight="400" fill="#FFFFFF">Access Control</text>
+
+    <!-- Data Contracts -->
+    <rect x="322" y="106" width="148" height="26" rx="4" ry="4" fill="#0A261E" stroke="#0FC691" stroke-width="1"/>
+    <!-- document icon -->
+    <rect x="332" y="112" width="12" height="14" rx="2" ry="2" fill="none" stroke="#0FC691" stroke-width="1.5"/>
+    <line x1="335" y1="117" x2="341" y2="117" stroke="#0FC691" stroke-width="1"/>
+    <line x1="335" y1="120" x2="341" y2="120" stroke="#0FC691" stroke-width="1"/>
+    <text x="350" y="123" font-family="'Geist', sans-serif" font-size="11" font-weight="400" fill="#FFFFFF">Data Contracts</text>
+
+    <!-- Quality Assertions -->
+    <rect x="478" y="106" width="148" height="26" rx="4" ry="4" fill="#0A261E" stroke="#0FC691" stroke-width="1"/>
+    <!-- checkmark icon -->
+    <circle cx="490" cy="119" r="7" fill="none" stroke="#0FC691" stroke-width="1.5"/>
+    <polyline points="486,119 489,122 494,115" fill="none" stroke="#0FC691" stroke-width="1.5" stroke-linejoin="round"/>
+    <text x="503" y="123" font-family="'Geist', sans-serif" font-size="11" font-weight="400" fill="#FFFFFF">Quality Assertions</text>
+  </g>
+
+  <!-- Bidirectional arrow: Hub ↔ Governance Controls (with label) -->
+  <line x1="480" y1="195" x2="480" y2="162" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-end)" marker-start="url(#arrow-start)"/>
+  <rect x="440" y="170" width="52" height="18" rx="3" ry="3" fill="#F2F1EE"/>
+  <text x="466" y="182" font-family="'Geist', sans-serif" font-size="9" font-weight="500" fill="#004843" text-anchor="middle" letter-spacing="0.5">Enforce</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- RIGHT LAYER — Orchestration & Transformation -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <g id="orchestration">
+    <!-- Section tile -->
+    <rect x="730" y="165" width="190" height="170" rx="8" ry="8" fill="#40002D" stroke="none"/>
+    <!-- Section label -->
+    <text x="825" y="187" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#FCD6E4" text-anchor="middle" letter-spacing="1.2">ORCHESTRATION &amp;</text>
+    <text x="825" y="200" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#FCD6E4" text-anchor="middle" letter-spacing="1.2">TRANSFORMATION</text>
+    <!-- Divider -->
+    <line x1="745" y1="207" x2="905" y2="207" stroke="#FF85CE" stroke-width="0.75" opacity="0.5"/>
+
+    <!-- Airflow -->
+    <rect x="745" y="214" width="160" height="26" rx="4" ry="4" fill="#40002D" stroke="#FF85CE" stroke-width="1"/>
+    <!-- flow icon -->
+    <circle cx="757" cy="227" r="4" fill="none" stroke="#FF85CE" stroke-width="1.5"/>
+    <circle cx="769" cy="227" r="4" fill="none" stroke="#FF85CE" stroke-width="1.5"/>
+    <line x1="761" y1="227" x2="765" y2="227" stroke="#FF85CE" stroke-width="1.5"/>
+    <text x="780" y="231" font-family="'Geist', sans-serif" font-size="11" font-weight="400" fill="#FFFFFF">Airflow</text>
+
+    <!-- dbt -->
+    <rect x="745" y="246" width="160" height="26" rx="4" ry="4" fill="#40002D" stroke="#FF85CE" stroke-width="1"/>
+    <!-- transform icon -->
+    <rect x="751" y="252" width="10" height="10" rx="2" ry="2" fill="none" stroke="#FF85CE" stroke-width="1.5"/>
+    <polyline points="761,257 766,257 766,262 776,262" fill="none" stroke="#FF85CE" stroke-width="1.5"/>
+    <rect x="776" y="258" width="8" height="8" rx="1" ry="1" fill="none" stroke="#FF85CE" stroke-width="1.5"/>
+    <text x="780" y="263" font-family="'Geist', sans-serif" font-size="11" font-weight="400" fill="#FFFFFF">dbt</text
