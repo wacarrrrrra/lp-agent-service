@@ -49,6 +49,66 @@ Embed all forms with this script. Use the table below for the correct `formId`. 
 
 ---
 
+## COPY CONSTRAINTS (MANDATORY — do not exceed)
+
+These limits exist to preserve the 2-column hero layout and prevent section overflow. Every piece of copy must be validated against these counts before output.
+
+### Hero
+- `product-badge` label: 4–6 words, max 30 characters
+- `h1`: 6–9 words, max 55 characters (3 lines max at clamp size)
+- `hero-sub` paragraph: 2 sentences max, **140–180 characters** (fits in ~3 rendered lines)
+- `hero-bullets`: exactly 3 items; each bullet max **80 characters**, no wrapping
+- Form card `h3`: 6–8 words, max 45 characters
+- Form card `p`: 1 sentence, max **90 characters**
+
+### Section headers (`.sec-header`)
+- `sec-label` span: 2–3 words, max 22 characters
+- `h2`: 6–10 words, max **55 characters**
+- `p` (intro): 1–2 sentences, max **160 characters**
+
+### Feature items (`.content-highlight` / `.ch-text`)
+- `sec-label` chip: 2–3 words, max 22 characters
+- `h2`: 6–9 words, max **55 characters**
+- `p` body: 2–3 sentences, max **200 characters**
+- `feature-list` bullets: exactly 3 items; each max **65 characters**, no line-wrap
+
+### Challenge tiles (`.hover-tile`)
+- Title: 4–6 words, max **35 characters**
+- Body: 1–2 sentences, max **120 characters**
+
+### How It Works steps
+- Step heading: 5–7 words
+- Each bullet: max **75 characters**, 3 bullets per step
+
+### Closing callout / CTA
+- Blockquote: 1–2 sentences, max **140 characters**
+- Company name: max 30 characters
+- Result label: max 12 characters
+- Result value: max 20 characters
+
+---
+
+## SECTION ORDER AND CLASS REQUIREMENTS (DO NOT ALTER)
+
+The HTML output must always have sections in this exact order with these exact classes. Never change section classes. Never add new sections. Never collapse sections or merge challenge + solution into one.
+
+```
+1. <section class="hero">        — 2-col hero with embedded HubSpot form
+2. <section class="logo-scroller"> — marquee trust strip, no structural changes
+3. <section>                     — challenge: sec-header + hover-tile-grid
+4. <section>                     — solution: sec-header + 4× content-highlight
+5. <section>                     — how it works: sec-header.centered + list-title-section
+6. <section>                     — enterprise/integration: sec-header + list-title-section (2-col variant)
+7. <section>                     — social proof: quote-inner
+8. <section>                     — FAQ: faq-section
+9. <section>                     — closing CTA
+10. footer
+```
+
+Each `content-highlight` in section 4 **must** include a `.ch-visual` with a `<figure class="framed-image">`. Never substitute a card or text box for the image figure — use a placeholder `<img src="" alt="[descriptive alt]">` if no image URL is available.
+
+---
+
 ## SEO + PPC Alignment Layer
 
 | Element | Rule |
@@ -76,11 +136,11 @@ If `additional_keywords` are provided in the request, distribute them across H2s
 
 ### 1. HERO — *Emotional trigger: Recognition*
 
-**H1 (required):** Must include the primary search term verbatim. ≤80 characters.
+**H1 (required):** Must include the primary search term verbatim. ≤55 characters.
 
-**Subheadline:** 1–2 lines clarifying who it's for, what it solves, why it's better.
+**Subheadline:** 2 sentences max, 140–180 characters. Who it's for, what it solves, why it's better.
 
-**Supporting bullets:** 3 max. Outcome-driven. Quantifiable where possible. No fluff.
+**Supporting bullets:** Exactly 3. Each max 80 characters. Outcome-driven. Quantifiable where possible. No fluff.
 
 **Primary CTA:** High contrast. Anchor-links to the embedded form below.
 
@@ -134,17 +194,16 @@ Write for whichever `primary_audience` is set in the request — but keep both i
 
 Explain: how the product solves the problem, why it's different from legacy tools, why it's different from competitors.
 
-**Structure:** 3–5 benefit blocks. Each block: H3 + 2–3 sentence explanation + optional bullet list. Focus on benefits, not feature dumps.
+**Structure:** 4 `content-highlight` blocks (even-indexed items get `.reverse`). Each block: H2 + `p` body (max 200 chars) + 3 `feature-list` bullets (max 65 chars each) + `.ch-visual` with `<figure class="framed-image">`. Focus on benefits, not feature dumps.
 
 #### 🎯 Emotional Engagement Rules — Solution Section
 
 Apply **competence transfer**: the reader needs to be able to explain the value to someone else — their manager, their team, their procurement committee. Write benefit blocks so they function as internal talking points.
 
-- Each H3 headline should be a claim the reader could repeat in a meeting
-- The 2–3 sentence explanation gives them the *why behind the what*
+- Each H2 headline should be a claim the reader could repeat in a meeting
+- The body paragraph gives them the *why behind the what*
 - Write as if the reader will screenshot this section and send it to someone
 - Use concrete before abstract: say what happens first, then why it matters
-- If a benefit requires more than one sentence to explain what it even is, rewrite the H3
 
 **Scroll momentum:** End with an implied curiosity bridge toward "How It Works."
 
@@ -156,7 +215,7 @@ Apply **competence transfer**: the reader needs to be able to explain the value 
 
 Simple 3-step structure: **Connect → Contextualize → Activate**
 
-Each step: one-sentence headline + 2–3 lines of explanation + optional micro-diagram or visual.
+Each step: one-sentence headline (5–7 words) + 3 bullets (max 75 characters each).
 
 #### 🎯 Emotional Engagement Rules — How It Works
 
@@ -266,6 +325,42 @@ Apply **friction reduction through clarity**: the reader's hesitation is almost 
 - Page length: 900–1,500 words
 - Mobile-friendly layout
 - Load optimized — no unnecessary scripts
+
+---
+
+## Copy Input Format (for pre-validated copy handoff)
+
+When copy is generated before HTML, output it in this JSON structure so the HTML builder can validate counts before insertion:
+
+```json
+{
+  "hero": {
+    "badge": "<= 30 chars",
+    "h1": "<= 55 chars",
+    "sub": "<= 180 chars",
+    "bullets": ["<= 80 chars", "<= 80 chars", "<= 80 chars"],
+    "formTitle": "<= 45 chars",
+    "formSub": "<= 90 chars"
+  },
+  "challenge": {
+    "label": "<= 22 chars",
+    "h2": "<= 55 chars",
+    "intro": "<= 160 chars",
+    "tiles": [
+      {"title": "<= 35 chars", "body": "<= 120 chars"}
+    ]
+  },
+  "features": [
+    {
+      "label": "<= 22 chars",
+      "h2": "<= 55 chars",
+      "body": "<= 200 chars",
+      "bullets": ["<= 65 chars", "<= 65 chars", "<= 65 chars"],
+      "imageAlt": "descriptive sentence for the screenshot"
+    }
+  ]
+}
+```
 
 ---
 
