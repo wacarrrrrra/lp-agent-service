@@ -25,6 +25,39 @@ Before coding, understand the context and commit to a brand-aligned aesthetic di
 
 ---
 
+## LAYOUT INTEGRITY RULES
+
+These rules prevent the most common generation failures. They are non-negotiable and take precedence over creative decisions.
+
+### Hero balance rule
+The hero uses `display: flex` with two equal `flex: 1` columns. The LEFT column (`hero-text`) and RIGHT column (`hero-visual` form card) must be visually balanced at approximately 500px height each. This means:
+
+- `hero-sub` paragraph: **≤180 characters** — strictly enforced. If copy is longer, the left column grows and the form card floats awkwardly in the middle.
+- `hero-bullets`: exactly 3 items, each **≤80 characters** — no line wrapping.
+- When in doubt, cut the `hero-sub` — the bullets carry the specifics.
+
+### Feature items must always be 2-column (text + image)
+Each `.content-highlight-inner` must have exactly 2 children: `.ch-text` (flex: 1) and `.ch-visual` (flex: 1). Rules:
+
+- Odd-numbered features, or features that lack an image placeholder, will collapse to 1-column.
+- Always include `<figure class="framed-image">` inside `.ch-visual`. Use `<img src="" alt="[descriptive alt]">` if no image URL is available — never substitute a card, div, or text block for the figure.
+- The 4th feature item may use a `.list-title-section` dark card as its visual; wrap it in `<div class="ch-visual">`.
+
+### The `.reverse` alternation pattern
+Even-indexed feature items (0-indexed: items 1 and 3) must get `class="content-highlight-inner reverse"` to alternate image left/right. Applying `.reverse` inconsistently breaks the visual zigzag rhythm. Checklist before output:
+- Item 0: `content-highlight-inner` (no reverse)
+- Item 1: `content-highlight-inner reverse`
+- Item 2: `content-highlight-inner` (no reverse)
+- Item 3: `content-highlight-inner reverse`
+
+### Section gaps come from `main { gap: 120px }` — do not add margin to sections
+Sections themselves have zero padding and zero margin. Vertical rhythm comes entirely from the `main` flex gap. Never add `margin-top` or `margin-bottom` to `<section>` elements or their `.container` wrappers. Adding extra margin is the primary cause of irregular vertical spacing.
+
+### Never use bare `section { }` CSS rules
+Only `.hero` and `.logo-scroller` have section-level classes. All other sections are unstyled `<section>` elements. Never write CSS rules targeting a bare `section` selector in the generated `<style>` block — it will bleed styles into all sections and corrupt layout. Always target inner component classes (`.sec-header`, `.hover-tile-grid`, `.content-highlight`, etc.).
+
+---
+
 ## Brand Color System
 
 Use only these exact hex values. Never invent colors outside this palette.
@@ -361,25 +394,18 @@ Every conversion must use the DataHub frame system:
   <desc>Brief description of what the diagram shows</desc>
 
   <defs>
-    <!-- Font import -->
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Castoro&family=Geist:wght@300;400;500;600&display=swap');
     </style>
-
-    <!-- Arrowhead marker -->
     <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
       <path d="M0,0 L0,6 L8,3 z" fill="#3CBBEB"/>
     </marker>
-
-    <!-- Brand colors as named stops for gradients if needed -->
   </defs>
 
-  <!-- Outer frame -->
   <rect x="20" y="20" width="920" height="600" rx="12" ry="12"
         fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.5"/>
 
   <!-- Section tiles, icons, connectors, labels... -->
-
 </svg>
 ```
 
@@ -439,6 +465,9 @@ Even when the user requests creative latitude:
 - Never places the DataHub logo on off-palette backgrounds
 - Never adjusts color transparency
 - Never uses raw screenshots — always Stylized UI treatment
+- Never writes bare `section { }` CSS rules — targets inner component classes only
+- Never adds `margin-top` or `margin-bottom` to `<section>` elements — vertical rhythm comes from `main { gap: 120px }` only
+- Never substitutes a card or div for `<figure class="framed-image">` inside `.ch-visual`
 
 ---
 
@@ -455,3 +484,5 @@ Even when the user requests creative latitude:
 | Which illustration style for a product callout? | Stylized UI |
 | Which illustration style for a hero visual? | 3D Render or Tonal color block |
 | Light or dark theme? | Either — choose based on page intent. Dark = authority/impact. Light = clarity/approachability. |
+| Hero sub copy is too long — what to cut? | Cut `hero-sub` first. Bullets carry specifics. |
+| `.reverse` on which feature items? | Items 1 and 3 (0-indexed). Items 0 and 2 have no `.reverse`. |
