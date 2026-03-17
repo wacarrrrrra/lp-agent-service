@@ -31,7 +31,7 @@ SLACK_DEFAULT_CHANNEL = os.getenv("SLACK_DEFAULT_CHANNEL", "")
 BART_USER_ID = os.getenv("BART_USER_ID", "")
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
 SLACK_API_BASE = "https://slack.com/api"
@@ -375,7 +375,7 @@ async def generate_svgs(bart_brief: str, slug: str) -> Dict[str, str]:
     async def gen_one(img_info: Dict[str, str]) -> Tuple[str, str]:
         prompt = build_svg_prompt(img_info, bart_brief, slug)
         try:
-            svg_content = await claude_text(prompt, max_tokens=4500)
+            svg_content = await claude_text(prompt, max_tokens=8000)
             match = re.search(r'<svg[\s\S]*?</svg>', svg_content, re.DOTALL)
             if match:
                 svg_content = match.group(0)
@@ -628,8 +628,12 @@ CTA_MICROCOPY — use these exact strings for buttons and risk-reduction lines:
 IMAGE_BRIEFS_MD:
 {writer_json.get("image_briefs_md", "")}
 
-Available diagram images — use these exact <picture> elements verbatim, do NOT write bare <img> tags or reference .png files for diagrams:
-{picture_elements if picture_elements else "(none)"}
+Available diagram images ({len(svgs)} total) — placement rules:
+- Use each <picture> element exactly ONCE, in the single most relevant .content-highlight section
+- Do NOT duplicate a <picture> element across multiple sections
+- For every .content-highlight that has no matching image, use this placeholder instead:
+  <figure class="framed-image"><img src="" alt="[descriptive alt text for this specific section]"></figure>
+{picture_elements if picture_elements else "(none — use the placeholder figure in all .ch-visual slots)"}
 
 Non-negotiable output rules:
 - Output ONLY the contents of <body>…</body> — nothing else
@@ -724,7 +728,7 @@ async def generate_full_lp(
         logger.warning("Copy QA returned invalid JSON — proceeding with original writer output")
 
     html_prompt = build_lp_html_prompt(fields, writer_json, svgs, secondary_keywords)
-    page_html = await claude_text(html_prompt, max_tokens=8000)
+    page_html = await claude_text(html_prompt, max_tokens=16000)
 
     # Claude returns body content only — strip any accidental wrapper tags
     page_html = re.sub(r'(?i)<!doctype[^>]*>', '', page_html).strip()
@@ -980,7 +984,7 @@ TASK B — Landing page outline (required):
 Angle (2 sentences), H1 w/ exact search term, H2/H3/H4 outline + bullets, 3–6 FAQs.
 
 TASK C — Diagram briefs (required):
-Write 1–2 diagram briefs for visuals that would support this page. Do NOT generate or upload images.
+Write exactly 4 diagram briefs — one for each of the 4 solution feature sections in the landing page. Do NOT generate or upload images.
 Use exactly this format for each — the LP builder will generate brand-compliant SVGs from your brief:
 
 Prompt 1: [Descriptive diagram title]
@@ -991,6 +995,13 @@ Prompt 1: [Descriptive diagram title]
 Prompt 2: [Descriptive diagram title]
 [Same format]
 
+Prompt 3: [Descriptive diagram title]
+[Same format]
+
+Prompt 4: [Descriptive diagram title]
+[Same format]
+
+Each diagram should visually support a different feature or capability of the product. Vary the layout types across the 4 (e.g. don't use 4 architecture diagrams).
 Diagram types that work well: horizontal workflow (left-to-right stages), architecture diagram (hub + connected systems), 2x2 grid (4 categories with titles + bullets).
 Focus on structure and labels. Do not specify colors or visual style — the builder applies the brand system.
 
