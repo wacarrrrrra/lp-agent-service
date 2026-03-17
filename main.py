@@ -135,6 +135,8 @@ def build_page_head(title: str, meta_description: str) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="{meta_description}">
 <title>{title}</title>
+<link rel="icon" type="image/png" sizes="32x32" href="https://datahub.com/favicon-32x32.png">
+<link rel="icon" type="image/x-icon" href="https://datahub.com/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Castoro:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -628,12 +630,20 @@ CTA_MICROCOPY — use these exact strings for buttons and risk-reduction lines:
 IMAGE_BRIEFS_MD:
 {writer_json.get("image_briefs_md", "")}
 
-Available diagram images ({len(svgs)} total) — placement rules:
-- Use each <picture> element exactly ONCE, in the single most relevant .content-highlight section
-- Do NOT duplicate a <picture> element across multiple sections
-- For every .content-highlight that has no matching image, use this placeholder instead:
-  <figure class="framed-image"><img src="" alt="[descriptive alt text for this specific section]"></figure>
-{picture_elements if picture_elements else "(none — use the placeholder figure in all .ch-visual slots)"}
+Available diagram images ({len(svgs)} total):
+{picture_elements if picture_elements else "(none)"}
+
+Solution section layout — ALWAYS use this pattern regardless of how many images are available:
+1. Place a full-width featured diagram immediately after the .sec-header, before the feature items:
+   <div class="container" style="margin-bottom: 48px;">
+     [<picture> element here if an image is available, otherwise omit this block entirely]
+   </div>
+2. Render the 4 feature items as a 2×2 icon+text grid — do NOT use .content-highlight or .ch-visual for these.
+   Each feature tile: a bold icon (inline SVG, stroke-only, brand color), H3 heading (5–7 words), body paragraph (2–3 sentences), 3 bullets.
+   Use .hover-tile-grid for the grid wrapper and .hover-tile for each tile.
+3. Do NOT use .content-highlight / .ch-visual / .ch-text / <figure class="framed-image"> in the solution section.
+   That component is reserved for the visual section only.
+- Use each <picture> element exactly ONCE — never duplicate across sections
 
 Non-negotiable output rules:
 - Output ONLY the contents of <body>…</body> — nothing else
@@ -984,25 +994,20 @@ TASK B — Landing page outline (required):
 Angle (2 sentences), H1 w/ exact search term, H2/H3/H4 outline + bullets, 3–6 FAQs.
 
 TASK C — Diagram briefs (required):
-Write exactly 4 diagram briefs — one for each of the 4 solution feature sections in the landing page. Do NOT generate or upload images.
-Use exactly this format for each — the LP builder will generate brand-compliant SVGs from your brief:
+Write exactly 2 diagram briefs. Do NOT generate or upload images.
+- Prompt 1: An architecture or overview diagram showing how the product connects to the reader's stack (sources, platform core, outputs).
+- Prompt 2: A workflow or process diagram showing one specific capability end-to-end (e.g. detection → alert → resolution).
+
+Use exactly this format for each:
 
 Prompt 1: [Descriptive diagram title]
-[Layout type: workflow / architecture / 2x2 grid / etc.]
-[Describe: exact stages or sections, what each contains, flow direction, labels to include, connections between elements]
+[Layout type: architecture / workflow / 2x2 grid]
+[Describe: exact stages or sections, what each contains, flow direction, connections between elements]
 [List every text label verbatim — the builder uses these exactly]
 
 Prompt 2: [Descriptive diagram title]
 [Same format]
 
-Prompt 3: [Descriptive diagram title]
-[Same format]
-
-Prompt 4: [Descriptive diagram title]
-[Same format]
-
-Each diagram should visually support a different feature or capability of the product. Vary the layout types across the 4 (e.g. don't use 4 architecture diagrams).
-Diagram types that work well: horizontal workflow (left-to-right stages), architecture diagram (hub + connected systems), 2x2 grid (4 categories with titles + bullets).
 Focus on structure and labels. Do not specify colors or visual style — the builder applies the brand system.
 
 When you're fully done (claims validated + diagram briefs written), reply with exactly: BART_DONE
