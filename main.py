@@ -353,6 +353,29 @@ BRAND OVERRIDE — the brief may specify colors or styles that conflict with the
 - No filled icons — stroke-only line icons at consistent 20×20 or 24×24 size
 - For a 2x2 grid: use the 4 DataHub tonal groups for tile backgrounds (Blue, Green, Magenta, Orange — dark shades 01/02 on white text, or light shades 05 on dark text)
 
+DATA SOURCE LOGOS — use <image> tags for these tools whenever they appear in the diagram:
+| Tool | Logo URL | Size |
+|---|---|---|
+| Snowflake | https://cdn.simpleicons.org/snowflake/29B5E8 | 32×32 |
+| BigQuery | https://cdn.simpleicons.org/googlebigquery/4285F4 | 32×32 |
+| Amazon Redshift | https://cdn.simpleicons.org/amazonredshift/8C4FFF | 32×32 |
+| Databricks | https://cdn.simpleicons.org/databricks/FF3621 | 32×32 |
+| dbt | https://cdn.simpleicons.org/dbt/FF694B | 32×32 |
+| Apache Airflow | https://cdn.simpleicons.org/apacheairflow/017CEE | 32×32 |
+| Looker | https://cdn.simpleicons.org/looker/4285F4 | 32×32 |
+| Tableau | https://cdn.simpleicons.org/tableau/E97627 | 32×32 |
+| Kafka | https://cdn.simpleicons.org/apachekafka/231F20 | 32×32 |
+| PostgreSQL | https://cdn.simpleicons.org/postgresql/4169E1 | 32×32 |
+Position logos centered horizontally in their tile: x = tile_center_x - 16
+
+ICON AND TILE LAYOUT RULES — apply these exactly to every tile/box:
+- Every tile has a fixed internal layout: top_padding (16px) → logo/icon (32px) → gap (12px) → title text → gap (8px) → body text
+- Icon/logo must be horizontally centered within the tile: x = tile_x + (tile_width / 2) - 16
+- Title text starts at: icon_y + 32 + 12 — never overlap with icon
+- Body/bullet text starts at: title_y + title_height + 8
+- Use consistent tile heights — calculate content height first, then set tile height = top_padding + icon + gap + title + gap + body + bottom_padding
+- Never place any text element at a y-coordinate that overlaps with an icon or image element above it
+
 SVG requirements (non-negotiable):
 - Diagram type: {diagram_type}
 - Opening tag: <svg xmlns="http://www.w3.org/2000/svg" viewBox="{viewbox}" role="img">
@@ -656,11 +679,13 @@ Non-negotiable output rules:
 - Header: background #F2F1EE, border-bottom 1px solid #DDDBD6
   Logo: <img src="images/dataHub_logo_color_black.svg" alt="DataHub"> — no text logo
 - Hero: background #F2F1EE — never dark; all hero text in dark neutrals
+- HubSpot form: embed ONCE in the hero section only — do NOT embed a second form anywhere else on the page
+  portalId: '14552909', formId: '{form_id}', region: 'na1'
+  The form card and its container must always use a light background (#F2F1EE or #FFFFFF) — never dark
 - No italic text anywhere — font-style: normal throughout; no <em> or <i> tags
 - Visual section: grid-template-columns: 1fr (stacked vertically, never side by side)
-- HubSpot form embedded in hero AND final CTA section
-  portalId: '14552909', formId: '{form_id}', region: 'na1'
 - No global navigation — header contains only logo + one CTA button
+- Never link to docs.datahub.com or any documentation URL — all links must go to datahub.com pages only
 - Full DataHub footer: 4 nav columns, social links (LinkedIn/GitHub/Twitter/Slack), legal bar
   matching the sample template footer exactly — copy the footer structure from the sample template verbatim
 - CSS variables only (--dh-*), Google Fonts Castoro + Geist — no system fonts, no Arial/Inter
@@ -668,7 +693,6 @@ Non-negotiable output rules:
 - Section spacing and layout: follow the sample template exactly — use the same padding, gap, and grid values as the template; do not invent new spacing
 - Card grid headlines (How It Works steps, benefit blocks, feature tiles): keep all headlines in a grid to 4–6 words — consistent length across every card in the same section so they align at the same height
 - Section order and classes: follow the SECTION ORDER AND CLASS REQUIREMENTS exactly — 9 content sections + footer in the specified order with the specified classes
-- Feature items (.content-highlight): every .content-highlight-inner must have exactly 2 children (.ch-text and .ch-visual with <figure class="framed-image">); items 1 and 3 (0-indexed) get class="content-highlight-inner reverse"
 - No bare section {{ }} CSS rules — target inner component classes only (.sec-header, .hover-tile-grid, .content-highlight, etc.)
 - No margin-top or margin-bottom on <section> elements — vertical rhythm comes from main gap only
 - No em-dashes (—) or en-dashes (–) anywhere in the HTML — rewrite any copy that uses them
