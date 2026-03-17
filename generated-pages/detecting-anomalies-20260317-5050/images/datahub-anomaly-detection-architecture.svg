@@ -1,0 +1,231 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img">
+  <title>DataHub Anomaly Detection Architecture</title>
+  <desc>Three horizontal swim lanes showing data flow from Data Sources through the DataHub Platform (Ingestion Layer, Anomaly Detection Engine, Incident and Alert Management) to Outputs including Slack, PagerDuty, Email, and Data Health Dashboard.</desc>
+
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Castoro&amp;family=Geist:wght@300;400;500;600&amp;display=swap');
+    </style>
+    <marker id="arrow-right" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#3CBBEB"/>
+    </marker>
+    <marker id="arrow-right-sm" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#3CBBEB"/>
+    </marker>
+  </defs>
+
+  <!-- Page background -->
+  <rect width="100%" height="100%" fill="#F2F1EE"/>
+
+  <!-- Outer frame -->
+  <rect x="20" y="20" width="920" height="500" rx="10" ry="10" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.5"/>
+
+  <!-- ─────────────────────────────────────────────
+       SWIM LANE COLUMN BACKGROUNDS
+  ───────────────────────────────────────────── -->
+
+  <!-- Left lane: Data Sources -->
+  <rect x="36" y="56" width="192" height="448" rx="8" ry="8" fill="#B0EAFC" fill-opacity="0.28" stroke="#3CBBEB" stroke-width="1" stroke-dasharray="5 3"/>
+
+  <!-- Center lane: DataHub Platform -->
+  <rect x="252" y="56" width="432" height="448" rx="8" ry="8" fill="#002131" stroke="#0A4170" stroke-width="1.5"/>
+
+  <!-- Right lane: Outputs -->
+  <rect x="700" y="56" width="204" height="448" rx="8" ry="8" fill="#B0EAFC" fill-opacity="0.28" stroke="#3CBBEB" stroke-width="1" stroke-dasharray="5 3"/>
+
+  <!-- ─────────────────────────────────────────────
+       LANE HEADER LABELS
+  ───────────────────────────────────────────── -->
+
+  <!-- Data Sources label -->
+  <text x="132" y="80" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#0A4170" text-anchor="middle" letter-spacing="1.2">DATA SOURCES</text>
+
+  <!-- DataHub Platform label -->
+  <text x="468" y="80" font-family="'Castoro', Georgia, serif" font-size="13" font-weight="400" fill="#3CBBEB" text-anchor="middle" letter-spacing="0.5">DataHub Platform</text>
+
+  <!-- Outputs label -->
+  <text x="802" y="80" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#0A4170" text-anchor="middle" letter-spacing="1.2">OUTPUTS</text>
+
+  <!-- ─────────────────────────────────────────────
+       DATA SOURCES — four source tiles
+  ───────────────────────────────────────────── -->
+
+  <!-- Snowflake tile -->
+  <rect x="52" y="96" width="160" height="80" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <image href="https://cdn.simpleicons.org/snowflake/29B5E8" x="96" y="108" width="32" height="32"/>
+  <text x="132" y="154" font-family="'Geist', sans-serif" font-size="11" font-weight="500" fill="#1E1E1E" text-anchor="middle">Snowflake</text>
+
+  <!-- BigQuery tile -->
+  <rect x="52" y="192" width="160" height="80" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <image href="https://cdn.simpleicons.org/googlebigquery/4285F4" x="96" y="204" width="32" height="32"/>
+  <text x="132" y="250" font-family="'Geist', sans-serif" font-size="11" font-weight="500" fill="#1E1E1E" text-anchor="middle">BigQuery</text>
+
+  <!-- Redshift tile -->
+  <rect x="52" y="288" width="160" height="80" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <image href="https://cdn.simpleicons.org/amazonredshift/8C4FFF" x="96" y="300" width="32" height="32"/>
+  <text x="132" y="346" font-family="'Geist', sans-serif" font-size="11" font-weight="500" fill="#1E1E1E" text-anchor="middle">Redshift</text>
+
+  <!-- Databricks tile -->
+  <rect x="52" y="384" width="160" height="80" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <image href="https://cdn.simpleicons.org/databricks/FF3621" x="96" y="396" width="32" height="32"/>
+  <text x="132" y="442" font-family="'Geist', sans-serif" font-size="11" font-weight="500" fill="#1E1E1E" text-anchor="middle">Databricks</text>
+
+  <!-- ─────────────────────────────────────────────
+       ARROWS: Data Sources → Platform
+  ───────────────────────────────────────────── -->
+  <line x1="213" y1="136" x2="246" y2="136" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right-sm)"/>
+  <line x1="213" y1="232" x2="246" y2="232" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right-sm)"/>
+  <line x1="213" y1="328" x2="246" y2="328" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right-sm)"/>
+  <line x1="213" y1="424" x2="246" y2="424" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right-sm)"/>
+
+  <!-- Vertical connector on platform left edge gathering all arrows -->
+  <line x1="246" y1="136" x2="246" y2="424" stroke="#3CBBEB" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <!-- ─────────────────────────────────────────────
+       DATAHUB PLATFORM — three sub-section tiles
+  ───────────────────────────────────────────── -->
+
+  <!-- ── Ingestion Layer ── -->
+  <rect x="268" y="92" width="400" height="100" rx="7" ry="7" fill="#0A4170" stroke="#3CBBEB" stroke-width="1"/>
+
+  <!-- Ingestion icon: database shape (stroke-only) -->
+  <g transform="translate(308, 108)" stroke="#3CBBEB" stroke-width="1.6" fill="none">
+    <ellipse cx="12" cy="5" rx="12" ry="5"/>
+    <line x1="0" y1="5" x2="0" y2="19"/>
+    <line x1="24" y1="5" x2="24" y2="19"/>
+    <ellipse cx="12" cy="19" rx="12" ry="5"/>
+    <path d="M0,12 Q12,16 24,12"/>
+  </g>
+
+  <text x="468" y="116" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#B0EAFC" text-anchor="middle" letter-spacing="1">INGESTION LAYER</text>
+  <text x="468" y="134" font-family="'Geist', sans-serif" font-size="10" font-weight="400" fill="#B0EAFC" text-anchor="middle">Metadata extraction from connected data platforms</text>
+  <text x="468" y="150" font-family="'Geist', sans-serif" font-size="10" font-weight="400" fill="#767473" text-anchor="middle">Assertion Monitors · Scheduled evaluation · Dataset profiling</text>
+  <text x="468" y="166" font-family="'Geist', sans-serif" font-size="10" font-weight="400" fill="#767473" text-anchor="middle">Freshness · Volume · Schema · Column · Custom SQL</text>
+  <text x="468" y="182" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#3CBBEB" text-anchor="middle">Assertion Monitors</text>
+
+  <!-- ── Anomaly Detection Engine (highlighted) ── -->
+  <rect x="268" y="208" width="400" height="136" rx="7" ry="7" fill="#006DCD" stroke="#3CBBEB" stroke-width="2"/>
+  <!-- Highlight accent bar -->
+  <rect x="268" y="208" width="6" height="136" rx="3" ry="3" fill="#3CBBEB"/>
+
+  <!-- Detection icon: alert triangle (stroke-only) -->
+  <g transform="translate(308, 224)" stroke="#FFFFFF" stroke-width="1.6" fill="none" stroke-linejoin="round">
+    <polygon points="12,2 22,20 2,20"/>
+    <line x1="12" y1="10" x2="12" y2="14"/>
+    <circle cx="12" cy="17" r="1" fill="#FFFFFF" stroke="none"/>
+  </g>
+
+  <!-- "CORE" badge -->
+  <rect x="596" y="216" width="60" height="18" rx="4" ry="4" fill="#3CBBEB"/>
+  <text x="626" y="228" font-family="'Geist', sans-serif" font-size="9" font-weight="600" fill="#002131" text-anchor="middle" letter-spacing="0.8">CORE</text>
+
+  <text x="468" y="232" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.8">ANOMALY DETECTION ENGINE</text>
+  <text x="468" y="252" font-family="'Geist', sans-serif" font-size="10" font-weight="400" fill="#B0EAFC" text-anchor="middle">ML-powered predictions · Seasonality &amp; trend awareness</text>
+
+  <!-- Smart Assertions sub-tile -->
+  <rect x="284" y="262" width="180" height="68" rx="5" ry="5" fill="#0A4170" stroke="#3CBBEB" stroke-width="1"/>
+  <text x="374" y="280" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#3CBBEB" text-anchor="middle">Smart Assertions (ML)</text>
+  <text x="374" y="296" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#B0EAFC" text-anchor="middle">Tunable sensitivity</text>
+  <text x="374" y="310" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#B0EAFC" text-anchor="middle">Exclusion windows · Feedback loops</text>
+  <text x="374" y="324" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#767473" text-anchor="middle">Mark false positives → retrain</text>
+
+  <!-- Assertion Monitors sub-tile -->
+  <rect x="480" y="262" width="172" height="68" rx="5" ry="5" fill="#0A4170" stroke="#3CBBEB" stroke-width="1"/>
+  <text x="566" y="280" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#3CBBEB" text-anchor="middle">Assertion Monitors</text>
+  <text x="566" y="296" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#B0EAFC" text-anchor="middle">Freshness · Volume · Schema</text>
+  <text x="566" y="310" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#B0EAFC" text-anchor="middle">Column · Custom SQL</text>
+  <text x="566" y="324" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#767473" text-anchor="middle">Scheduled · Rule-based</text>
+
+  <!-- ── Incident & Alert Management ── -->
+  <rect x="268" y="360" width="400" height="120" rx="7" ry="7" fill="#0A4170" stroke="#3CBBEB" stroke-width="1"/>
+
+  <!-- Bell icon (stroke-only) -->
+  <g transform="translate(308, 376)" stroke="#3CBBEB" stroke-width="1.6" fill="none">
+    <path d="M12,2 C7.6,2 4,5.6 4,10 L4,16 L2,18 L22,18 L20,16 L20,10 C20,5.6 16.4,2 12,2 Z"/>
+    <path d="M9,18 Q9,21 12,21 Q15,21 15,18"/>
+    <line x1="12" y1="2" x2="12" y2="0"/>
+  </g>
+
+  <text x="468" y="384" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#B0EAFC" text-anchor="middle" letter-spacing="1">INCIDENT &amp; ALERT MANAGEMENT</text>
+  <text x="468" y="402" font-family="'Geist', sans-serif" font-size="10" font-weight="400" fill="#B0EAFC" text-anchor="middle">Automatic incident creation on assertion failure</text>
+  <text x="468" y="418" font-family="'Geist', sans-serif" font-size="10" font-weight="400" fill="#767473" text-anchor="middle">Auto-resolves when assertions pass · Assign to owners</text>
+  <text x="468" y="436" font-family="'Geist', sans-serif" font-size="10" font-weight="400" fill="#767473" text-anchor="middle">Route alerts to Slack · PagerDuty · Email</text>
+  <text x="468" y="454" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#3CBBEB" text-anchor="middle">Monitoring Rules: auto-apply across domains, platforms, schemas</text>
+
+  <!-- Vertical connector inside platform between sub-sections -->
+  <line x1="468" y1="192" x2="468" y2="208" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arrow-right-sm)" transform="rotate(90,468,200)"/>
+  <!-- Arrow down: Ingestion → Detection -->
+  <line x1="468" y1="193" x2="468" y2="207" stroke="#3CBBEB" stroke-width="1.4" marker-end="url(#arrow-right-sm)" transform="rotate(90 468 200)"/>
+
+  <!-- Proper down arrows between platform sections -->
+  <line x1="468" y1="194" x2="468" y2="206" stroke="#3CBBEB" stroke-width="1.5"/>
+  <polygon points="462,204 474,204 468,210" fill="#3CBBEB"/>
+
+  <line x1="468" y1="346" x2="468" y2="358" stroke="#3CBBEB" stroke-width="1.5"/>
+  <polygon points="462,356 474,356 468,362" fill="#3CBBEB"/>
+
+  <!-- ─────────────────────────────────────────────
+       ARROWS: Platform → Outputs
+  ───────────────────────────────────────────── -->
+  <line x1="669" y1="280" x2="694" y2="280" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right-sm)"/>
+  <!-- Vertical gather line on right edge of platform -->
+  <line x1="669" y1="136" x2="669" y2="424" stroke="#3CBBEB" stroke-width="1" stroke-dasharray="3 2"/>
+  <line x1="669" y1="136" x2="694" y2="136" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right-sm)"/>
+  <line x1="669" y1="232" x2="694" y2="232" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right-sm)"/>
+  <line x1="669" y1="328" x2="694" y2="328" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right-sm)"/>
+  <line x1="669" y1="424" x2="694" y2="424" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arrow-right-sm)"/>
+
+  <!-- ─────────────────────────────────────────────
+       OUTPUTS — four output tiles
+  ───────────────────────────────────────────── -->
+
+  <!-- Slack tile -->
+  <rect x="716" y="96" width="172" height="80" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <!-- Slack icon (stroke-only, simplified hash) -->
+  <g transform="translate(786, 108)" stroke="#0A4170" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <line x1="4" y1="0" x2="4" y2="20"/>
+    <line x1="12" y1="0" x2="12" y2="20"/>
+    <line x1="0" y1="6" x2="16" y2="6"/>
+    <line x1="0" y1="14" x2="16" y2="14"/>
+  </g>
+  <text x="802" y="154" font-family="'Geist', sans-serif" font-size="11" font-weight="500" fill="#1E1E1E" text-anchor="middle">Slack</text>
+  <text x="802" y="168" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#767473" text-anchor="middle">Channel notifications</text>
+
+  <!-- PagerDuty tile -->
+  <rect x="716" y="192" width="172" height="80" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <!-- PagerDuty icon (stroke-only bell) -->
+  <g transform="translate(786, 204)" stroke="#0A4170" stroke-width="1.6" fill="none">
+    <path d="M8,2 C4,2 1,5 1,9 L1,15 L0,17 L16,17 L15,15 L15,9 C15,5 12,2 8,2 Z"/>
+    <path d="M5.5,17 Q5.5,20 8,20 Q10.5,20 10.5,17"/>
+  </g>
+  <text x="802" y="250" font-family="'Geist', sans-serif" font-size="11" font-weight="500" fill="#1E1E1E" text-anchor="middle">PagerDuty</text>
+  <text x="802" y="264" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#767473" text-anchor="middle">On-call escalation</text>
+
+  <!-- Email tile -->
+  <rect x="716" y="288" width="172" height="80" rx="6" ry="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.2"/>
+  <!-- Email icon (stroke-only envelope) -->
+  <g transform="translate(786, 300)" stroke="#0A4170" stroke-width="1.6" fill="none" stroke-linejoin="round">
+    <rect x="0" y="2" width="24" height="18" rx="2"/>
+    <polyline points="0,4 12,14 24,4"/>
+  </g>
+  <text x="802" y="346" font-family="'Geist', sans-serif" font-size="11" font-weight="500" fill="#1E1E1E" text-anchor="middle">Email</text>
+  <text x="802" y="360" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#767473" text-anchor="middle">Owner &amp; stakeholder alerts</text>
+
+  <!-- Data Health Dashboard tile -->
+  <rect x="716" y="384" width="172" height="80" rx="6" ry="6" fill="#0A4170" stroke="#3CBBEB" stroke-width="1.5"/>
+  <!-- Dashboard icon (stroke-only grid) -->
+  <g transform="translate(786, 396)" stroke="#3CBBEB" stroke-width="1.6" fill="none" stroke-linejoin="round">
+    <rect x="0" y="0" width="10" height="10" rx="1"/>
+    <rect x="14" y="0" width="10" height="10" rx="1"/>
+    <rect x="0" y="14" width="10" height="10" rx="1"/>
+    <rect x="14" y="14" width="10" height="10" rx="1"/>
+  </g>
+  <text x="802" y="442" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#B0EAFC" text-anchor="middle">Data Health Dashboard</text>
+  <text x="802" y="456" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#767473" text-anchor="middle">Unified incident view</text>
+
+  <!-- ─────────────────────────────────────────────
+       DIAGRAM TITLE (bottom)
+  ───────────────────────────────────────────── -->
+  <text x="480" y="518" font-family="'Castoro', Georgia, serif" font-size="12" font-weight="400" fill="#767473" text-anchor="middle" letter-spacing="0.3">DataHub Anomaly Detection Architecture</text>
+
+</svg>
