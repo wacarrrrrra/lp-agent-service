@@ -1017,24 +1017,7 @@ For each claim include: ✅/⚠️/❌ + evidence (file paths/settings).
 TASK B — Landing page outline (required):
 Angle (2 sentences), H1 w/ exact search term, H2/H3/H4 outline + bullets, 3–6 FAQs.
 
-TASK C — Diagram briefs (required):
-Write exactly 2 diagram briefs. Do NOT generate or upload images.
-- Prompt 1: An architecture or overview diagram showing how the product connects to the reader's stack (sources, platform core, outputs).
-- Prompt 2: A workflow or process diagram showing one specific capability end-to-end (e.g. detection → alert → resolution).
-
-Use exactly this format for each:
-
-Prompt 1: [Descriptive diagram title]
-[Layout type: architecture / workflow / 2x2 grid]
-[Describe: exact stages or sections, what each contains, flow direction, connections between elements]
-[List every text label verbatim — the builder uses these exactly]
-
-Prompt 2: [Descriptive diagram title]
-[Same format]
-
-Focus on structure and labels. Do not specify colors or visual style — the builder applies the brand system.
-
-When you're fully done (claims validated + diagram briefs written), reply with exactly: BART_DONE
+When you're fully done (claims validated + outline written), reply with exactly: BART_DONE
 """
 
 # ----------------------------
