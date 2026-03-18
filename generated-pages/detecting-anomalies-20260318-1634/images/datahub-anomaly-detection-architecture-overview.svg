@@ -1,0 +1,243 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img">
+  <title>DataHub Anomaly Detection Architecture Overview</title>
+  <desc>Three-tier horizontal architecture diagram showing data flow from left to right: Data Sources (Snowflake, BigQuery, dbt, Airflow, Redshift) connect via Metadata Ingestion and Profiling to the DataHub Platform Core (Smart Assertion Engine, Anomaly Detection, Incident Management, Lineage Graph), which connects via Alerts and Notifications to Alert Destinations (Slack, MS Teams, Email).</desc>
+
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Castoro&amp;family=Geist:wght@300;400;500;600&amp;display=swap');
+    </style>
+    <marker id="arrow-right" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#3CBBEB"/>
+    </marker>
+    <marker id="arrow-left" markerWidth="8" markerHeight="8" refX="2" refY="3" orient="auto">
+      <path d="M8,0 L8,6 L0,3 z" fill="#3CBBEB"/>
+    </marker>
+    <marker id="arrow-right-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#3CBBEB"/>
+    </marker>
+  </defs>
+
+  <!-- Page background -->
+  <rect width="100%" height="100%" fill="#F2F1EE"/>
+
+  <!-- Outer frame -->
+  <rect x="20" y="20" width="920" height="500" rx="10" ry="10" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.5"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION HEADER ROW -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- Left section header: Data Sources -->
+  <rect x="40" y="36" width="190" height="26" rx="4" fill="#002131"/>
+  <text x="135" y="53" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#B0EAFC" text-anchor="middle" letter-spacing="0.08em">DATA SOURCES</text>
+
+  <!-- Middle section header: DataHub Platform Core -->
+  <rect x="340" y="36" width="290" height="26" rx="4" fill="#002131"/>
+  <text x="485" y="53" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#B0EAFC" text-anchor="middle" letter-spacing="0.08em">DATAHUB PLATFORM CORE</text>
+
+  <!-- Right section header: Alert Destinations -->
+  <rect x="740" y="36" width="190" height="26" rx="4" fill="#002131"/>
+  <text x="835" y="53" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#B0EAFC" text-anchor="middle" letter-spacing="0.08em">ALERT DESTINATIONS</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- LEFT SECTION — DATA SOURCES -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- Source tile background -->
+  <rect x="40" y="72" width="190" height="428" rx="8" fill="#F2F1EE" stroke="#B0EAFC" stroke-width="1.2"/>
+
+  <!-- Snowflake tile -->
+  <rect x="52" y="84" width="166" height="72" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+  <image href="https://cdn.simpleicons.org/snowflake/29B5E8" x="91" y="96" width="32" height="32"/>
+  <text x="135" y="146" font-family="'Geist', sans-serif" font-size="11" font-weight="500" fill="#1E1E1E" text-anchor="middle">Snowflake</text>
+
+  <!-- BigQuery tile -->
+  <rect x="52" y="164" width="166" height="72" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+  <image href="https://cdn.simpleicons.org/googlebigquery/4285F4" x="91" y="176" width="32" height="32"/>
+  <text x="135" y="226" font-family="'Geist', sans-serif" font-size="11" font-weight="500" fill="#1E1E1E" text-anchor="middle">BigQuery</text>
+
+  <!-- dbt tile -->
+  <rect x="52" y="244" width="166" height="72" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+  <image href="https://cdn.simpleicons.org/dbt/FF694B" x="91" y="256" width="32" height="32"/>
+  <text x="135" y="306" font-family="'Geist', sans-serif" font-size="11" font-weight="500" fill="#1E1E1E" text-anchor="middle">dbt</text>
+
+  <!-- Airflow tile -->
+  <rect x="52" y="324" width="166" height="72" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+  <image href="https://cdn.simpleicons.org/apacheairflow/017CEE" x="91" y="336" width="32" height="32"/>
+  <text x="135" y="386" font-family="'Geist', sans-serif" font-size="11" font-weight="500" fill="#1E1E1E" text-anchor="middle">Airflow</text>
+
+  <!-- Redshift tile -->
+  <rect x="52" y="404" width="166" height="84" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+  <image href="https://cdn.simpleicons.org/amazonredshift/8C4FFF" x="91" y="416" width="32" height="32"/>
+  <text x="135" y="466" font-family="'Geist', sans-serif" font-size="11" font-weight="500" fill="#1E1E1E" text-anchor="middle">Redshift</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- BIDIRECTIONAL ARROW — Sources to Platform Core -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- Arrow shaft right -->
+  <line x1="234" y1="283" x2="334" y2="283" stroke="#3CBBEB" stroke-width="2" marker-end="url(#arrow-right)"/>
+  <!-- Arrow shaft left -->
+  <line x1="340" y1="295" x2="240" y2="295" stroke="#3CBBEB" stroke-width="2" marker-end="url(#arrow-left)"/>
+
+  <!-- Arrow label background -->
+  <rect x="237" y="258" width="100" height="30" rx="4" fill="#B0EAFC"/>
+  <text x="287" y="270" font-family="'Geist', sans-serif" font-size="9" font-weight="600" fill="#002131" text-anchor="middle">Metadata Ingestion</text>
+  <text x="287" y="282" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#002131" text-anchor="middle">&amp; Profiling</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- MIDDLE SECTION — DATAHUB PLATFORM CORE -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- Platform core background -->
+  <rect x="340" y="72" width="290" height="428" rx="8" fill="#F2F1EE" stroke="#0A4170" stroke-width="1.5"/>
+
+  <!-- ── Subsystem 1: Smart Assertion Engine ── -->
+  <rect x="354" y="84" width="262" height="96" rx="6" fill="#002131"/>
+  <!-- ML-Powered badge -->
+  <rect x="362" y="92" width="80" height="18" rx="9" fill="#3CBBEB"/>
+  <text x="402" y="104" font-family="'Geist', sans-serif" font-size="9" font-weight="600" fill="#002131" text-anchor="middle">ML-POWERED</text>
+  <!-- Icon: brain/circuit — stroke-only -->
+  <g transform="translate(454, 92)" stroke="#3CBBEB" stroke-width="1.6" fill="none">
+    <circle cx="12" cy="12" r="9"/>
+    <line x1="12" y1="3" x2="12" y2="6"/>
+    <line x1="12" y1="18" x2="12" y2="21"/>
+    <line x1="3" y1="12" x2="6" y2="12"/>
+    <line x1="18" y1="12" x2="21" y2="12"/>
+    <circle cx="12" cy="12" r="3"/>
+    <line x1="8.5" y1="8.5" x2="10.5" y2="10.5"/>
+    <line x1="15.5" y1="8.5" x2="13.5" y2="10.5"/>
+    <line x1="8.5" y1="15.5" x2="10.5" y2="13.5"/>
+    <line x1="15.5" y1="15.5" x2="13.5" y2="13.5"/>
+  </g>
+  <text x="485" y="122" font-family="'Castoro', Georgia, serif" font-size="14" font-weight="400" fill="#FFFFFF" text-anchor="middle">Smart Assertion Engine</text>
+  <!-- Auto-tuning badge -->
+  <rect x="362" y="132" width="148" height="16" rx="3" fill="#0A4170"/>
+  <text x="436" y="143" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#B0EAFC" text-anchor="middle">Auto-tuning thresholds</text>
+  <text x="485" y="168" font-family="'Geist', sans-serif" font-size="9" font-weight="300" fill="#767473" text-anchor="middle">STDDEV algorithm · 60-day lookback · sensitivity controls</text>
+
+  <!-- ── Subsystem 2: Anomaly Detection ── -->
+  <rect x="354" y="190" width="262" height="90" rx="6" fill="#0A4170"/>
+  <!-- Icon: alert/wave — stroke-only -->
+  <g transform="translate(454, 198)" stroke="#3CBBEB" stroke-width="1.6" fill="none">
+    <polyline points="0,16 4,8 8,14 12,4 16,10 20,6 24,12"/>
+  </g>
+  <text x="485" y="224" font-family="'Castoro', Georgia, serif" font-size="14" font-weight="400" fill="#FFFFFF" text-anchor="middle">Anomaly Detection</text>
+  <!-- Sub-items row -->
+  <rect x="362" y="232" width="246" height="38" rx="4" fill="#002131"/>
+  <text x="485" y="248" font-family="'Geist', sans-serif" font-size="10" font-weight="500" fill="#3CBBEB" text-anchor="middle">Freshness</text>
+  <line x1="520" y1="238" x2="520" y2="262" stroke="#0A4170" stroke-width="1"/>
+  <text x="485" y="262" font-family="'Geist', sans-serif" font-size="10" font-weight="500" fill="#3CBBEB" text-anchor="middle">Volume</text>
+  <line x1="450" y1="238" x2="450" y2="262" stroke="#0A4170" stroke-width="1"/>
+  <text x="406" y="248" font-family="'Geist', sans-serif" font-size="10" font-weight="500" fill="#B0EAFC" text-anchor="middle">Freshness</text>
+  <text x="485" y="248" font-family="'Geist', sans-serif" font-size="10" font-weight="500" fill="#B0EAFC" text-anchor="middle">Volume</text>
+  <text x="564" y="248" font-family="'Geist', sans-serif" font-size="10" font-weight="500" fill="#B0EAFC" text-anchor="middle">Schema</text>
+  <line x1="450" y1="238" x2="450" y2="262" stroke="#0A4170" stroke-width="1"/>
+  <line x1="520" y1="238" x2="520" y2="262" stroke="#0A4170" stroke-width="1"/>
+
+  <!-- ── Subsystem 3: Incident Management ── -->
+  <rect x="354" y="292" width="262" height="80" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+  <!-- Icon: clipboard — stroke-only -->
+  <g transform="translate(461, 302)" stroke="#0A4170" stroke-width="1.6" fill="none">
+    <rect x="2" y="4" width="20" height="16" rx="2"/>
+    <rect x="7" y="1" width="10" height="6" rx="1"/>
+    <line x1="7" y1="13" x2="17" y2="13"/>
+    <line x1="7" y1="17" x2="14" y2="17"/>
+  </g>
+  <text x="485" y="334" font-family="'Castoro', Georgia, serif" font-size="14" font-weight="400" fill="#1E1E1E" text-anchor="middle">Incident Management</text>
+  <text x="485" y="352" font-family="'Geist', sans-serif" font-size="9" font-weight="300" fill="#767473" text-anchor="middle">Raise · Track · Assign · Resolve · ACTIVE → RESOLVED</text>
+  <text x="485" y="365" font-family="'Geist', sans-serif" font-size="9" font-weight="300" fill="#767473" text-anchor="middle">OPERATIONAL / CRITICAL priority levels</text>
+
+  <!-- ── Subsystem 4: Lineage Graph & Impact Analysis ── -->
+  <rect x="354" y="384" width="262" height="104" rx="6" fill="#002131"/>
+  <!-- Icon: network nodes — stroke-only -->
+  <g transform="translate(461, 394)" stroke="#3CBBEB" stroke-width="1.6" fill="none">
+    <circle cx="12" cy="6" r="4"/>
+    <circle cx="4" cy="18" r="3"/>
+    <circle cx="20" cy="18" r="3"/>
+    <line x1="12" y1="10" x2="6" y2="15"/>
+    <line x1="12" y1="10" x2="18" y2="15"/>
+    <line x1="7" y1="18" x2="17" y2="18"/>
+  </g>
+  <text x="485" y="428" font-family="'Castoro', Georgia, serif" font-size="14" font-weight="400" fill="#FFFFFF" text-anchor="middle">Lineage Graph &amp;</text>
+  <text x="485" y="446" font-family="'Castoro', Georgia, serif" font-size="14" font-weight="400" fill="#FFFFFF" text-anchor="middle">Impact Analysis</text>
+  <!-- Downstream badge -->
+  <rect x="362" y="456" width="166" height="18" rx="3" fill="#0A4170"/>
+  <text x="445" y="468" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#B0EAFC" text-anchor="middle">Downstream impact tracking</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROW — Platform Core to Alert Destinations -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <line x1="634" y1="283" x2="734" y2="283" stroke="#3CBBEB" stroke-width="2" marker-end="url(#arrow-right)"/>
+
+  <!-- Arrow label background -->
+  <rect x="637" y="258" width="94" height="30" rx="4" fill="#B0EAFC"/>
+  <text x="684" y="270" font-family="'Geist', sans-serif" font-size="9" font-weight="600" fill="#002131" text-anchor="middle">Alerts &amp;</text>
+  <text x="684" y="282" font-family="'Geist', sans-serif" font-size="9" font-weight="400" fill="#002131" text-anchor="middle">Notifications</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- RIGHT SECTION — ALERT DESTINATIONS -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- Destinations background -->
+  <rect x="740" y="72" width="190" height="428" rx="8" fill="#F2F1EE" stroke="#B0EAFC" stroke-width="1.2"/>
+
+  <!-- Slack tile -->
+  <rect x="752" y="148" width="166" height="80" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+  <!-- Slack icon — stroke-only approximation -->
+  <g transform="translate(819, 160)" stroke="#0A4170" stroke-width="1.6" fill="none">
+    <rect x="0" y="6" width="6" height="6" rx="1"/>
+    <rect x="8" y="0" width="6" height="6" rx="1"/>
+    <rect x="8" y="8" width="6" height="6" rx="1"/>
+    <rect x="16" y="6" width="6" height="6" rx="1"/>
+    <line x1="6" y1="9" x2="8" y2="9"/>
+    <line x1="14" y1="9" x2="16" y2="9"/>
+    <line x1="11" y1="6" x2="11" y2="8"/>
+    <line x1="11" y1="14" x2="11" y2="16"/>
+  </g>
+  <text x="835" y="208" font-family="'Geist', sans-serif" font-size="12" font-weight="500" fill="#1E1E1E" text-anchor="middle">Slack</text>
+  <text x="835" y="222" font-family="'Geist', sans-serif" font-size="9" font-weight="300" fill="#767473" text-anchor="middle">Channel notifications</text>
+
+  <!-- MS Teams tile -->
+  <rect x="752" y="240" width="166" height="80" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+  <!-- Teams icon — stroke-only -->
+  <g transform="translate(819, 252)" stroke="#0A4170" stroke-width="1.6" fill="none">
+    <rect x="4" y="4" width="14" height="14" rx="2"/>
+    <rect x="0" y="0" width="12" height="12" rx="2"/>
+    <line x1="4" y1="6" x2="8" y2="6"/>
+    <line x1="4" y1="9" x2="8" y2="9"/>
+  </g>
+  <text x="835" y="298" font-family="'Geist', sans-serif" font-size="12" font-weight="500" fill="#1E1E1E" text-anchor="middle">MS Teams</text>
+  <text x="835" y="312" font-family="'Geist', sans-serif" font-size="9" font-weight="300" fill="#767473" text-anchor="middle">Team channel alerts</text>
+
+  <!-- Email tile -->
+  <rect x="752" y="332" width="166" height="80" rx="6" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+  <!-- Email icon — stroke-only -->
+  <g transform="translate(819, 344)" stroke="#0A4170" stroke-width="1.6" fill="none">
+    <rect x="0" y="3" width="24" height="16" rx="2"/>
+    <polyline points="0,3 12,13 24,3"/>
+  </g>
+  <text x="835" y="390" font-family="'Geist', sans-serif" font-size="12" font-weight="500" fill="#1E1E1E" text-anchor="middle">Email</text>
+  <text x="835" y="404" font-family="'Geist', sans-serif" font-size="9" font-weight="300" fill="#767473" text-anchor="middle">Direct notifications</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- VERTICAL CONNECTORS inside Platform Core -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <line x1="485" y1="180" x2="485" y2="190" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arrow-right-blue)" transform="rotate(90, 485, 185)"/>
+  <!-- connector 1→2 -->
+  <line x1="485" y1="180" x2="485" y2="190" stroke="#3CBBEB" stroke-width="1.2"/>
+  <!-- connector 2→3 -->
+  <line x1="485" y1="280" x2="485" y2="292" stroke="#3CBBEB" stroke-width="1.2"/>
+  <!-- connector 3→4 -->
+  <line x1="485" y1="372" x2="485" y2="384" stroke="#3CBBEB" stroke-width="1.2"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- BOTTOM CAPTION BAR -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <rect x="40" y="492" width="880" height="20" rx="4" fill="#002131"/>
+  <text x="480" y="506" font-family="'Geist', sans-serif" font-size="10" font-weight="400" fill="#B0EAFC" text-anchor="middle">DataHub Anomaly Detection — Metadata-driven data quality monitoring with ML-powered smart assertions and automated incident management</text>
+
+</svg>
