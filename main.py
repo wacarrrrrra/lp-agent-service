@@ -1598,7 +1598,10 @@ async def request_form():
   </select>
 
   <label>Primary audience</label>
-  <input name="audience" placeholder="e.g. Data Engineers, CDOs">
+  <select name="audience">
+    <option value="Platform Engineer">Platform Engineer</option>
+    <option value="Economic Buyer">Economic Buyer</option>
+  </select>
 
   <label>Offer</label>
   <input name="offer" placeholder="e.g. Free trial available">
