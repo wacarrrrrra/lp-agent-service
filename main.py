@@ -223,6 +223,68 @@ def parse_secondary_keywords(raw: Optional[str]) -> List[str]:
         out.append(k)
     return out
 
+def parse_workflow_request(text: str) -> Optional[Dict]:
+    """
+    Parse an [LP-REQUEST] message posted by a Slack Workflow.
+
+    Expected format (all fields except Search term are optional):
+        [LP-REQUEST]
+        Search term: data governance software
+        Secondary keywords: data catalog, metadata management
+        CTA: Demo
+        Intent: Commercial
+        Audience: Data Engineers
+        Offer: Free trial available
+        Must include: SOC 2 compliance
+        Must not say: cheap, easy
+
+    Returns a dict with the same keys as extract_modal_values(), or None
+    if the message does not contain [LP-REQUEST].
+    """
+    if "[LP-REQUEST]" not in text:
+        return None
+
+    def _field(label: str) -> str:
+        m = re.search(rf'^\s*{re.escape(label)}\s*:\s*(.+)', text, re.IGNORECASE | re.MULTILINE)
+        return m.group(1).strip() if m else ""
+
+    search_term = _field("Search term")
+    if not search_term:
+        return None  # mandatory field missing — ignore the message
+
+    cta_raw = _field("CTA") or _field("Primary CTA") or "Demo"
+    intent_raw = _field("Intent") or "Commercial"
+
+    # Normalise CTA to one of the four valid values
+    cta_map = {
+        "demo": "Demo",
+        "free trial": "Free Trial",
+        "trial": "Free Trial",
+        "product tour": "Product Tour",
+        "tour": "Product Tour",
+        "bi-weekly demo": "Bi-weekly Demo",
+        "biweekly demo": "Bi-weekly Demo",
+    }
+    primary_cta = cta_map.get(cta_raw.lower().strip(), "Demo")
+
+    intent_map = {
+        "transactional": "Transactional",
+        "commercial": "Commercial",
+        "informational": "Informational",
+    }
+    intent = intent_map.get(intent_raw.lower().strip(), "Commercial")
+
+    return {
+        "search_term": search_term,
+        "secondary_keywords": _field("Secondary keywords"),
+        "primary_cta": primary_cta,
+        "intent": intent,
+        "primary_audience": _field("Audience") or _field("Primary audience") or "",
+        "offer": _field("Offer"),
+        "must_include": _field("Must include"),
+        "must_not_say": _field("Must not say"),
+    }
+
 # ----------------------------
 # Thread accumulation
 # ----------------------------
@@ -1505,7 +1567,7 @@ async def slack_events(request: Request):
     event = body.get("event", {}) or {}
     if event.get("type") != "message":
         return JSONResponse({"ok": True})
-    if event.get("subtype"):
+    if event.get("subtype") and "[LP-REQUEST]" not in (event.get("text") or ""):
         return JSONResponse({"ok": True})
 
     thread_ts = event.get("thread_ts") or event.get("ts")
@@ -1555,6 +1617,80 @@ async def slack_events(request: Request):
                 logger.info("Job reconstructed for thread %s search_term=%s", thread_ts, search_term)
         except Exception as e:
             logger.warning("Job reconstruction failed: %s", e)
+
+    # ── Slack Workflow trigger ──────────────────────────────────────────────
+    # Workflows (used for Slack Connect / external guests) post a structured
+    # [LP-REQUEST] message to #sem-lp-requests.  We detect it here so the
+    # workflow can be set up entirely in the Slack UI — no slash command needed.
+    if "[LP-REQUEST]" in text and not job:
+        wf_fields = parse_workflow_request(text)
+        if wf_fields:
+            wf_search_term = wf_fields["search_term"]
+            wf_request_id = generate_request_id()
+            wf_slug = slugify(wf_search_term)
+            wf_secondary_keywords = parse_secondary_keywords(wf_fields.get("secondary_keywords"))
+            bart_channel = SEM_LP_REQUESTS_CHANNEL or SLACK_DEFAULT_CHANNEL
+            requester_channel = SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL
+
+            async def run_workflow_pipeline(
+                _fields=wf_fields,
+                _request_id=wf_request_id,
+                _slug=wf_slug,
+                _secondary_keywords=wf_secondary_keywords,
+                _bart_channel=bart_channel,
+                _requester_channel=requester_channel,
+            ):
+                try:
+                    await post_message(
+                        _requester_channel,
+                        f"Got it — drafting `{_fields['search_term']}` now. "
+                        f"I'll post the package here when it's ready. _(Request ID: {_request_id})_",
+                    )
+
+                    starter = (
+                        f"🚀 *LP request started (via Workflow)*\n"
+                        f"*Request ID:* {_request_id}\n"
+                        f"*Search term:* {_fields['search_term']}\n"
+                        f"*Secondary keywords:* {', '.join(_secondary_keywords) if _secondary_keywords else '—'}\n"
+                        f"*Primary CTA:* {_fields['primary_cta']}\n"
+                        f"*Intent:* {_fields['intent']}\n"
+                        f"*Primary Audience:* {_fields.get('primary_audience') or '—'}\n"
+                    )
+                    bart_thread_ts = await post_message(_bart_channel, starter)
+
+                    JOBS[bart_thread_ts] = {
+                        "request_id": _request_id,
+                        "slug": _slug,
+                        "bart_channel": _bart_channel,
+                        "requester_channel": _requester_channel,
+                        "fields": _fields,
+                        "secondary_keywords": _secondary_keywords,
+                        "awaiting": "bart",
+                        "bart_output": None,
+                    }
+                    _save_jobs()
+
+                    await post_message(
+                        _bart_channel,
+                        bart_prompt(_fields["search_term"], _fields["primary_cta"], _fields["intent"], _secondary_keywords),
+                        thread_ts=bart_thread_ts,
+                    )
+                    await post_message(
+                        _bart_channel,
+                        "⏳ Waiting for Bart… pipeline continues automatically after `BART_DONE`.",
+                        thread_ts=bart_thread_ts,
+                    )
+
+                except Exception as e:
+                    logger.exception("Workflow pipeline failed to start: %s", e)
+                    try:
+                        await post_message(_requester_channel, f"❌ Pipeline failed to start: `{e}`")
+                    except Exception:
+                        pass
+
+            asyncio.create_task(run_workflow_pipeline())
+            return JSONResponse({"ok": True})
+    # ───────────────────────────────────────────────────────────────────────
 
     if not job:
         return JSONResponse({"ok": True})
