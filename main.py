@@ -1551,6 +1551,268 @@ async def _handle_interactivity(request: Request):
         logger.exception("Interactivity handler error: %s", e)
         return JSONResponse({"response_action": "clear"})
 
+@app.get("/request")
+async def request_form():
+    from fastapi.responses import HTMLResponse
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New LP Request — DataHub</title>
+<style>
+  body { font-family: sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; margin-bottom: 8px; }
+  p.sub { color: #666; margin-bottom: 32px; font-size: 0.9rem; }
+  label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; margin-top: 20px; }
+  input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box; }
+  textarea { height: 60px; resize: vertical; }
+  button { margin-top: 28px; background: #1a1a1a; color: #fff; border: none; padding: 12px 28px; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+  button:hover { background: #333; }
+  .required { color: #c00; }
+</style>
+</head>
+<body>
+<h1>New SEM Landing Page Request</h1>
+<p class="sub">Fill out the form below. Results will be posted to <strong>#sem-lp-build-kits</strong>.</p>
+<form method="POST" action="/request">
+  <label>Search term <span class="required">*</span></label>
+  <input name="search_term" required placeholder="e.g. data governance software">
+
+  <label>Secondary keywords</label>
+  <input name="secondary_keywords" placeholder="e.g. data catalog, metadata management">
+
+  <label>Primary CTA <span class="required">*</span></label>
+  <select name="cta">
+    <option value="Demo">Demo</option>
+    <option value="Free Trial">Free Trial</option>
+    <option value="Product Tour">Product Tour</option>
+    <option value="Bi-weekly Demo">Bi-weekly Demo</option>
+  </select>
+
+  <label>Intent <span class="required">*</span></label>
+  <select name="intent">
+    <option value="Commercial">Commercial</option>
+    <option value="Transactional">Transactional</option>
+    <option value="Informational">Informational</option>
+  </select>
+
+  <label>Primary audience</label>
+  <input name="audience" placeholder="e.g. Data Engineers, CDOs">
+
+  <label>Offer</label>
+  <input name="offer" placeholder="e.g. Free trial available">
+
+  <label>Must include</label>
+  <textarea name="must_include" placeholder="Claims or facts that must appear on the page"></textarea>
+
+  <label>Must not say</label>
+  <textarea name="must_not_say" placeholder="Words or claims to avoid"></textarea>
+
+  <button type="submit">Submit Request</button>
+</form>
+</body>
+</html>"""
+    return HTMLResponse(html)
+
+
+@app.post("/request")
+async def request_form_submit(request: Request):
+    from fastapi.responses import HTMLResponse
+    form = await request.form()
+
+    search_term = (form.get("search_term") or "").strip()
+    if not search_term:
+        return HTMLResponse("<p>Error: search_term is required.</p>", status_code=400)
+
+    cta_map = {
+        "demo": "Demo", "free trial": "Free Trial", "trial": "Free Trial",
+        "product tour": "Product Tour", "tour": "Product Tour",
+        "bi-weekly demo": "Bi-weekly Demo", "biweekly demo": "Bi-weekly Demo",
+    }
+    intent_map = {
+        "transactional": "Transactional",
+        "commercial": "Commercial",
+        "informational": "Informational",
+    }
+
+    fields = {
+        "search_term": search_term,
+        "secondary_keywords": (form.get("secondary_keywords") or ""),
+        "primary_cta": cta_map.get((form.get("cta") or "Demo").lower(), "Demo"),
+        "intent": intent_map.get((form.get("intent") or "Commercial").lower(), "Commercial"),
+        "primary_audience": (form.get("audience") or ""),
+        "offer": (form.get("offer") or ""),
+        "must_include": (form.get("must_include") or ""),
+        "must_not_say": (form.get("must_not_say") or ""),
+    }
+
+    request_id = generate_request_id()
+    slug = slugify(search_term)
+    secondary_keywords = parse_secondary_keywords(fields["secondary_keywords"])
+    bart_channel = SEM_LP_REQUESTS_CHANNEL or SLACK_DEFAULT_CHANNEL
+    requester_channel = SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL
+
+    async def run_form_pipeline():
+        try:
+            await post_message(
+                requester_channel,
+                f"Got it — drafting `{search_term}` now. "
+                f"I'll post the package here when it's ready. _(Request ID: {request_id})_",
+            )
+            starter = (
+                f"🚀 *LP request started (via web form)*\n"
+                f"*Request ID:* {request_id}\n"
+                f"*Search term:* {fields['search_term']}\n"
+                f"*Secondary keywords:* {', '.join(secondary_keywords) if secondary_keywords else '—'}\n"
+                f"*Primary CTA:* {fields['primary_cta']}\n"
+                f"*Intent:* {fields['intent']}\n"
+                f"*Primary Audience:* {fields.get('primary_audience') or '—'}\n"
+            )
+            bart_thread_ts = await post_message(bart_channel, starter)
+
+            JOBS[bart_thread_ts] = {
+                "request_id": request_id,
+                "slug": slug,
+                "bart_channel": bart_channel,
+                "requester_channel": requester_channel,
+                "fields": fields,
+                "secondary_keywords": secondary_keywords,
+                "awaiting": "bart",
+                "bart_output": None,
+            }
+            _save_jobs()
+
+            await post_message(
+                bart_channel,
+                bart_prompt(fields["search_term"], fields["primary_cta"], fields["intent"], secondary_keywords),
+                thread_ts=bart_thread_ts,
+            )
+            await post_message(
+                bart_channel,
+                "⏳ Waiting for Bart… pipeline continues automatically after `BART_DONE`.",
+                thread_ts=bart_thread_ts,
+            )
+        except Exception as e:
+            logger.exception("Form pipeline failed: %s", e)
+
+    asyncio.create_task(run_form_pipeline())
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Request submitted</title>
+<style>body{{font-family:sans-serif;max-width:500px;margin:80px auto;padding:0 20px;color:#1a1a1a}}</style>
+</head>
+<body>
+<h1>Request submitted</h1>
+<p><strong>{search_term}</strong> is being drafted now.</p>
+<p>Results will be posted to <strong>#sem-lp-build-kits</strong> when ready.</p>
+<p style="color:#888;font-size:0.85rem">Request ID: {request_id}</p>
+<p><a href="/request">Submit another</a></p>
+</body>
+</html>"""
+    return HTMLResponse(html)
+
+
+@app.post("/slack/workflow")
+async def slack_workflow(request: Request):
+    """
+    Called by a Slack Workflow Builder 'Send a webhook' step.
+    Expects JSON body with LP request fields.
+    No Slack signature verification — protect with a shared secret in the URL
+    or leave open (Render URL is not publicly advertised).
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "invalid_json"}, status_code=400)
+
+    search_term = (body.get("search_term") or body.get("Search term") or "").strip()
+    if not search_term:
+        return JSONResponse({"ok": False, "error": "search_term required"}, status_code=400)
+
+    cta_raw = (body.get("cta") or body.get("CTA") or "Demo").strip()
+    intent_raw = (body.get("intent") or body.get("Intent") or "Commercial").strip()
+
+    cta_map = {
+        "demo": "Demo", "free trial": "Free Trial", "trial": "Free Trial",
+        "product tour": "Product Tour", "tour": "Product Tour",
+        "bi-weekly demo": "Bi-weekly Demo", "biweekly demo": "Bi-weekly Demo",
+    }
+    intent_map = {
+        "transactional": "Transactional",
+        "commercial": "Commercial",
+        "informational": "Informational",
+    }
+
+    fields = {
+        "search_term": search_term,
+        "secondary_keywords": (body.get("secondary_keywords") or body.get("Secondary keywords") or ""),
+        "primary_cta": cta_map.get(cta_raw.lower(), "Demo"),
+        "intent": intent_map.get(intent_raw.lower(), "Commercial"),
+        "primary_audience": (body.get("audience") or body.get("Audience") or body.get("primary_audience") or ""),
+        "offer": (body.get("offer") or body.get("Offer") or ""),
+        "must_include": (body.get("must_include") or body.get("Must include") or ""),
+        "must_not_say": (body.get("must_not_say") or body.get("Must not say") or ""),
+    }
+
+    request_id = generate_request_id()
+    slug = slugify(search_term)
+    secondary_keywords = parse_secondary_keywords(fields["secondary_keywords"])
+    bart_channel = SEM_LP_REQUESTS_CHANNEL or SLACK_DEFAULT_CHANNEL
+    requester_channel = SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL
+
+    async def run_wh_pipeline():
+        try:
+            await post_message(
+                requester_channel,
+                f"Got it — drafting `{search_term}` now. "
+                f"I'll post the package here when it's ready. _(Request ID: {request_id})_",
+            )
+            starter = (
+                f"🚀 *LP request started (via Workflow)*\n"
+                f"*Request ID:* {request_id}\n"
+                f"*Search term:* {fields['search_term']}\n"
+                f"*Secondary keywords:* {', '.join(secondary_keywords) if secondary_keywords else '—'}\n"
+                f"*Primary CTA:* {fields['primary_cta']}\n"
+                f"*Intent:* {fields['intent']}\n"
+                f"*Primary Audience:* {fields.get('primary_audience') or '—'}\n"
+            )
+            bart_thread_ts = await post_message(bart_channel, starter)
+
+            JOBS[bart_thread_ts] = {
+                "request_id": request_id,
+                "slug": slug,
+                "bart_channel": bart_channel,
+                "requester_channel": requester_channel,
+                "fields": fields,
+                "secondary_keywords": secondary_keywords,
+                "awaiting": "bart",
+                "bart_output": None,
+            }
+            _save_jobs()
+
+            await post_message(
+                bart_channel,
+                bart_prompt(fields["search_term"], fields["primary_cta"], fields["intent"], secondary_keywords),
+                thread_ts=bart_thread_ts,
+            )
+            await post_message(
+                bart_channel,
+                "⏳ Waiting for Bart… pipeline continues automatically after `BART_DONE`.",
+                thread_ts=bart_thread_ts,
+            )
+        except Exception as e:
+            logger.exception("Webhook pipeline failed: %s", e)
+            try:
+                await post_message(requester_channel, f"❌ Pipeline failed to start: `{e}`")
+            except Exception:
+                pass
+
+    asyncio.create_task(run_wh_pipeline())
+    return JSONResponse({"ok": True, "request_id": request_id, "slug": slug})
+
+
 @app.post("/slack/events")
 async def slack_events(request: Request):
     raw_body = await request.body()
