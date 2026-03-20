@@ -44,6 +44,7 @@ SEM_LP_BUILD_KITS_CHANNEL = os.getenv("SEM_LP_BUILD_KITS_CHANNEL", "")  # agency
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "")
 GITHUB_BRANCH = os.getenv("GITHUB_BRANCH", "main")
+RENDER_URL = os.getenv("RENDER_URL", "").rstrip("/")
 
 # ----------------------------
 # Job state — persisted to disk so restarts don't lose in-flight jobs
@@ -873,8 +874,8 @@ async def generate_full_lp(
     full_html = f"<!doctype html>\n<html lang=\"en\">\n{head}\n<body>\n{page_html}\n</body>\n</html>"
 
     pages_url = (
-        f"{GITHUB_PAGES_BASE}/generated-pages/{metadata['slug']}/"
-        if GITHUB_PAGES_BASE else ""
+        f"{RENDER_URL}/preview/{metadata['slug']}"
+        if RENDER_URL else ""
     )
     return {
         "html": full_html,
@@ -1551,10 +1552,36 @@ async def _handle_interactivity(request: Request):
         logger.exception("Interactivity handler error: %s", e)
         return JSONResponse({"response_action": "clear"})
 
+@app.get("/preview/{slug}")
+async def preview_page(slug: str):
+    from fastapi.responses import HTMLResponse
+    if not GITHUB_TOKEN or not GITHUB_REPO:
+        return HTMLResponse("<p>Preview unavailable — GitHub not configured.</p>", status_code=503)
+
+    path = f"generated-pages/{slug}/index.html"
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}"
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    async with httpx.AsyncClient(timeout=20) as client:
+        r = await client.get(url, headers=headers, params={"ref": GITHUB_BRANCH})
+
+    if r.status_code == 404:
+        return HTMLResponse("<p>Page not found.</p>", status_code=404)
+    if r.status_code != 200:
+        return HTMLResponse(f"<p>GitHub error {r.status_code}.</p>", status_code=502)
+
+    content = base64.b64decode(r.json()["content"]).decode("utf-8")
+    return HTMLResponse(content)
+
+
 @app.get("/request")
 async def request_form():
     from fastapi.responses import HTMLResponse
-    html = """<!DOCTYPE html>
+    logo = LOGO_SVG_BLACK if LOGO_SVG_BLACK and not LOGO_SVG_BLACK.startswith("[Missing") else ""
+    html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1683,7 +1710,7 @@ async def request_form():
 </head>
 <body>
 <header>
-  <img src="https://datahub.com/img/datahub-logo-color-black.svg" alt="DataHub">
+  <div style="height:28px;display:flex;align-items:center">{logo}</div>
 </header>
 <main>
   <p class="eyebrow">SEM</p>
@@ -1844,6 +1871,7 @@ async def request_form_submit(request: Request):
 
     asyncio.create_task(run_form_pipeline())
 
+    logo = LOGO_SVG_BLACK if LOGO_SVG_BLACK and not LOGO_SVG_BLACK.startswith("[Missing") else ""
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1871,7 +1899,7 @@ async def request_form_submit(request: Request):
 </head>
 <body>
 <header>
-  <img src="https://datahub.com/img/datahub-logo-color-black.svg" alt="DataHub">
+  <div style="height:28px;display:flex;align-items:center">{logo}</div>
 </header>
 <main>
   <div class="check">
