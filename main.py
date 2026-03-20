@@ -1613,8 +1613,8 @@ async def request_form():
     display: flex;
     align-items: center;
   }
-  header img { height: 250px; }
-  header svg { height: 250px; width: auto; }
+  header img { height: 50px; }
+  header svg { height: 50px; width: auto; }
   main {
     max-width: 720px;
     margin: 56px auto;
@@ -1711,7 +1711,7 @@ async def request_form():
 </head>
 <body>
 <header>
-  <div style="height:250px;display:flex;align-items:center">__LOGO__</div>
+  <div style="height:50px;display:flex;align-items:center">__LOGO__</div>
 </header>
 <main>
   <p class="eyebrow">SEM</p>
@@ -1886,7 +1886,7 @@ async def request_form_submit(request: Request):
   *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{ font-family: 'Geist', sans-serif; background: var(--dh-off-white); color: var(--dh-dark); min-height: 100vh; }}
   header {{ background: var(--dh-off-white); border-bottom: 1px solid var(--dh-border); padding: 0 40px; height: 64px; display: flex; align-items: center; }}
-  header img {{ height: 250px; }} header svg {{ height: 250px; width: auto; }}
+  header img {{ height: 50px; }} header svg {{ height: 50px; width: auto; }}
   main {{ max-width: 480px; margin: 80px auto; padding: 0 24px; text-align: center; }}
   .check {{ width: 48px; height: 48px; background: var(--dh-bright); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; }}
   .check svg {{ width: 22px; height: 22px; }}
@@ -1900,7 +1900,7 @@ async def request_form_submit(request: Request):
 </head>
 <body>
 <header>
-  <div style="height:250px;display:flex;align-items:center">__LOGO__</div>
+  <div style="height:50px;display:flex;align-items:center">__LOGO__</div>
 </header>
 <main>
   <div class="check">
