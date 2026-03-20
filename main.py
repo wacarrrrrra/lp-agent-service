@@ -1581,7 +1581,7 @@ async def preview_page(slug: str):
 async def request_form():
     from fastapi.responses import HTMLResponse
     logo = LOGO_SVG_BLACK if LOGO_SVG_BLACK and not LOGO_SVG_BLACK.startswith("[Missing") else ""
-    html = f"""<!DOCTYPE html>
+    html = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1710,7 +1710,7 @@ async def request_form():
 </head>
 <body>
 <header>
-  <div style="height:28px;display:flex;align-items:center">{logo}</div>
+  <div style="height:28px;display:flex;align-items:center">__LOGO__</div>
 </header>
 <main>
   <p class="eyebrow">SEM</p>
@@ -1785,7 +1785,7 @@ async def request_form():
   </div>
 </main>
 </body>
-</html>"""
+</html>""".replace("__LOGO__", logo)
     return HTMLResponse(html)
 
 
@@ -1899,7 +1899,7 @@ async def request_form_submit(request: Request):
 </head>
 <body>
 <header>
-  <div style="height:28px;display:flex;align-items:center">{logo}</div>
+  <div style="height:28px;display:flex;align-items:center">__LOGO__</div>
 </header>
 <main>
   <div class="check">
@@ -1914,7 +1914,7 @@ async def request_form_submit(request: Request):
   <a href="/request">Submit another request</a>
 </main>
 </body>
-</html>"""
+</html>""".replace("__LOGO__", logo)
     return HTMLResponse(html)
 
 
