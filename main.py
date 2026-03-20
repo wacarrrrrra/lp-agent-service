@@ -1560,60 +1560,203 @@ async def request_form():
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>New LP Request — DataHub</title>
+<link rel="icon" type="image/x-icon" href="https://datahub.com/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Castoro:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  body { font-family: sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; color: #1a1a1a; }
-  h1 { font-size: 1.4rem; margin-bottom: 8px; }
-  p.sub { color: #666; margin-bottom: 32px; font-size: 0.9rem; }
-  label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; margin-top: 20px; }
-  input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box; }
-  textarea { height: 60px; resize: vertical; }
-  button { margin-top: 28px; background: #1a1a1a; color: #fff; border: none; padding: 12px 28px; border-radius: 4px; font-size: 1rem; cursor: pointer; }
-  button:hover { background: #333; }
-  .required { color: #c00; }
+  :root {
+    --dh-off-white: #F2F1EE;
+    --dh-border: #DDDBD6;
+    --dh-dark: #1E1E1E;
+    --dh-muted: #767473;
+    --dh-blue: #0A4170;
+    --dh-bright: #3CBBEB;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Geist', sans-serif;
+    background: var(--dh-off-white);
+    color: var(--dh-dark);
+    min-height: 100vh;
+  }
+  header {
+    background: var(--dh-off-white);
+    border-bottom: 1px solid var(--dh-border);
+    padding: 0 40px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+  }
+  header img { height: 28px; }
+  main {
+    max-width: 560px;
+    margin: 56px auto;
+    padding: 0 24px;
+  }
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dh-blue);
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Castoro', serif;
+    font-size: 2rem;
+    font-weight: 400;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+  .sub {
+    font-size: 0.9rem;
+    color: var(--dh-muted);
+    margin-bottom: 40px;
+    line-height: 1.6;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--dh-border);
+    border-radius: 8px;
+    padding: 32px;
+  }
+  .field { margin-bottom: 20px; }
+  .field:last-of-type { margin-bottom: 0; }
+  label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--dh-dark);
+    margin-bottom: 6px;
+  }
+  .hint {
+    font-size: 0.75rem;
+    color: var(--dh-muted);
+    margin-top: 4px;
+  }
+  input, select, textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--dh-border);
+    border-radius: 4px;
+    font-family: 'Geist', sans-serif;
+    font-size: 0.9rem;
+    color: var(--dh-dark);
+    background: #fff;
+    appearance: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--dh-bright);
+  }
+  textarea { height: 72px; resize: vertical; }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23767473' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  .divider {
+    border: none;
+    border-top: 1px solid var(--dh-border);
+    margin: 24px 0;
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .required { color: #B00; }
+  button {
+    margin-top: 28px;
+    width: 100%;
+    background: var(--dh-dark);
+    color: #fff;
+    border: none;
+    padding: 13px 24px;
+    border-radius: 4px;
+    font-family: 'Geist', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover { background: var(--dh-blue); }
 </style>
 </head>
 <body>
-<h1>New SEM Landing Page Request</h1>
-<p class="sub">Fill out the form below. Results will be posted to <strong>#sem-lp-build-kits</strong>.</p>
-<form method="POST" action="/request">
-  <label>Search term <span class="required">*</span></label>
-  <input name="search_term" required placeholder="e.g. data governance software">
+<header>
+  <img src="https://datahub.com/img/datahub-logo-color-black.svg" alt="DataHub">
+</header>
+<main>
+  <p class="eyebrow">SEM</p>
+  <h1>New Landing Page Request</h1>
+  <p class="sub">Fill out the brief below. Results will be posted to <strong>#sem-lp-build-kits</strong> when ready.</p>
 
-  <label>Secondary keywords</label>
-  <input name="secondary_keywords" placeholder="e.g. data catalog, metadata management">
+  <div class="card">
+    <form method="POST" action="/request">
 
-  <label>Primary CTA <span class="required">*</span></label>
-  <select name="cta">
-    <option value="Demo">Demo</option>
-    <option value="Free Trial">Free Trial</option>
-    <option value="Product Tour">Product Tour</option>
-    <option value="Bi-weekly Demo">Bi-weekly Demo</option>
-  </select>
+      <div class="field">
+        <label>Search term <span class="required">*</span></label>
+        <input name="search_term" required placeholder="e.g. data governance software">
+        <p class="hint">The exact keyword this page will target.</p>
+      </div>
 
-  <label>Intent <span class="required">*</span></label>
-  <select name="intent">
-    <option value="Commercial">Commercial</option>
-    <option value="Transactional">Transactional</option>
-    <option value="Informational">Informational</option>
-  </select>
+      <div class="field">
+        <label>Secondary keywords</label>
+        <input name="secondary_keywords" placeholder="e.g. data catalog, metadata management">
+        <p class="hint">Comma-separated. Distributed across H2s and H3s.</p>
+      </div>
 
-  <label>Primary audience</label>
-  <select name="audience">
-    <option value="Platform Engineer">Platform Engineer</option>
-    <option value="Economic Buyer">Economic Buyer</option>
-  </select>
+      <hr class="divider">
 
-  <label>Offer</label>
-  <input name="offer" placeholder="e.g. Free trial available">
+      <div class="row">
+        <div class="field">
+          <label>Primary CTA <span class="required">*</span></label>
+          <select name="cta">
+            <option value="Demo">Demo</option>
+            <option value="Free Trial">Free Trial</option>
+            <option value="Product Tour">Product Tour</option>
+            <option value="Bi-weekly Demo">Bi-weekly Demo</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Intent <span class="required">*</span></label>
+          <select name="intent">
+            <option value="Commercial">Commercial</option>
+            <option value="Transactional">Transactional</option>
+            <option value="Informational">Informational</option>
+          </select>
+        </div>
+      </div>
 
-  <label>Must include</label>
-  <textarea name="must_include" placeholder="Claims or facts that must appear on the page"></textarea>
+      <div class="field">
+        <label>Primary audience <span class="required">*</span></label>
+        <select name="audience">
+          <option value="Platform Engineer">Platform Engineer</option>
+          <option value="Economic Buyer">Economic Buyer</option>
+        </select>
+      </div>
 
-  <label>Must not say</label>
-  <textarea name="must_not_say" placeholder="Words or claims to avoid"></textarea>
+      <hr class="divider">
 
-  <button type="submit">Submit Request</button>
-</form>
+      <div class="field">
+        <label>Offer</label>
+        <input name="offer" placeholder="e.g. Free trial available">
+      </div>
+
+      <div class="field">
+        <label>Must include</label>
+        <textarea name="must_include" placeholder="Claims or facts that must appear on the page"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Must not say</label>
+        <textarea name="must_not_say" placeholder="Words or claims to avoid"></textarea>
+      </div>
+
+      <button type="submit">Submit Request</button>
+
+    </form>
+  </div>
+</main>
 </body>
 </html>"""
     return HTMLResponse(html)
@@ -1703,15 +1846,45 @@ async def request_form_submit(request: Request):
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><title>Request submitted</title>
-<style>body{{font-family:sans-serif;max-width:500px;margin:80px auto;padding:0 20px;color:#1a1a1a}}</style>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Request submitted — DataHub</title>
+<link rel="icon" type="image/x-icon" href="https://datahub.com/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Castoro:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {{ --dh-off-white: #F2F1EE; --dh-border: #DDDBD6; --dh-dark: #1E1E1E; --dh-muted: #767473; --dh-blue: #0A4170; --dh-bright: #3CBBEB; }}
+  *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{ font-family: 'Geist', sans-serif; background: var(--dh-off-white); color: var(--dh-dark); min-height: 100vh; }}
+  header {{ background: var(--dh-off-white); border-bottom: 1px solid var(--dh-border); padding: 0 40px; height: 64px; display: flex; align-items: center; }}
+  header img {{ height: 28px; }}
+  main {{ max-width: 480px; margin: 80px auto; padding: 0 24px; text-align: center; }}
+  .check {{ width: 48px; height: 48px; background: var(--dh-bright); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; }}
+  .check svg {{ width: 22px; height: 22px; }}
+  h1 {{ font-family: 'Castoro', serif; font-size: 1.8rem; font-weight: 400; margin-bottom: 12px; }}
+  p {{ color: var(--dh-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 8px; }}
+  .term {{ color: var(--dh-dark); font-weight: 600; }}
+  .id {{ font-size: 0.75rem; color: var(--dh-border); margin-top: 32px; font-family: monospace; }}
+  a {{ display: inline-block; margin-top: 32px; color: var(--dh-blue); font-size: 0.85rem; font-weight: 500; text-decoration: none; }}
+  a:hover {{ text-decoration: underline; }}
+</style>
 </head>
 <body>
-<h1>Request submitted</h1>
-<p><strong>{search_term}</strong> is being drafted now.</p>
-<p>Results will be posted to <strong>#sem-lp-build-kits</strong> when ready.</p>
-<p style="color:#888;font-size:0.85rem">Request ID: {request_id}</p>
-<p><a href="/request">Submit another</a></p>
+<header>
+  <img src="https://datahub.com/img/datahub-logo-color-black.svg" alt="DataHub">
+</header>
+<main>
+  <div class="check">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  </div>
+  <h1>Request submitted</h1>
+  <p><span class="term">{search_term}</span> is being drafted now.</p>
+  <p>Results will be posted to <strong>#sem-lp-build-kits</strong> when ready.</p>
+  <p class="id">Request ID: {request_id}</p>
+  <a href="/request">Submit another request</a>
+</main>
 </body>
 </html>"""
     return HTMLResponse(html)
