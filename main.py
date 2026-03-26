@@ -843,22 +843,28 @@ async def generate_full_lp(
     page_html = page_html.replace('\u2014', ' ').replace('\u2013', '-')  # — and –
     page_html = page_html.replace('&mdash;', ' ').replace('&ndash;', '-')
 
-    # Lazify HubSpot form — replace render-blocking script pair with IntersectionObserver loader
+    # Lazify HubSpot form — replace render-blocking script pair with IntersectionObserver loader.
+    # Injects a target div so the form renders INSIDE the hero card, not elsewhere in the DOM.
+    _hs_counter = [0]
     _hs_pattern = re.compile(
         r'<script[^>]+//js\.hsforms\.net[^>]*></script>\s*'
         r'<script[^>]*>\s*hbspt\.forms\.create\(([\s\S]+?)\);\s*</script>',
         re.DOTALL
     )
     def _lazify_hs(m: re.Match) -> str:
-        args = m.group(1).strip()
+        _hs_counter[0] += 1
+        target_id = f"hs-form-target-{_hs_counter[0]}"
+        args = m.group(1).strip().rstrip('}')
+        args_with_target = args + f', "target": "#{target_id}"}}'
         return (
+            f'<div id="{target_id}"></div>'
             '<script>(function(){'
-            'var w=document.querySelector(".hs-form-section");if(!w)return;'
+            f'var w=document.getElementById("{target_id}");if(!w)return;'
             'new IntersectionObserver(function(e,o){'
             'if(!e[0].isIntersecting)return;o.disconnect();'
             'var s=document.createElement("script");'
             's.src="//js.hsforms.net/forms/embed/v2.js";'
-            f's.onload=function(){{hbspt.forms.create({args})}};'
+            f's.onload=function(){{hbspt.forms.create({args_with_target})}};'
             'document.head.appendChild(s)'
             '},{"rootMargin":"400px"}).observe(w)'
             '})();</script>'
