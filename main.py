@@ -131,6 +131,7 @@ GITHUB_PAGES_BASE = (
 
 def build_page_head(title: str, meta_description: str) -> str:
     """Build the full <head> with correct title/meta and the template CSS."""
+    _fonts_url = "https://fonts.googleapis.com/css2?family=Castoro:ital@0;1&family=Geist:wght@300;400;500;600&display=swap"
     return f"""<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -140,7 +141,9 @@ def build_page_head(title: str, meta_description: str) -> str:
 <link rel="icon" type="image/x-icon" href="https://datahub.com/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Castoro:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="{_fonts_url}">
+<link rel="stylesheet" href="{_fonts_url}" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="{_fonts_url}"></noscript>
 {TEMPLATE_CSS}
 </head>"""
 
@@ -735,27 +738,27 @@ Non-negotiable output rules:
 - Output ONLY the contents of <body>…</body> — nothing else
 - Do NOT write <!doctype>, <html>, <head>, <title>, <meta>, <style>, or <link> tags
 - Do NOT write any CSS — the stylesheet is already handled
-- Start your output with the first element inside <body> (e.g. the scroll progress bar or header)
-- End your output with the last element before </body> (e.g. the footer or script tags)
+- Do NOT write a <header>, <nav>, or <footer> — this page is embedded in datahub.com which provides its own header and footer
+- Do NOT write a scroll progress bar or mobile sticky CTA
+- Start your output with the opening <main> tag
+- End your output with the closing </main> tag followed by a single <script> block for FAQ accordion and any other JS
 - Title tag and meta description are handled separately — do not include them
 - H1 must include primary keyword verbatim: "{fields["search_term"]}"
-- Header: background #F2F1EE, border-bottom 1px solid #DDDBD6
-  Logo: <img src="images/dataHub_logo_color_black.svg" alt="DataHub"> — no text logo
-- Hero: background #F2F1EE — never dark; all hero text in dark neutrals
+- Hero: background #F2F1EE — never dark; all hero text in dark neutrals; hero section padding: 72px 0
 - HubSpot form: embed ONCE in the hero section only — do NOT embed a second form anywhere else on the page
   portalId: '14552909', formId: '{form_id}', region: 'na1'
+  Use the standard two-script embed pattern — the service will automatically convert it to a lazy-loader
   The form card and its container must always use a light background (#F2F1EE or #FFFFFF) — never dark
+- Images: add loading="lazy" decoding="async" to ALL images EXCEPT the hero image
+  Hero image: add fetchpriority="high" (no lazy loading on hero)
 - No italic text anywhere — font-style: normal throughout; no <em> or <i> tags
 - Visual section: grid-template-columns: 1fr (stacked vertically, never side by side)
-- No global navigation — header contains only logo + one CTA button
 - Never link to docs.datahub.com or any documentation URL — all links must go to datahub.com pages only
-- Full DataHub footer: 4 nav columns, social links (LinkedIn/GitHub/Twitter/Slack), legal bar
-  matching the sample template footer exactly — copy the footer structure from the sample template verbatim
 - CSS variables only (--dh-*), Google Fonts Castoro + Geist — no system fonts, no Arial/Inter
 - No invented metrics, logos, or social proof
 - Section spacing and layout: follow the sample template exactly — use the same padding, gap, and grid values as the template; do not invent new spacing
 - Card grid headlines (How It Works steps, benefit blocks, feature tiles): keep all headlines in a grid to 4–6 words — consistent length across every card in the same section so they align at the same height
-- Section order and classes: follow the SECTION ORDER AND CLASS REQUIREMENTS exactly — 9 content sections + footer in the specified order with the specified classes
+- Section order and classes: follow the SECTION ORDER AND CLASS REQUIREMENTS exactly — 9 content sections in the specified order with the specified classes (no header, no footer)
 - No bare section {{ }} CSS rules — target inner component classes only (.sec-header, .hover-tile-grid, .content-highlight, etc.)
 - No margin-top or margin-bottom on <section> elements — vertical rhythm comes from main gap only
 - No em-dashes (—) or en-dashes (–) anywhere in the HTML — rewrite any copy that uses them
@@ -840,16 +843,34 @@ async def generate_full_lp(
     page_html = page_html.replace('\u2014', ' ').replace('\u2013', '-')  # — and –
     page_html = page_html.replace('&mdash;', ' ').replace('&ndash;', '-')
 
+    # Lazify HubSpot form — replace render-blocking script pair with IntersectionObserver loader
+    _hs_pattern = re.compile(
+        r'<script[^>]+//js\.hsforms\.net[^>]*></script>\s*'
+        r'<script[^>]*>\s*hbspt\.forms\.create\(([\s\S]+?)\);\s*</script>',
+        re.DOTALL
+    )
+    def _lazify_hs(m: re.Match) -> str:
+        args = m.group(1).strip()
+        return (
+            '<script>(function(){'
+            'var w=document.querySelector(".hs-form-section");if(!w)return;'
+            'new IntersectionObserver(function(e,o){'
+            'if(!e[0].isIntersecting)return;o.disconnect();'
+            'var s=document.createElement("script");'
+            's.src="//js.hsforms.net/forms/embed/v2.js";'
+            f's.onload=function(){{hbspt.forms.create({args})}};'
+            'document.head.appendChild(s)'
+            '},{"rootMargin":"400px"}).observe(w)'
+            '})();</script>'
+        )
+    page_html = _hs_pattern.sub(_lazify_hs, page_html)
+
     # Inject hardcoded trust strip — replace placeholder if present, otherwise insert after first </section>
     if '<!-- TRUST_STRIP_PLACEHOLDER -->' in page_html:
         page_html = page_html.replace('<!-- TRUST_STRIP_PLACEHOLDER -->', TRUST_STRIP_HTML)
     else:
         # Fallback: insert after the first closing </section> (end of hero)
         page_html = page_html.replace('</section>', f'</section>\n{TRUST_STRIP_HTML}', 1)
-
-    # Guarantee footer — if Claude hit the token limit, append the template footer verbatim
-    if '<footer' not in page_html.lower() and TEMPLATE_FOOTER_HTML:
-        page_html = page_html + '\n' + TEMPLATE_FOOTER_HTML
 
     # Assemble metadata and full page
     seo = writer_json.get("seo_json", {})
