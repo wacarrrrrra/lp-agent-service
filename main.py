@@ -580,7 +580,9 @@ FAQ placement and structure:
 
 Final CTA section:
 - Restate the single biggest outcome from the hero
-- Add one risk-reduction line near the form ("No credit card. 20-minute session.")
+- Do NOT embed a second form — use an anchor button CTA instead: <a href="#hero" class="button button-primary button-lg"><span>[CTA text] →</span></a>
+- Add one risk-reduction line below the button ("No credit card. Takes 5 minutes.")
+- The hero section must have id="hero" so the anchor link works
 - CTA button copy must differ slightly from hero CTA — reinforce momentum, not repetition
 
 ━━━ SEO RULES ━━━
