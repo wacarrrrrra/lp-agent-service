@@ -54,9 +54,13 @@ def _get_docs_service():
     from google.oauth2 import service_account
     from googleapiclient.discovery import build
 
-    creds = service_account.Credentials.from_service_account_info(
-        json.loads(GOOGLE_SERVICE_ACCOUNT_JSON), scopes=_SCOPES
-    )
+    val = GOOGLE_SERVICE_ACCOUNT_JSON or "/etc/secrets/google-service-account.json"
+    if val.strip().startswith("{"):
+        creds = service_account.Credentials.from_service_account_info(
+            json.loads(val), scopes=_SCOPES
+        )
+    else:
+        creds = service_account.Credentials.from_service_account_file(val, scopes=_SCOPES)
     return build("docs", "v1", credentials=creds, cache_discovery=False)
 
 
