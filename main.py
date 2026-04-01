@@ -1322,6 +1322,72 @@ async def slack_commands(request: Request):
         ))
         return PlainTextResponse("", status_code=200)
 
+    if command == "/run-blog":
+        if not text:
+            return PlainTextResponse(
+                "Usage: `/run-blog <slack-thread-link>` — paste the link to the Bart thread in #sem-lp-requests",
+                status_code=200,
+            )
+        thread_link = text.split()[0]
+        blog_channel = BLOG_PUBLISHER_CHANNEL or channel_id
+        user_id = form.get("user_id", "")
+
+        async def run_manual_blog():
+            try:
+                _parsed_channel, thread_ts = parse_slack_thread_link(thread_link)
+                bart_channel = SEM_LP_REQUESTS_CHANNEL or _parsed_channel
+                if not thread_ts:
+                    await post_message(
+                        blog_channel,
+                        "❌ Couldn't parse that thread link — right-click the message in #sem-lp-requests and choose Copy link.",
+                    )
+                    return
+
+                await post_message(blog_channel, f"🔁 <@{user_id}> Fetching Bart's thread and resuming blog generation…")
+
+                # Reconstruct job from thread starter message
+                thread_messages = await fetch_thread_messages(bart_channel, thread_ts)
+                starter = next(
+                    (m for m in thread_messages if "Topic:" in (m.get("text") or "")),
+                    None,
+                )
+                topic = ""
+                if starter:
+                    m = re.search(r"\*Topic:\*\s*(.+)", starter.get("text", ""))
+                    topic = m.group(1).strip() if m else ""
+
+                job = {
+                    "pipeline": "tech_blog",
+                    "job_id": generate_request_id(),
+                    "topic": topic,
+                    "bart_channel": bart_channel,
+                    "requester_channel": blog_channel,
+                    "user_id": user_id,
+                    "awaiting": "generating",
+                }
+
+                bart_brief = accumulate_bart_brief(thread_messages, BART_USER_ID)
+                if not bart_brief:
+                    await post_message(blog_channel, "⚠️ No Bart messages found in that thread yet — make sure Bart has posted before running this.")
+                    return
+
+                await run_tech_blog_generation(
+                    job=job,
+                    thread_ts=thread_ts,
+                    trigger_text=bart_brief,
+                    post_message=post_message,
+                    fetch_thread_messages=fetch_thread_messages,
+                    accumulate_bart_brief=accumulate_bart_brief,
+                    jobs=JOBS,
+                    save_jobs=_save_jobs,
+                )
+            except Exception as e:
+                logger.exception("run_manual_blog failed: %s", e)
+                await post_message(blog_channel, f"❌ Manual blog run failed: `{e}`")
+
+        asyncio.create_task(run_manual_blog())
+        return PlainTextResponse("", status_code=200)
+
     if command == "/sync-to-wordpress":
         if not text:
             return PlainTextResponse(
