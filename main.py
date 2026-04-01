@@ -2187,7 +2187,32 @@ async def slack_events(request: Request):
                 (m for m in thread_messages if "Search term:" in (m.get("text") or "")),
                 None
             )
-            if starter:
+            # Check for tech_blog starter first (has "*Topic:*")
+            tech_starter = next(
+                (m for m in thread_messages if "*Topic:*" in (m.get("text") or "")),
+                None
+            )
+            if tech_starter:
+                tech_text = tech_starter.get("text", "")
+                def _parse_tech_field(label: str) -> str:
+                    m = re.search(rf'\*{label}:\*\s*(.+)', tech_text)
+                    return m.group(1).strip() if m else ""
+                topic = _parse_tech_field("Topic")
+                job_id = _parse_tech_field("Job ID") or generate_request_id()
+                blog_channel = BLOG_PUBLISHER_CHANNEL or SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL
+                job = {
+                    "pipeline": "tech_blog",
+                    "job_id": job_id,
+                    "topic": topic,
+                    "bart_channel": bart_channel,
+                    "requester_channel": blog_channel,
+                    "user_id": _parse_tech_field("Requested by").strip("<@>") or "",
+                    "awaiting": "bart",
+                }
+                JOBS[thread_ts] = job
+                _save_jobs()
+                logger.info("Tech blog job reconstructed for thread %s topic=%s", thread_ts, topic)
+            elif starter:
                 starter_text = starter.get("text", "")
                 def _parse_field(label: str) -> str:
                     m = re.search(rf'\*{label}:\*\s*(.+)', starter_text)
