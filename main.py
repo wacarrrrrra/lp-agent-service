@@ -9,6 +9,9 @@ import asyncio
 import re
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Tuple
+
+from pipelines.technical_blog.pipeline import start_tech_blog_job, run_tech_blog_generation
+from pipelines.technical_blog.gdoc_sync import run_sync_pipeline
 from pathlib import Path
 
 import httpx
@@ -41,6 +44,7 @@ SLACK_API_BASE = "https://slack.com/api"
 # ----------------------------
 SEM_LP_REQUESTS_CHANNEL = os.getenv("SEM_LP_REQUESTS_CHANNEL", "")   # private channel with BartBot
 SEM_LP_BUILD_KITS_CHANNEL = os.getenv("SEM_LP_BUILD_KITS_CHANNEL", "")  # agency-facing results channel
+BLOG_PUBLISHER_CHANNEL = os.getenv("BLOG_PUBLISHER_CHANNEL", "")        # #blog-publisher channel
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "")
 GITHUB_BRANCH = os.getenv("GITHUB_BRANCH", "main")
@@ -1303,6 +1307,37 @@ async def slack_commands(request: Request):
         await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
         return PlainTextResponse("", status_code=200)
 
+    if command == "/technical-blog":
+        if not text:
+            return PlainTextResponse("Usage: `/technical-blog <topic>`", status_code=200)
+        user_id = form.get("user_id", "")
+        blog_channel = BLOG_PUBLISHER_CHANNEL or channel_id
+        asyncio.create_task(start_tech_blog_job(
+            topic=text,
+            requester_channel=blog_channel,
+            user_id=user_id,
+            post_message=post_message,
+            jobs=JOBS,
+            save_jobs=_save_jobs,
+        ))
+        return PlainTextResponse("", status_code=200)
+
+    if command == "/sync-to-wordpress":
+        if not text:
+            return PlainTextResponse(
+                "Usage: `/sync-to-wordpress <google-doc-url>`", status_code=200
+            )
+        gdoc_url = text.split()[0]
+        blog_channel = BLOG_PUBLISHER_CHANNEL or channel_id
+        thread_ts = None  # no existing thread — confirmation posts as a new message
+        asyncio.create_task(run_sync_pipeline(
+            gdoc_url=gdoc_url,
+            requester_channel=blog_channel,
+            thread_ts=thread_ts,
+            post_message=post_message,
+        ))
+        return PlainTextResponse("", status_code=200)
+
     return PlainTextResponse("Unsupported command.", status_code=200)
 
 @app.post("/slack/interactions")
@@ -2196,6 +2231,20 @@ async def slack_events(request: Request):
         job["awaiting"] = "generating"
         JOBS[thread_ts] = job
         _save_jobs()
+
+        # Route tech_blog jobs to the engineering blog pipeline
+        if job.get("pipeline") == "tech_blog":
+            asyncio.create_task(run_tech_blog_generation(
+                job=job,
+                thread_ts=thread_ts,
+                trigger_text=text,
+                post_message=post_message,
+                fetch_thread_messages=fetch_thread_messages,
+                accumulate_bart_brief=accumulate_bart_brief,
+                jobs=JOBS,
+                save_jobs=_save_jobs,
+            ))
+            return JSONResponse({"ok": True})
 
         bart_channel = job["bart_channel"]
         requester_channel = job["requester_channel"]
