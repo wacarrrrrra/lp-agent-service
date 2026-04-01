@@ -36,6 +36,9 @@ def build_bart_message(topic: str) -> str:
         "5. KEY CLAIMS — 3–5 technical claims that must be accurate; flag any you are uncertain about\n"
         "6. DIAGRAM NEEDED — yes/no, and if yes: describe in one sentence what the diagram should show\n"
         "7. SUGGESTED SLUG — URL-friendly, no filler words\n\n"
+        "Important: do not ask clarifying questions. If you cannot access code repositories, "
+        "use Notion, Linear, or your existing knowledge about the topic. Complete the brief to "
+        "the best of your ability and reply BART_DONE when done.\n\n"
         "When complete, reply BART_DONE on its own line."
     )
 
