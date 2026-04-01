@@ -27,13 +27,21 @@ _SCOPES = [
 ]
 
 
-def _get_services():
+def _get_credentials():
     from google.oauth2 import service_account
+
+    val = GOOGLE_SERVICE_ACCOUNT_JSON or "/etc/secrets/google-service-account.json"
+    if val.strip().startswith("{"):
+        return service_account.Credentials.from_service_account_info(
+            json.loads(val), scopes=_SCOPES
+        )
+    return service_account.Credentials.from_service_account_file(val, scopes=_SCOPES)
+
+
+def _get_services():
     from googleapiclient.discovery import build
 
-    creds = service_account.Credentials.from_service_account_info(
-        json.loads(GOOGLE_SERVICE_ACCOUNT_JSON), scopes=_SCOPES
-    )
+    creds = _get_credentials()
     docs = build("docs", "v1", credentials=creds, cache_discovery=False)
     drive = build("drive", "v3", credentials=creds, cache_discovery=False)
     return docs, drive
