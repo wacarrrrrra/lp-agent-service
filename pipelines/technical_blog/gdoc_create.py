@@ -217,6 +217,7 @@ def _create_doc_sync(
         body=file_metadata,
         media_body=media,
         fields="id",
+        supportsAllDrives=True,
     ).execute()
 
     doc_id = doc["id"]
@@ -226,6 +227,7 @@ def _create_doc_sync(
         fileId=doc_id,
         body={"type": "anyone", "role": "writer"},
         fields="id",
+        supportsAllDrives=True,
     ).execute()
 
     return f"https://docs.google.com/document/d/{doc_id}/edit"
