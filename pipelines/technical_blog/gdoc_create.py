@@ -20,6 +20,7 @@ logger = logging.getLogger("uvicorn.error")
 
 GDOC_BLOG_DRAFTS_FOLDER_ID = os.getenv("GDOC_BLOG_DRAFTS_FOLDER_ID", "")
 GOOGLE_SERVICE_ACCOUNT_JSON = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+GOOGLE_DRIVE_DOMAIN = os.getenv("GOOGLE_DRIVE_DOMAIN", "")  # e.g. "datahub.com"
 
 _SCOPES = [
     "https://www.googleapis.com/auth/documents",
@@ -76,19 +77,70 @@ def _md_to_html(
 
     while i < len(lines):
         line = lines[i]
+        stripped = line.strip()
+
+        # [NOTE: ...] — skip entirely
+        if re.match(r"^\[NOTE:", stripped, re.IGNORECASE):
+            i += 1
+            continue
+
+        # [DIAGRAM: description] — render as styled placeholder paragraph
+        m_diag = re.match(r"^\[DIAGRAM:\s*(.+)\]$", stripped, re.IGNORECASE)
+        if m_diag:
+            html_parts.append(
+                f'<p style="background:#FFF3CD;border:1px solid #FFC107;padding:8px;border-radius:4px">'
+                f'<strong>📊 Diagram needed:</strong> {_escape(m_diag.group(1).strip())}</p>'
+            )
+            i += 1
+            continue
+
+        # [DEFINITION: Title | Body] — styled definition box
+        m_def = re.match(r"^\[DEFINITION:\s*(.+?)\s*\|\s*(.+)\]$", stripped, re.IGNORECASE | re.DOTALL)
+        if m_def:
+            html_parts.append(
+                f'<div style="border:1.5px solid #E3E1D6;border-radius:8px;background:#F3F3F6;padding:16px;margin:12px 0">'
+                f'<h2 style="margin-top:0">{_inline_html(m_def.group(1).strip())}</h2>'
+                f'<p style="margin:0">{_inline_html(m_def.group(2).strip())}</p>'
+                f'</div>'
+            )
+            i += 1
+            continue
+
+        # [CALLOUT: Title | Body] — styled callout box
+        m_call = re.match(r"^\[CALLOUT:\s*(.+?)\s*\|\s*(.+)\]$", stripped, re.IGNORECASE | re.DOTALL)
+        if m_call:
+            html_parts.append(
+                f'<div style="border:1.5px solid #E3E1D6;border-radius:8px;background:#F3F3F6;padding:16px;margin:12px 0">'
+                f'<h3 style="margin-top:0">{_inline_html(m_call.group(1).strip())}</h3>'
+                f'<p style="margin:0">{_inline_html(m_call.group(2).strip())}</p>'
+                f'</div>'
+            )
+            i += 1
+            continue
+
+        # [FAQ] — render as a styled heading so it's visible as a section marker
+        if stripped == "[FAQ]":
+            html_parts.append(
+                '<p style="background:#E8F4F8;border-left:4px solid #006DCD;padding:8px 12px;font-weight:bold">'
+                'FAQ section — questions below will become accordion blocks in WordPress</p>'
+            )
+            i += 1
+            continue
 
         # Fenced code block
-        if line.strip().startswith("```"):
+        if stripped.startswith("```"):
+            lang = stripped[3:].strip() or "code"
             code_lines = []
             i += 1
             while i < len(lines) and not lines[i].strip().startswith("```"):
                 code_lines.append(_escape(lines[i]))
                 i += 1
             html_parts.append(
-                f'<pre style="font-family:\'Courier New\',monospace;background:#f5f5f5;'
-                f'padding:8px;margin:8px 0">'
+                f'<div style="border:1px solid #ddd;border-radius:4px;margin:8px 0">'
+                f'<div style="background:#e8e8e8;padding:3px 8px;font-size:11px;font-family:monospace;color:#555;border-bottom:1px solid #ddd">{_escape(lang)}</div>'
+                f'<pre style="font-family:\'Courier New\',monospace;background:#f5f5f5;padding:8px;margin:0;white-space:pre-wrap">'
                 + "\n".join(code_lines)
-                + "</pre>"
+                + "</pre></div>"
             )
             i += 1
             continue
@@ -127,16 +179,18 @@ def _md_to_html(
                 + "</table>"
             )
             continue
-        elif line.strip():
-            html_parts.append(f"<p>{_inline_html(line.strip())}</p>")
+        elif stripped:
+            html_parts.append(f"<p>{_inline_html(stripped)}</p>")
 
         i += 1
 
-    # Inject diagram placeholder at the top of the body if needed
+    # Inject diagram placeholder at the top of the body if a diagram_prompt was supplied
     if diagram_prompt:
-        # One-sentence description: first sentence of the prompt
         short_desc = diagram_prompt.split(".")[0].strip()
-        placeholder = f"<p>[DIAGRAM: {_escape(short_desc)}]</p>"
+        placeholder = (
+            f'<p style="background:#FFF3CD;border:1px solid #FFC107;padding:8px;border-radius:4px">'
+            f'<strong>📊 Diagram needed:</strong> {_escape(short_desc)}</p>'
+        )
         html_parts.insert(0, placeholder)
 
     return "\n".join(html_parts)
@@ -222,13 +276,15 @@ def _create_doc_sync(
 
     doc_id = doc["id"]
 
-    # Make the doc readable by anyone with the link (so reviewers don't need individual sharing)
-    drive.permissions().create(
-        fileId=doc_id,
-        body={"type": "anyone", "role": "writer"},
-        fields="id",
-        supportsAllDrives=True,
-    ).execute()
+    # Share with the Google Workspace domain (org-only) if GOOGLE_DRIVE_DOMAIN is set.
+    # If not set, no public permission is added — the doc is accessible only to the service account.
+    if GOOGLE_DRIVE_DOMAIN:
+        drive.permissions().create(
+            fileId=doc_id,
+            body={"type": "domain", "role": "writer", "domain": GOOGLE_DRIVE_DOMAIN},
+            fields="id",
+            supportsAllDrives=True,
+        ).execute()
 
     return f"https://docs.google.com/document/d/{doc_id}/edit"
 
