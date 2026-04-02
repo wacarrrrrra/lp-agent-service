@@ -386,9 +386,11 @@ def _md_to_blocks(markdown: str) -> str:
                 code_lines.append(lines[i])
                 i += 1
             code_content = _escape_code("\n".join(code_lines))
+            lang_attr = f'{{"language":"{lang}"}} ' if lang else ""
+            code_class = f' class="language-{lang}"' if lang else ""
             blocks.append(
-                f"<!-- wp:code -->\n"
-                f'<pre class="wp-block-code"><code lang="{lang}" class="language-{lang}">'
+                f"<!-- wp:code {lang_attr}-->\n"
+                f'<pre class="wp-block-code"><code{code_class}>'
                 f"{code_content}</code></pre>\n<!-- /wp:code -->"
             )
             i += 1
