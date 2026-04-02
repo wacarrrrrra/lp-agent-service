@@ -351,7 +351,7 @@ def _md_to_blocks(markdown: str) -> str:
             continue
 
         # [FAQ] — enter FAQ mode
-        if stripped == "[FAQ]":
+        if stripped.upper() == "[FAQ]":
             in_faq = True
             i += 1
             continue
