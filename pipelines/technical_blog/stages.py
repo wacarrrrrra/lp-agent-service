@@ -26,10 +26,10 @@ _BLOG_STYLE_RULES = """
 ## Content & SEO rules (follow strictly)
 
 ### SEO fields
-- Title tag: ≤60 characters EXCLUDING " | DataHub". Include the focus keyword. Title Case.
+- Title tag: ≤60 characters EXCLUDING " | DataHub". Include the focus keyword verbatim. Title Case.
 - Meta description: ≤140 characters. Sentence case. Include focus keyword and a reason to click.
-- URL slug: no filler words (a, the, of, and). Use hyphens. Under 5 words.
-- Focus keyword: the primary search term, 2–4 words.
+- URL slug: no filler words (a, the, of, and). Use hyphens. Under 5 words. Must contain the focus keyword words (e.g. focus keyword "data lineage" → slug includes "data-lineage").
+- Focus keyword: the primary search term, 2–4 words. Must appear verbatim in both the title tag and the URL slug.
 
 ### Structure
 - Open with a clean, citable definition of the primary entity — minimize preamble.
@@ -101,6 +101,8 @@ Rules to check:
 11. No generic link anchor text ("click here", "here", "learn more" alone)
 12. FAQ section must have a [FAQ] shortcode on its own line immediately after the ## FAQs heading
 13. Any diagram notes must use [DIAGRAM: description] shortcode format, not inline comments
+14. Focus keyword (from YAML front matter) must appear verbatim in the title (case-insensitive)
+15. Focus keyword words must all appear in the URL slug (e.g. keyword "data lineage" → slug must contain "data" and "lineage")
 
 Return only the JSON array. If there are no issues, return []."""
 
