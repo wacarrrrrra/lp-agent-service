@@ -119,7 +119,7 @@ def _md_to_html(
             continue
 
         # [FAQ] — render as a styled heading so it's visible as a section marker
-        if stripped == "[FAQ]":
+        if stripped.upper() == "[FAQ]":
             html_parts.append(
                 '<p style="background:#E8F4F8;border-left:4px solid #006DCD;padding:8px 12px;font-weight:bold">'
                 'FAQ section — questions below will become accordion blocks in WordPress</p>'
