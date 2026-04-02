@@ -202,6 +202,7 @@ def _build_doc_html(
     slug: str,
     focus_keyword: str,
     markdown_body: str,
+    author: str = "DataHub",
     diagram_prompt: Optional[str] = None,
 ) -> str:
     """Assemble the full HTML document: metadata table + body."""
@@ -209,7 +210,7 @@ def _build_doc_html(
 <table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;margin-bottom:24px">
   <tr><td><strong>Title</strong></td><td>{_escape(title)}</td></tr>
   <tr><td><strong>Meta description</strong></td><td>{_escape(meta_description)}</td></tr>
-  <tr><td><strong>Author</strong></td><td>John Joyce, Co-Founder, DataHub</td></tr>
+  <tr><td><strong>Author</strong></td><td>{_escape(author or "DataHub")}</td></tr>
   <tr><td><strong>Category</strong></td><td>Engineering</td></tr>
   <tr><td><strong>Url slug</strong></td><td>{_escape(slug)}</td></tr>
   <tr><td><strong>Focus keyword</strong></td><td>{_escape(focus_keyword)}</td></tr>
@@ -236,6 +237,7 @@ def _create_doc_sync(
     slug: str,
     focus_keyword: str,
     markdown_body: str,
+    author: str = "DataHub",
     diagram_prompt: Optional[str] = None,
 ) -> str:
     """Synchronous inner function — runs in a thread via asyncio.to_thread."""
@@ -254,6 +256,7 @@ def _create_doc_sync(
         slug=slug,
         focus_keyword=focus_keyword,
         markdown_body=markdown_body,
+        author=author,
         diagram_prompt=diagram_prompt,
     )
 
@@ -295,6 +298,7 @@ async def create_blog_draft_doc(
     slug: str,
     focus_keyword: str,
     markdown_body: str,
+    author: str = "DataHub",
     diagram_prompt: Optional[str] = None,
 ) -> str:
     """Create a Google Doc in the Blog Drafts folder. Returns the doc URL."""
@@ -305,5 +309,6 @@ async def create_blog_draft_doc(
         slug,
         focus_keyword,
         markdown_body,
+        author,
         diagram_prompt,
     )
