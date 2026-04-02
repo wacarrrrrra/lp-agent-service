@@ -141,6 +141,7 @@ async def run_tech_blog_generation(
         meta_description = meta.get("meta_description") or seo_json.get("meta_description") or ""
         focus_keyword = meta.get("focus_keyword") or seo_json.get("focus_keyword") or ""
         category = meta.get("category") or "Engineering"
+        author = meta.get("author") or "DataHub"
 
         # Step 6 — Assign cycling images
         idx = get_and_advance_image_index(slug=slug)
@@ -155,6 +156,7 @@ async def run_tech_blog_generation(
             slug=slug,
             focus_keyword=focus_keyword,
             markdown_body=body_md,
+            author=author,
             diagram_prompt=diagram_prompt,
         )
 
