@@ -130,6 +130,14 @@ def _strip_fences(raw: str) -> str:
     return re.sub(r"\s*```$", "", raw.strip())
 
 
+def _strip_markdown_fence(raw: str) -> str:
+    """Strip a leading ```markdown (or ```md) fence and trailing ``` if present."""
+    raw = raw.strip()
+    raw = re.sub(r"^```(?:markdown|md)?\s*\n", "", raw, flags=re.IGNORECASE)
+    raw = re.sub(r"\n```\s*$", "", raw)
+    return raw.strip()
+
+
 async def run_outline(bart_brief: str) -> Tuple[str, Dict]:
     """Stage 1: produce a detailed outline + shortcode scaffold + SEO JSON."""
     user_prompt = f"""Using the brief below, produce a detailed blog post outline.
@@ -213,6 +221,7 @@ BRIEF:
 {bart_brief}"""
 
     draft = await _claude(_SYSTEM_PROMPT, user_prompt, max_tokens=12000)
+    draft = _strip_markdown_fence(draft)
     # Strip em-dashes even if Claude missed the rule
     draft = draft.replace("\u2014", " ").replace("\u2013", "-")
     draft = draft.replace("&mdash;", " ").replace("&ndash;", "-")
@@ -262,6 +271,7 @@ POST TO REVISE:
 {draft}"""
 
     revised = await _claude(_SYSTEM_PROMPT, user_prompt, max_tokens=14000)
+    revised = _strip_markdown_fence(revised)
     revised = revised.replace("\u2014", " ").replace("\u2013", "-")
     return revised
 
@@ -296,6 +306,7 @@ ISSUES:
 POST:
 {draft}"""
     corrected = await _claude(_SYSTEM_PROMPT, fix_prompt, max_tokens=12000)
+    corrected = _strip_markdown_fence(corrected)
     corrected = corrected.replace("\u2014", " ").replace("\u2013", "-")
     return corrected, issues
 
