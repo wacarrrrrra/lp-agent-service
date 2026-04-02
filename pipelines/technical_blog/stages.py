@@ -129,22 +129,40 @@ def _strip_fences(raw: str) -> str:
 
 
 async def run_outline(bart_brief: str) -> Tuple[str, Dict]:
-    """Stage 1: produce a detailed outline + extract SEO JSON and diagram_prompt."""
+    """Stage 1: produce a detailed outline + shortcode scaffold + SEO JSON."""
     user_prompt = f"""Using the brief below, produce a detailed blog post outline.
 
+## Section outline
 For each H2 section include:
-- The section heading (sentence case)
+- The section heading (sentence case — phrase 30–50% as questions where natural)
 - 3–5 bullet points covering what the section will say
-- Whether a diagram, code snippet, table, [DEFINITION:], or [CALLOUT:] is needed in this section
+- Note any code snippets, tables, or diagrams needed
 
-Plan a FAQ section at the end (5–8 questions, mix of informational and product-specific).
+## Shortcode plan (required — include this section verbatim in your outline)
+After the section outline, add a section headed "## SHORTCODE PLAN" containing:
 
-At the end, output a JSON block (fenced with ```json) with:
+**[DEFINITION:]** — Write the exact shortcode to place near the top of the article, defining the primary entity in one clean, citable sentence:
+[DEFINITION: Quick definition: {{primary entity}} | {{one-sentence definition}}]
+
+**[CALLOUT:] boxes** — List 1–3 callout boxes (secondary concepts, tips, "how DataHub handles X"):
+[CALLOUT: {{title}} | {{1–2 sentence body}}]
+
+**[DIAGRAM:]** — If a diagram would help, write the exact shortcode:
+[DIAGRAM: {{one sentence describing what the diagram shows}}]
+(Write "No diagram" if not needed.)
+
+**[FAQ] questions** — List the exact 6–8 FAQ question titles (mix of informational and product-specific):
+1. {{question}}
+2. {{question}}
+...
+
+## SEO JSON
+At the end output a ```json block:
 {{
-  "title": "...",     ← Title Case, ≤60 chars EXCLUDING " | DataHub"
-  "slug": "...",      ← no filler words, 3–5 hyphened words
-  "meta_description": "...",  ← ≤140 chars, sentence case, includes focus keyword
-  "focus_keyword": "...",     ← 2–4 word primary search term
+  "title": "...",            ← Title Case, ≤60 chars EXCLUDING " | DataHub"
+  "slug": "...",             ← no filler words, 3–5 hyphened words
+  "meta_description": "...", ← ≤140 chars, sentence case, includes focus keyword
+  "focus_keyword": "...",    ← 2–4 word primary search term
   "diagram_prompt": "..." or null
 }}
 
@@ -197,6 +215,53 @@ BRIEF:
     draft = draft.replace("\u2014", " ").replace("\u2013", "-")
     draft = draft.replace("&mdash;", " ").replace("&ndash;", "-")
     return draft
+
+
+async def run_best_practices_pass(draft: str) -> str:
+    """Stage 2.5: revise the draft against writing best practices. Returns improved draft."""
+    user_prompt = f"""Review this blog post draft and revise it against the DataHub writing best practices below.
+Return the COMPLETE revised post in markdown with YAML front matter. Return ONLY the markdown — no preamble or explanation.
+
+## Checks to make and fix
+
+1. PRIMARY ENTITY DEFINITION
+   Within the first 100 words (before the first H2), there must be a [DEFINITION: Title | Body] shortcode giving a clean, citable one-sentence definition of the primary topic. If it is missing or buried in a paragraph, add it immediately after the intro sentence.
+   Format: [DEFINITION: Quick definition: {{topic}} | {{one clean sentence}}]
+
+2. FIRST HYPERLINK
+   The very first hyperlink in the article body must go to https://datahub.com/products/ anchored on a relevant keyphrase (e.g. "DataHub's data catalog"). If the first link goes elsewhere, insert a datahub.com/products/ link before it in a natural sentence.
+
+3. H2 QUESTION FORMAT
+   Rephrase 30–50% of H2 headings as questions where it reads naturally. Do not force it. Example: "Why data lineage matters" → "Why does data lineage matter?"
+
+4. EXTERNAL CITATIONS
+   Include at least 3 links to authoritative third-party sources (research reports, standards bodies, analyst firms). Anchor from the source name: "According to [Gartner's 2025 report](url)" not "According to [this study](url)". If citations are missing, add them where they strengthen a claim.
+
+5. WEASEL WORDS
+   Replace or remove: "many organizations", "significant savings", "increasingly", "growing number of", "it's no secret", "in the world of", "as teams scale", "more and more". Substitute a specific number, example, or delete the sentence.
+
+6. SHORTCODE COMPLETENESS — the post MUST contain all of these:
+   - At least one [DEFINITION: Title | Body] box (near the top)
+   - At least one [CALLOUT: Title | Body] box mid-article for a secondary concept or "How DataHub handles X"
+   - The [FAQ] shortcode on its own line immediately after ## FAQs
+   - [DIAGRAM: description] if the outline called for one
+   Add any that are missing. Do not remove ones that are already there.
+
+7. DATAHUB WOVEN IN THROUGHOUT
+   DataHub should appear naturally in at least 3 H2 sections, not only in the final section. If it is only in the conclusion, add a [CALLOUT: How DataHub handles {{topic}} | ...] in an earlier section.
+
+8. PARAGRAPH LENGTH
+   No body paragraph should exceed 4 lines. Break any that are longer.
+
+9. FAQ ANSWERS
+   Each FAQ answer must lead with a 1–2 sentence direct answer, then elaborate. Total 40–70 words for informational questions, 60–120 for product questions.
+
+POST TO REVISE:
+{draft}"""
+
+    revised = await _claude(_SYSTEM_PROMPT, user_prompt, max_tokens=14000)
+    revised = revised.replace("\u2014", " ").replace("\u2013", "-")
+    return revised
 
 
 async def run_qa_pass(draft: str) -> Tuple[str, list]:
