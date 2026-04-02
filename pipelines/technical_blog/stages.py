@@ -21,6 +21,61 @@ _SYSTEM_PROMPT = (
     "You write in sentence case. No em dashes."
 )
 
+# Key rules distilled from blog-template-guide.md and writing-best-practices.md
+_BLOG_STYLE_RULES = """
+## Content & SEO rules (follow strictly)
+
+### SEO fields
+- Title tag: ≤60 characters EXCLUDING " | DataHub". Include the focus keyword. Title Case.
+- Meta description: ≤140 characters. Sentence case. Include focus keyword and a reason to click.
+- URL slug: no filler words (a, the, of, and). Use hyphens. Under 5 words.
+- Focus keyword: the primary search term, 2–4 words.
+
+### Structure
+- Open with a clean, citable definition of the primary entity — minimize preamble.
+- First hyperlink must point to https://datahub.com/products/ anchored on a relevant keyphrase.
+- H2s: phrase 30–50% as questions when it feels natural. All sentence case.
+- Target 2,500–3,500 words total.
+- 4-line max per body paragraph.
+- Numbers one through nine spelled out in body text (not in code, headings, or lists).
+- Use "and" not "&". No em dashes. No exclamation marks in headings. No italic text.
+- No weasel words — quantify claims or omit them.
+
+### Shortcodes (use these in the markdown output — the publisher handles rendering)
+Use the following shortcodes on their own line:
+
+[DEFINITION: Title | Body text]
+  → Styled definition box with H2 heading. Use near the top for the primary entity definition.
+  Example: [DEFINITION: Quick definition: data lineage | Data lineage tracks the origin, movement, and transformation of data across your stack.]
+
+[CALLOUT: Title | Body text]
+  → Styled callout box with H3. Does not appear in TOC. Use for tips, context, secondary concepts.
+
+[DIAGRAM: one-sentence description of what the diagram should show]
+  → Flags a diagram placeholder. Will be visible in the Google Doc for the designer, and rendered as an empty image block in WordPress.
+
+[NOTE: editorial note text]
+  → Stripped from both Google Doc and WordPress. Use for internal review notes only.
+
+### FAQ section
+- End the article with an H2 "FAQs" section.
+- Put [FAQ] on its own line immediately after the H2 heading.
+- Write each question as an H3, followed by the answer as a paragraph.
+- 5–8 FAQs: mix informational (broader topic) and product-specific (how DataHub handles this).
+- Each answer: 1–2 sentence direct answer first, then elaboration. 40–70 words total.
+
+Example FAQ format:
+## FAQs
+
+[FAQ]
+
+### What is the difference between data lineage and data provenance?
+Data lineage tracks how data moves and transforms across systems. Data provenance focuses on the origin and ownership of data at the point of creation. In practice, most data catalogs (including DataHub) combine both.
+
+### How does DataHub capture lineage automatically?
+DataHub uses metadata ingestion connectors for tools like dbt, Airflow, and Spark to capture lineage without manual tagging. [See how DataHub's lineage works](https://datahub.com/products/).
+""".strip()
+
 _QA_SYSTEM_PROMPT = (
     "You are a copy editor. You check markdown blog posts against a strict style rulebook. "
     "Be precise and list only real violations — do not flag things that are correct."
@@ -40,9 +95,12 @@ Rules to check:
 5. Numbers one through nine spelled out in body text (not in code, headings, or lists)
 6. No ampersands (&) in body text — use "and"
 7. No exclamation marks in headings
-8. Meta description ≤140 characters
-9. No filler openers (flags: "in today's", "as organizations", "it's no secret", "in the world of")
-10. No generic link anchor text ("click here", "here", "learn more" alone)
+8. Meta description (from YAML front matter) must be ≤140 characters — count carefully
+9. Title (from YAML front matter) must be ≤60 characters EXCLUDING the " | DataHub" suffix — count carefully
+10. No filler openers (flags: "in today's", "as organizations", "it's no secret", "in the world of")
+11. No generic link anchor text ("click here", "here", "learn more" alone)
+12. FAQ section must have a [FAQ] shortcode on its own line immediately after the ## FAQs heading
+13. Any diagram notes must use [DIAGRAM: description] shortcode format, not inline comments
 
 Return only the JSON array. If there are no issues, return []."""
 
@@ -77,14 +135,16 @@ async def run_outline(bart_brief: str) -> Tuple[str, Dict]:
 For each H2 section include:
 - The section heading (sentence case)
 - 3–5 bullet points covering what the section will say
-- Whether a diagram, code snippet, or table is needed in this section
+- Whether a diagram, code snippet, table, [DEFINITION:], or [CALLOUT:] is needed in this section
+
+Plan a FAQ section at the end (5–8 questions, mix of informational and product-specific).
 
 At the end, output a JSON block (fenced with ```json) with:
 {{
-  "title": "...",
-  "slug": "...",
-  "meta_description": "...",
-  "focus_keyword": "...",
+  "title": "...",     ← Title Case, ≤60 chars EXCLUDING " | DataHub"
+  "slug": "...",      ← no filler words, 3–5 hyphened words
+  "meta_description": "...",  ← ≤140 chars, sentence case, includes focus keyword
+  "focus_keyword": "...",     ← 2–4 word primary search term
   "diagram_prompt": "..." or null
 }}
 
@@ -111,28 +171,18 @@ BRIEF:
 
 async def run_full_draft(outline: str, bart_brief: str) -> str:
     """Stage 2: write the full blog post from the outline. Returns markdown with YAML front matter."""
-    user_prompt = f"""Write the full blog post from the outline below.
+    user_prompt = f"""Write the full blog post from the outline below. Follow ALL style rules carefully.
 
-Rules:
-- Sentence case for all headings (H1, H2, H3)
-- No em dashes — use commas, colons, or restructure the sentence
-- No italic text
-- No filler openers ("In today's...", "As data teams grow...", "It's no secret...")
-- Spell out numbers one through nine in body text
-- Use "and" not "&"
-- No exclamation marks in headings
-- Hyperlink format: [anchor text](URL) — anchor text should be descriptive, never "click here" or "here"
-- FAQ section at the end: H3 for each question, paragraph for each answer
-- End with a natural transition to related resources (do not hard-sell)
+{_BLOG_STYLE_RULES}
 
 Output format: clean markdown. Include YAML front matter at the top:
 
 ---
-title: "..."
+title: "..."           ← Title Case, ≤60 chars EXCLUDING " | DataHub"
 slug: "..."
-author: "John Joyce, Co-Founder, DataHub"
+author: "DataHub"
 category: "Engineering"
-meta_description: "..."
+meta_description: "..."   ← ≤140 chars
 focus_keyword: "..."
 ---
 
