@@ -84,6 +84,25 @@ def _para_style(para: Dict) -> str:
     return para.get("paragraphStyle", {}).get("namedStyleType", "NORMAL_TEXT")
 
 
+_MONOSPACE_FONTS = {"courier new", "courier", "roboto mono", "consolas", "source code pro", "inconsolata", "monospace"}
+
+
+def _is_code_para(para: Dict) -> bool:
+    """Return True if every text run in the paragraph uses a monospace font."""
+    elements = para.get("elements", [])
+    if not elements:
+        return False
+    for el in elements:
+        tr = el.get("textRun", {})
+        content = tr.get("content", "")
+        if content in ("", "\n"):
+            continue
+        font = tr.get("textStyle", {}).get("weightedFontFamily", {}).get("fontFamily", "").lower()
+        if font not in _MONOSPACE_FONTS:
+            return False
+    return True
+
+
 def _is_metadata_table(table: Dict) -> bool:
     rows = table.get("tableRows", [])
     for row in rows[:3]:
@@ -106,6 +125,7 @@ def _parse_doc(doc: Dict) -> Tuple[Dict, str]:
     meta: Dict = {}
     md_lines: List[str] = []
     meta_table_found = False
+    in_code_block = False
 
     for el in body_content:
         if "table" in el:
@@ -156,8 +176,24 @@ def _parse_doc(doc: Dict) -> Tuple[Dict, str]:
             style = _para_style(para)
 
             if not text:
-                md_lines.append("")
+                if in_code_block:
+                    pass  # blank line inside code — keep collecting
+                else:
+                    md_lines.append("")
                 continue
+
+            # Code block detection: monospace-font paragraph → fenced code block
+            if _is_code_para(para) and style == "NORMAL_TEXT":
+                if not in_code_block:
+                    md_lines.append("```")  # open fence (language unknown after GDoc round-trip)
+                    in_code_block = True
+                md_lines.append(text)
+                continue
+
+            # Non-code paragraph — close any open code fence first
+            if in_code_block:
+                md_lines.append("```")
+                in_code_block = False
 
             if style == "HEADING_1":
                 md_lines.append(f"# {text}")
@@ -169,6 +205,9 @@ def _parse_doc(doc: Dict) -> Tuple[Dict, str]:
                 md_lines.append(f"#### {text}")
             else:
                 md_lines.append(text)
+
+    if in_code_block:
+        md_lines.append("```")  # close any dangling fence
 
     markdown_body = "\n".join(md_lines).strip()
     return meta, markdown_body
