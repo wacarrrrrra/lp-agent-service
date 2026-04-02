@@ -129,6 +129,83 @@ def _block_table(table_html: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Shortcode block renderers
+# ---------------------------------------------------------------------------
+
+def _block_definition_box(title: str, text: str) -> str:
+    heading = title if title.lower().startswith("quick definition") else f"Quick definition: {title}"
+    heading_id = re.sub(r"[^a-z0-9]+", "-", heading.lower()).strip("-")
+    return (
+        f"<!-- wp:html -->\n"
+        f'<div class="quick-definition-box" style="border:1.5px solid #E3E1D6;border-radius:8px;background-color:#F3F3F6;padding:24px;margin:0 0 24px 0">'
+        f'<h2 class="wp-block-heading has-large-font-size" id="{heading_id}" style="margin-top:0;margin-bottom:16px">{heading}</h2>'
+        f'<p style="margin:0">{text}</p>'
+        f"</div>\n"
+        f"<!-- /wp:html -->"
+    )
+
+
+def _block_callout_box(title: str, text: str) -> str:
+    return (
+        f"<!-- wp:html -->\n"
+        f'<div class="callout-box" style="border:1.5px solid #E3E1D6;border-radius:8px;background-color:#F3F3F6;padding:24px;margin:0 0 24px 0">'
+        f'<h3 style="margin-top:0;margin-bottom:16px">{title}</h3>'
+        f'<p style="margin:0">{text}</p>'
+        f"</div>\n"
+        f"<!-- /wp:html -->"
+    )
+
+
+def _block_faq_accordion(items: List[Dict]) -> str:
+    """Render FAQ items as a Kadence accordion."""
+    uid_acc = _uid()
+    n = len(items)
+    panes_html = ""
+    for idx, item in enumerate(items):
+        uid_pane = _uid()
+        answer_block = f"<!-- wp:paragraph --><p>{item['answer']}</p><!-- /wp:paragraph -->"
+        pane_attrs = json.dumps({"titleTag": "h3", "uniqueID": uid_pane}, separators=(",", ":"))
+        panes_html += (
+            f"<!-- wp:kadence/pane {pane_attrs} -->\n"
+            f'<div class="wp-block-kadence-pane kt-accordion-pane kt-accordion-pane-{idx + 1} kt-pane{uid_pane}">'
+            f'<div class="kt-accordion-header-wrap"><button class="kt-blocks-accordion-header kt-acccordion-button-label-show" type="button">'
+            f'<span class="kt-blocks-accordion-title-wrap"><span class="kt-blocks-accordion-title">{item["question"]}</span></span>'
+            f'<span class="kt-blocks-accordion-icon-trigger"></span></button></div>'
+            f'<div class="kt-accordion-panel"><div class="kt-accordion-panel-inner">'
+            f"{answer_block}"
+            f"</div></div></div>\n<!-- /wp:kadence/pane -->\n"
+        )
+
+    title_styles = [{"size": ["md", "", ""], "sizeType": "px", "lineHeight": ["", "", ""], "lineType": "", "letterSpacing": "", "family": "", "google": "", "style": "", "weight": "600", "variant": "", "subset": "", "loadGoogle": True, "padding": ["xs", "0", "0", "0"], "marginTop": 16, "color": "", "background": "palette9", "border": ["", "", "", ""], "borderRadius": ["", "", "", ""], "borderWidth": ["", "", "", ""], "colorHover": "palette2", "backgroundHover": "#FFFFFF", "borderHover": ["", "", "", ""], "colorActive": "palette1", "backgroundActive": "#FFFFFF", "borderActive": ["", "", "", ""], "textTransform": ""}]
+    title_border = [{"top": ["palette7", "", 1], "right": ["palette7", "", ""], "bottom": ["palette7", "", ""], "left": ["palette7", "", ""], "unit": "px"}]
+    content_border = [{"top": ["palette9", "", 0], "right": ["palette9", "", 0], "bottom": ["palette9", "", 0], "left": ["palette9", "", 0], "unit": "px"}]
+
+    acc_attrs = json.dumps({
+        "uniqueID": uid_acc,
+        "paneCount": n,
+        "startCollapsed": True,
+        "linkPaneCollapse": False,
+        "contentBorderStyle": content_border,
+        "contentPadding": ["xs", "0", "0", "0"],
+        "titleStyles": title_styles,
+        "titleBorder": title_border,
+        "titleBorderRadius": ["", 0, 0, 0],
+        "iconStyle": "arrow",
+        "iconSide": "left",
+        "faqSchema": True,
+    }, separators=(",", ":"))
+
+    return (
+        f"<!-- wp:kadence/accordion {acc_attrs} -->\n"
+        f'<div class="wp-block-kadence-accordion alignnone">'
+        f'<div class="kt-accordion-wrap kt-accordion-id{uid_acc} kt-accordion-has-{n}-panes kt-active-pane-0 kt-accordion-block kt-pane-header-alignment-left kt-accodion-icon-style-arrow kt-accodion-icon-side-left" style="max-width:none">'
+        f'<div class="kt-accordion-inner-wrap" data-allow-multiple-open="true" data-start-open="none">'
+        f"{panes_html}"
+        f"</div></div></div>\n<!-- /wp:kadence/accordion -->"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Kadence rowlayout with sticky TOC
 # ---------------------------------------------------------------------------
 
@@ -200,13 +277,109 @@ def _md_to_blocks(markdown: str) -> str:
     lines = markdown.splitlines()
     blocks: List[str] = []
     i = 0
+    in_faq = False
+    faq_items: List[Dict] = []
+    faq_current_q: Optional[str] = None
+    faq_current_a: List[str] = []
+
+    def _flush_faq() -> None:
+        nonlocal faq_items, faq_current_q, faq_current_a
+        if faq_current_q and faq_current_a:
+            faq_items.append({"question": faq_current_q, "answer": " ".join(faq_current_a).strip()})
+        faq_current_q = None
+        faq_current_a = []
+
+    def _close_faq_section() -> None:
+        nonlocal in_faq, faq_items
+        _flush_faq()
+        if faq_items:
+            blocks.append(_block_faq_accordion(faq_items))
+        in_faq = False
+        faq_items = []
 
     while i < len(lines):
         line = lines[i]
+        stripped = line.strip()
+
+        # [NOTE: ...] — skip entirely
+        if re.match(r"^\[NOTE:", stripped, re.IGNORECASE):
+            i += 1
+            continue
+
+        # [DIAGRAM: description] — empty image block placeholder (not visible text in WP)
+        m_diag = re.match(r"^\[DIAGRAM:\s*(.+)\]$", stripped, re.IGNORECASE)
+        if m_diag:
+            desc = _inline_md(m_diag.group(1).strip())
+            blocks.append(
+                f"<!-- wp:image -->\n"
+                f'<figure class="wp-block-image"><img src="" alt="{desc}"/>'
+                f'<figcaption class="wp-element-caption">{desc}</figcaption></figure>\n'
+                f"<!-- /wp:image -->"
+            )
+            i += 1
+            continue
+
+        # Legacy diagram comment from pipeline injection — same treatment
+        if stripped.startswith("<!-- DIAGRAM_NEEDED:"):
+            m = re.search(r"<!-- DIAGRAM_NEEDED:\s*(.+?)-->", stripped)
+            desc = _inline_md(m.group(1).strip()) if m else "Diagram"
+            blocks.append(
+                f"<!-- wp:image -->\n"
+                f'<figure class="wp-block-image"><img src="" alt="{desc}"/>'
+                f'<figcaption class="wp-element-caption">{desc}</figcaption></figure>\n'
+                f"<!-- /wp:image -->"
+            )
+            i += 1
+            continue
+
+        # [DEFINITION: Title | Body]
+        m_def = re.match(r"^\[DEFINITION:\s*(.+?)\s*\|\s*(.+)\]$", stripped, re.IGNORECASE)
+        if m_def:
+            if in_faq:
+                _close_faq_section()
+            blocks.append(_block_definition_box(m_def.group(1).strip(), _inline_md(m_def.group(2).strip())))
+            i += 1
+            continue
+
+        # [CALLOUT: Title | Body]
+        m_call = re.match(r"^\[CALLOUT:\s*(.+?)\s*\|\s*(.+)\]$", stripped, re.IGNORECASE)
+        if m_call:
+            if in_faq:
+                _close_faq_section()
+            blocks.append(_block_callout_box(m_call.group(1).strip(), _inline_md(m_call.group(2).strip())))
+            i += 1
+            continue
+
+        # [FAQ] — enter FAQ mode
+        if stripped == "[FAQ]":
+            in_faq = True
+            i += 1
+            continue
+
+        # While in FAQ mode: collect H3 + answer pairs
+        if in_faq:
+            if line.startswith("### "):
+                _flush_faq()
+                faq_current_q = line[4:].strip()
+            elif line.startswith("## ") or line.startswith("# "):
+                # New H2 closes the FAQ section
+                _close_faq_section()
+                # Fall through to process this heading normally (don't continue)
+            elif stripped and faq_current_q is not None:
+                faq_current_a.append(_inline_md(stripped))
+                i += 1
+                continue
+            else:
+                i += 1
+                continue
+
+            if in_faq:
+                i += 1
+                continue
 
         # Fenced code block
-        if line.strip().startswith("```"):
-            lang = line.strip()[3:].strip()
+        if stripped.startswith("```"):
+            lang = stripped[3:].strip()
             code_lines: List[str] = []
             i += 1
             while i < len(lines) and not lines[i].strip().startswith("```"):
@@ -218,12 +391,6 @@ def _md_to_blocks(markdown: str) -> str:
                 f'<pre class="wp-block-code"><code lang="{lang}" class="language-{lang}">'
                 f"{code_content}</code></pre>\n<!-- /wp:code -->"
             )
-            i += 1
-            continue
-
-        # Diagram placeholder comment — wrap in wp:html
-        if line.strip().startswith("<!-- DIAGRAM_NEEDED:"):
-            blocks.append(f"<!-- wp:html -->\n{line.strip()}\n<!-- /wp:html -->")
             i += 1
             continue
 
@@ -294,15 +461,19 @@ def _md_to_blocks(markdown: str) -> str:
             continue
 
         # Blank line — skip
-        if not line.strip():
+        if not stripped:
             i += 1
             continue
 
         # Paragraph
         blocks.append(
-            f"<!-- wp:paragraph -->\n<p>{_inline_md(line.strip())}</p>\n<!-- /wp:paragraph -->"
+            f"<!-- wp:paragraph -->\n<p>{_inline_md(stripped)}</p>\n<!-- /wp:paragraph -->"
         )
         i += 1
+
+    # Flush any open FAQ section at end of document
+    if in_faq:
+        _close_faq_section()
 
     body_content = "\n\n".join(blocks)
     return _wrap_in_rowlayout(body_content)
@@ -364,25 +535,34 @@ async def _get_people_id(name: str) -> Optional[int]:
     return None
 
 
-async def _get_media_id_by_filename(filename: str) -> Optional[int]:
-    """Look up a media item ID by exact filename using the WP media library search."""
+async def _get_media_info_by_filename(filename: str) -> Tuple[Optional[int], Optional[str]]:
+    """Look up a media item by filename. Returns (id, source_url)."""
     basename = filename.split("/")[-1]
     async with httpx.AsyncClient(timeout=20) as client:
         r = await client.get(
             f"{WP_BASE_URL}/wp-json/wp/v2/media",
-            params={"search": basename, "media_type": "image", "per_page": 5},
+            params={"search": basename, "media_type": "image", "per_page": 10},
             headers=_auth(),
         )
     if r.status_code != 200:
-        return None
+        return None, None
     data = r.json()
     if not isinstance(data, list):
-        return None
+        return None, None
+    # Prefer exact basename match in source_url
     for item in data:
         source = item.get("source_url", "")
         if basename in source:
-            return item["id"]
-    return data[0]["id"] if data else None
+            return item["id"], source
+    if data:
+        return data[0]["id"], data[0].get("source_url")
+    return None, None
+
+
+async def _get_media_id_by_filename(filename: str) -> Optional[int]:
+    """Convenience wrapper — returns just the media ID."""
+    media_id, _ = await _get_media_info_by_filename(filename)
+    return media_id
 
 
 async def _find_existing_post(slug: str) -> Optional[int]:
@@ -403,6 +583,7 @@ async def _set_rankmath_meta(
     seo_title: str,
     meta_description: str,
     focus_keyword: str,
+    social_image_url: Optional[str] = None,
 ) -> None:
     rm_meta = {}
     if seo_title:
@@ -411,6 +592,9 @@ async def _set_rankmath_meta(
         rm_meta["rank_math_description"] = meta_description
     if focus_keyword:
         rm_meta["rank_math_focus_keyword"] = focus_keyword
+    if social_image_url:
+        rm_meta["rank_math_facebook_image"] = social_image_url
+        rm_meta["rank_math_twitter_image"] = social_image_url
     if not rm_meta:
         return
     async with httpx.AsyncClient(timeout=20) as client:
@@ -459,7 +643,7 @@ async def publish_draft(
         people_id,
         hero_id,
         featured_id,
-        socialcard_id,
+        socialcard_info,
         existing_id,
     ) = await _asyncio.gather(
         _get_category_id(category),
@@ -467,9 +651,10 @@ async def publish_draft(
         _get_people_id(_AUTHOR_NAME),
         _get_media_id_by_filename(hero_filename),
         _get_media_id_by_filename(featured_filename),
-        _get_media_id_by_filename(socialcard_filename),
+        _get_media_info_by_filename(socialcard_filename),
         _find_existing_post(slug),
     )
+    socialcard_id, socialcard_url = socialcard_info
 
     seo_title = f"{title} | DataHub"
 
@@ -522,8 +707,8 @@ async def publish_draft(
     if r2.status_code not in (200, 201):
         logger.warning("ACF update failed (%s): %s", r2.status_code, r2.text[:200])
 
-    # RankMath SEO fields
-    await _set_rankmath_meta(post_id, seo_title, meta_description, focus_keyword)
+    # RankMath SEO fields — include socialcard URL as OG/Twitter image
+    await _set_rankmath_meta(post_id, seo_title, meta_description, focus_keyword, socialcard_url)
 
     edit_url = f"{WP_BASE_URL}/wp-admin/post.php?post={post_id}&action=edit"
     return post_id, edit_url
