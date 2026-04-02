@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
 from pipelines.technical_blog.bart_brief import build_bart_message
-from pipelines.technical_blog.stages import run_outline, run_full_draft, run_qa_pass, parse_yaml_front_matter
+from pipelines.technical_blog.stages import run_outline, run_full_draft, run_best_practices_pass, run_qa_pass, parse_yaml_front_matter
 from pipelines.technical_blog.image_cycling import get_and_advance_image_index, get_image_filenames
 from pipelines.technical_blog.gdoc_create import create_blog_draft_doc
 from pipelines.technical_blog.wp_publish import publish_draft
@@ -114,17 +114,21 @@ async def run_tech_blog_generation(
         messages = await fetch_thread_messages(bart_channel, thread_ts)
         bart_brief = accumulate_bart_brief(messages, BART_USER_ID) or trigger_text
 
-        # Step 2 — Outline
-        await post_message(bart_channel, "📐 Step 1/3: Building outline…", thread_ts=thread_ts)
+        # Step 2 — Outline (includes shortcode scaffold)
+        await post_message(bart_channel, "📐 Step 1/4: Building outline and shortcode plan…", thread_ts=thread_ts)
         outline, seo_json = await run_outline(bart_brief)
         diagram_prompt: Optional[str] = seo_json.get("diagram_prompt") or None
 
         # Step 3 — Full draft
-        await post_message(bart_channel, "✍️ Step 2/3: Writing full draft…", thread_ts=thread_ts)
+        await post_message(bart_channel, "✍️ Step 2/4: Writing full draft…", thread_ts=thread_ts)
         draft = await run_full_draft(outline, bart_brief)
 
-        # Step 4 — QA pass (up to 2 iterations)
-        await post_message(bart_channel, "🔍 Step 3/3: Running QA…", thread_ts=thread_ts)
+        # Step 4 — Writing best practices revision
+        await post_message(bart_channel, "📋 Step 3/4: Applying writing best practices…", thread_ts=thread_ts)
+        draft = await run_best_practices_pass(draft)
+
+        # Step 5 — QA pass (up to 2 iterations)
+        await post_message(bart_channel, "🔍 Step 4/4: Running QA…", thread_ts=thread_ts)
         draft, qa_issues = await run_qa_pass(draft)
         if qa_issues:
             # One more pass if issues were found
