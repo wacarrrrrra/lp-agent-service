@@ -134,8 +134,7 @@ GITHUB_PAGES_BASE = (
 )
 
 def build_page_head(title: str, meta_description: str) -> str:
-    """Build the full <head> with correct title/meta and the template CSS."""
-    _fonts_url = "https://fonts.googleapis.com/css2?family=Castoro:ital@0;1&family=Geist:wght@300;400;500;600&display=swap"
+    """Build the full <head> with correct title/meta and the shared stylesheet."""
     return f"""<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -143,11 +142,7 @@ def build_page_head(title: str, meta_description: str) -> str:
 <title>{title}</title>
 <link rel="icon" type="image/png" sizes="32x32" href="https://datahub.com/favicon-32x32.png">
 <link rel="icon" type="image/x-icon" href="https://datahub.com/favicon.ico">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="{_fonts_url}">
-<link rel="stylesheet" href="{_fonts_url}" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="{_fonts_url}"></noscript>
+<link rel="stylesheet" href="/assets/css/styles.css">
 {TEMPLATE_CSS}
 </head>"""
 
@@ -450,7 +445,7 @@ SVG requirements (non-negotiable):
 - Diagram type: {diagram_type}
 - Opening tag: <svg xmlns="http://www.w3.org/2000/svg" viewBox="{viewbox}" role="img">
 - <title> and <desc> immediately after the opening tag
-- Import Castoro + Geist via <defs><style>@import url(...)</style></defs>
+- Import Plantin MT Pro + Lab Grotesque via <defs><style>@import url(...)</style></defs> (use Google Fonts Castoro + Geist as SVG fallbacks if needed)
 - Minimum font-size: 9 — no text below this value
 - Arrow markers using fill="#3CBBEB" defined in <defs>
 - Page background: <rect width="100%" height="100%" fill="#F2F1EE"/>
@@ -582,12 +577,33 @@ FAQ placement and structure:
 - Keep answers to 3–5 sentences: validate the concern, resolve it, restate the benefit
 - Place FAQ immediately before final CTA to clear the last objections before the ask
 
-Final CTA section:
-- Restate the single biggest outcome from the hero
-- Do NOT embed a second form — use an anchor button CTA instead: <a href="#hero" class="button button-primary button-lg"><span>[CTA text] →</span></a>
-- Add one risk-reduction line below the button ("No credit card. Takes 5 minutes.")
-- The hero section must have id="hero" so the anchor link works
-- CTA button copy must differ slightly from hero CTA — reinforce momentum, not repetition
+Final CTA section (cta-ring):
+- Use the .cta-ring component (NOT the old .frame-cta). Structure:
+  <div class="cta-ring">
+    <div class="cta-ring__tile">
+      <div class="cta-ring__content">
+        <div class="cta-ring__text">
+          <h2 id="cta-h2">[Outcome-focused heading]</h2>
+          <p>[1-2 sentences, risk-reduction message]</p>
+        </div>
+        <div class="btn-row">
+          <a class="button button-primary button-lg" href="#hero-form"><span>Request a demo</span></a>
+          <a class="button button-secondary button-lg" href="https://datahub.com/products/"><span>Explore the product</span></a>
+        </div>
+        <div class="cta-trust">
+          <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>[Trust point]</div>
+          <!-- 3 trust items total -->
+        </div>
+      </div>
+    </div>
+  </div>
+- Primary button always links to #hero-form (NOT #hero or #product-tour)
+- Secondary button always links to https://datahub.com/products/
+- Both buttons use button-secondary (NOT button-inverse or button-ghost)
+- Include exactly 3 trust items with checkmark SVGs — short risk-reduction phrases
+- Do NOT use .frame-cta, .sec-label, .demo-chip, or inline styles in the CTA section
+- Do NOT embed a second form — the primary CTA anchors back to the hero form
+- H2 restates the single biggest outcome from the hero — CTA copy must differ slightly from hero CTA
 
 ━━━ SEO RULES ━━━
 - Page word count: 900–1,500 words
@@ -728,17 +744,132 @@ IMAGE_BRIEFS_MD:
 Available diagram images ({len(svgs)} total):
 {picture_elements if picture_elements else "(none)"}
 
-Solution section layout — ALWAYS use this pattern regardless of how many images are available:
-1. Place a full-width featured diagram immediately after the .sec-header, before the feature items:
+Challenge section (section 3) — ALWAYS use this exact structure:
+- Wrapper: <div class="hover-tile-grid"> — no inline styles, no modifiers
+- Exactly 4 tiles: <div class="hover-tile animate-in">
+- Each tile contains: <div class="hover-tile-content"> wrapping icon + h3 title + p body
+- Icon: <div class="hover-tile-icon" aria-hidden="true"> with an inline SVG (stroke="#3CBBEB", stroke-width="1.8", fill="none", 18×18)
+- The shared stylesheet makes this a dark blue theme (dark surface, white headings, light blue body text, blue-03 ring border, 4-column grid on desktop)
+- Do NOT add inline styles to hover-tile-grid, hover-tile, or any child elements
+- Do NOT add --light or --3col modifiers to the challenge grid
+- Do NOT use h4 or h5 tags inside hover-tiles — use h3 for titles, p for body text
+- Do NOT add <ul> or checklist items inside challenge tiles — those belong in solution tiles only
+
+Solution section (section 4) — ALWAYS use this exact structure:
+1. Optional full-width featured diagram immediately after the .sec-header, before the feature tiles:
    <div class="container" style="margin-bottom: 48px;">
      [<picture> element here if an image is available, otherwise omit this block entirely]
    </div>
-2. Render the 4 feature items as a 2×2 icon+text grid — do NOT use .content-highlight or .ch-visual for these.
-   Each feature tile: a bold icon (inline SVG, stroke-only, brand color), H3 heading (5–7 words), body paragraph (2–3 sentences), 3 bullets.
-   Use .hover-tile-grid for the grid wrapper and .hover-tile for each tile.
+2. Render 4 feature tiles in the LIGHT hover-tile-grid variant (2-column on desktop, white tile cards):
+   <div class="hover-tile-grid hover-tile-grid--light">
+     <div class="hover-tile animate-in">
+       <div class="hover-tile-content">
+         <div class="hover-tile-icon" aria-hidden="true">
+           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#006DCD" stroke-width="1.8">...</svg>
+         </div>
+         <h3>Tile heading (5-7 words)</h3>
+         <p>Body paragraph (2-3 sentences, max 200 chars)</p>
+         <ul class="hover-tile-checklist">
+           <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Bullet text (max 65 chars)</li>
+           <li>...</li>
+           <li>...</li>
+         </ul>
+       </div>
+     </div>
+     <!-- exactly 4 tiles -->
+   </div>
+- MUST use hover-tile-grid--light (white cards, dark text, blue-03 icons)
+- Icon SVG stroke MUST be "#006DCD" (blue-03), NOT "#3CBBEB"
+- Checklist SVGs use stroke="currentColor"
+- Do NOT add inline styles to the grid, tiles, or any child elements
+- Do NOT use the bare .hover-tile-grid without --light for the solution section
+- Do NOT use h4/h5 tags — use h3 for titles, p for body text
 3. Do NOT use .content-highlight / .ch-visual / .ch-text / <figure class="framed-image"> in the solution section.
    That component is reserved for the visual section only.
 - Use each <picture> element exactly ONCE — never duplicate across sections
+
+How It Works section (section 5) — ALWAYS use this exact structure:
+- Centered sec-header: <div class="sec-header centered">
+- 3 cards in the LIGHT 3-column hover-tile-grid:
+  <div class="hover-tile-grid hover-tile-grid--light hover-tile-grid--3col">
+    <div class="hover-tile animate-in">
+      <div class="hover-tile-content">
+        <div class="hover-tile-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#006DCD" stroke-width="1.8">...</svg>
+        </div>
+        <h3>Step heading (5-7 words)</h3>
+        <p>Step description (2-3 sentences)</p>
+        <ul class="hover-tile-checklist">
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Bullet (max 75 chars)</li>
+          <li>...</li>
+          <li>...</li>
+        </ul>
+      </div>
+    </div>
+    <!-- exactly 3 cards: Connect → Contextualize → Activate -->
+  </div>
+- MUST use hover-tile-grid--light AND hover-tile-grid--3col together
+- Exactly 3 cards with 3 checklist bullets each
+- Do NOT use list-title-section or list-title-grid — those are deprecated
+- Do NOT add inline styles to the grid, tiles, or any child elements
+
+Enterprise section (section 6) — ALWAYS use this exact structure:
+- Centered sec-header: <div class="sec-header centered">
+- Use hover-tile-grid--light tiles (same card component as Solution and How It Works)
+- If the topic has 3 groups (e.g. Integrations, Deployment, Security): use --3col
+  <div class="hover-tile-grid hover-tile-grid--light hover-tile-grid--3col">
+- If the topic has only 2 groups: use default 2-col (no --3col modifier)
+  <div class="hover-tile-grid hover-tile-grid--light">
+- Each card structure:
+  <div class="hover-tile animate-in">
+    <div class="hover-tile-content">
+      <div class="hover-tile-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#006DCD" stroke-width="1.8">...</svg>
+      </div>
+      <h3>Group heading</h3>
+      <ul class="hover-tile-checklist">
+        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Bullet text</li>
+      </ul>
+    </div>
+  </div>
+- Icon SVG stroke MUST be "#006DCD" (blue-03)
+- Checklist SVGs use stroke="currentColor"
+- Do NOT use ring-split, list-title-section, list-title-grid, or list-item-group — those are deprecated
+- Do NOT add inline styles to the grid, tiles, or any child elements
+- Typical groupings: Deployment/Access, Integrations/APIs, Security/Compliance — but adapt to the keyword topic
+
+Social proof / quote section (section 7) — ALWAYS use this exact structure:
+- Centered sec-header: <div class="sec-header centered">
+  <span class="sec-label">Peer reviewed</span>
+  <h2 id="social-h2">Trusted by modern data teams</h2>
+  (no intro paragraph needed for this section)
+- Each quote uses the .quote-ring component (dark source panel + white quote panel):
+  <div class="quote-ring">
+    <div class="quote-ring__source">
+      <div class="quote-ring__source-name">Gartner Peer Insights</div>
+      <div class="quote-ring__source-label">Verified review</div>
+      <div class="quote-ring__source-result">
+        <div class="quote-ring__source-result-lbl">Key outcome</div>
+        <div class="quote-ring__source-result-val">Short outcome description</div>
+      </div>
+    </div>
+    <div class="quote-ring__quote">
+      <blockquote>"Quote text here."</blockquote>
+      <div class="quote-author">
+        <div class="quote-avatar">AB</div>
+        <div>
+          <div class="quote-name">Reviewer title</div>
+          <div class="quote-role">Department, Industry</div>
+        </div>
+      </div>
+    </div>
+  </div>
+- If multiple quotes are needed, use a SEPARATE .quote-ring for each — do NOT put multiple blockquotes in one quote-ring
+- Use heading id="social-h2" (not proof-h2)
+- Use <div> tags inside quote-ring, NOT <p> tags
+- Use BEM class names: quote-ring__source-result-lbl and quote-ring__source-result-val (not quote-result-lbl/quote-result-val)
+- Do NOT add inline styles to any quote-ring element — the shared stylesheet handles all typography and colors
+- Do NOT use quote-inner, quote-co-role, or grid-2 classes — those are deprecated
 
 Non-negotiable output rules:
 - Output ONLY the contents of <body>…</body> — nothing else
@@ -750,27 +881,61 @@ Non-negotiable output rules:
 - End your output with the closing </main> tag followed by a single <script> block for FAQ accordion and any other JS
 - Title tag and meta description are handled separately — do not include them
 - H1 must include primary keyword verbatim: "{fields["search_term"]}"
-- Hero: background #F2F1EE — never dark; all hero text in dark neutrals; hero section padding: 72px 0
-- HubSpot form: embed ONCE in the hero section only — do NOT embed a second form anywhere else on the page
-  portalId: '14552909', formId: '{form_id}', region: 'na1'
+- Hero: the shared stylesheet handles all hero styles — do NOT add inline styles to the hero section, hero-inner, hero-text, hero-visual, hero-sub, or hero-bullets elements
+- Hero right column: use the .hs-form-ring component for the HubSpot form — structure:
+  <div class="hero-visual animate-in" id="hero-form">
+    <div class="hs-form-ring">
+      <div class="hs-form-ring__header">
+        <h3>[Form heading, 6-8 words, max 45 chars]</h3>
+        <p>[Form description, 1 sentence, max 90 chars]</p>
+      </div>
+      <div class="hs-form-ring__body" id="hs-form-target-1"></div>
+    </div>
+  </div>
+- HubSpot form: embed ONCE in the hero .hs-form-ring only — do NOT embed a second form anywhere else
+  portalId: '14552909', formId: '{form_id}', region: 'na1', css: ''
   Use the standard two-script embed pattern — the service will automatically convert it to a lazy-loader
-  The form card and its container must always use a light background (#F2F1EE or #FFFFFF) — never dark
-- Images: add loading="lazy" decoding="async" to ALL images EXCEPT the hero image
-  Hero image: add fetchpriority="high" (no lazy loading on hero)
+- Hero secondary CTA: if a secondary link is needed in the hero btn-row, use the text-only button pattern:
+  <a class="button-text" href="URL">Link text <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></a>
+  Do NOT use button-ghost in the hero — button-ghost is deprecated for hero CTAs
+- Images: add loading="lazy" decoding="async" to ALL images
+  Do NOT use framed-image in the hero — the hero right column is always the form ring
 - No italic text anywhere — font-style: normal throughout; no <em> or <i> tags
 - Visual section: grid-template-columns: 1fr (stacked vertically, never side by side)
 - Never link to docs.datahub.com or any documentation URL — all links must go to datahub.com pages only
-- CSS variables only (--dh-*), Google Fonts Castoro + Geist — no system fonts, no Arial/Inter
+- The shared stylesheet provides all fonts (Plantin MT Pro for headlines, Lab Grotesque for body) and CSS variables — do NOT add inline font-family styles or Google Fonts links
 - No invented metrics, logos, or social proof
 - Section spacing and layout: follow the sample template exactly — use the same padding, gap, and grid values as the template; do not invent new spacing
 - Card grid headlines (How It Works steps, benefit blocks, feature tiles): keep all headlines in a grid to 4–6 words — consistent length across every card in the same section so they align at the same height
 - Section order and classes: follow the SECTION ORDER AND CLASS REQUIREMENTS exactly — 9 content sections in the specified order with the specified classes (no header, no footer)
+- Section headers (.sec-header) must use this exact structure — no inline styles, no wrong heading levels:
+  <div class="sec-header">
+    <span class="sec-label">Label text</span>
+    <h2 id="section-id">Section heading</h2>
+    <p>Intro paragraph (1-2 sentences, max 160 chars)</p>
+  </div>
+  Use h2 for the heading, p for the intro. Do NOT use h3 or h4 for either element. Do NOT add inline font-size, color, or other styles — the shared stylesheet handles all sec-header typography.
 - No bare section {{ }} CSS rules — target inner component classes only (.sec-header, .hover-tile-grid, .content-highlight, etc.)
 - No margin-top or margin-bottom on <section> elements — vertical rhythm comes from main gap only
 - No em-dashes (—) or en-dashes (–) anywhere in the HTML — rewrite any copy that uses them
 - TRUST STRIP: Do NOT write the logo scroller / trust strip section. Instead output exactly this placeholder on its own line, immediately after the closing </section> tag of the hero:
   <!-- TRUST_STRIP_PLACEHOLDER -->
   The trust strip will be injected automatically in code.
+- FAQ SECTION: Use the faq-ring two-column grid layout (NOT the old .faq-tile-list centered list). Structure:
+  <div class="faq-ring">
+    <div class="faq-ring__heading">
+      <h2 id="faq-h2">Frequently asked questions about [search term]</h2>
+    </div>
+    <div class="faq-ring__list" role="list">
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" id="faq-q1" aria-expanded="false" aria-controls="faq-a1">[Question]<span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+        <div class="faq-answer" id="faq-a1" role="region" aria-labelledby="faq-q1"><div class="faq-answer-inner">[Answer]</div></div>
+      </div>
+      <!-- repeat for each FAQ (4-6 tiles, sequential IDs: faq-q2/faq-a2, faq-q3/faq-a3, etc.) -->
+    </div>
+  </div>
+  IMPORTANT: If the FAQ h2 heading text is longer than 40 characters, add the modifier class: class="faq-ring__heading faq-ring__heading--long". If 40 characters or fewer, use just class="faq-ring__heading". This controls the heading font size to prevent layout gaps.
+  Do NOT use .sec-header or .sec-label inside the FAQ section — the heading is inside .faq-ring__heading, not a sec-header.
 
 Return ONLY the HTML — no code fences, no preamble, no explanation.
 """.strip()
