@@ -2330,13 +2330,16 @@ async def slack_events(request: Request):
     if event.get("type") != "message":
         return JSONResponse({"ok": True})
     if event.get("subtype") and "[LP-REQUEST]" not in (event.get("text") or ""):
-        return JSONResponse({"ok": True})
+        # Allow bot_message through if it looks like a BART cost summary
+        _raw_text = (event.get("text") or "")
+        if not ("Session:" in _raw_text and "$" in _raw_text):
+            return JSONResponse({"ok": True})
 
     thread_ts = event.get("thread_ts") or event.get("ts")
-    user_id = event.get("user") or ""
+    user_id = event.get("user") or event.get("bot_id") or ""
     text = (event.get("text") or "").strip()
 
-    _bart_done = "BART_DONE" in text or (":moneybag:" in text and "Session:" in text)
+    _bart_done = "BART_DONE" in text or ("Session:" in text and "$" in text)
     logger.info("EVENT user=%s thread_ts=%s jobs_loaded=%s bart_done=%s text_preview=%s",
                 user_id, thread_ts, list(JOBS.keys()), _bart_done, text[:80])
 
@@ -2344,7 +2347,8 @@ async def slack_events(request: Request):
 
     # If job not in memory (e.g. Render restarted) but Bart posted BART_DONE,
     # reconstruct the job from the thread's starter message
-    if not job and user_id == BART_USER_ID and _bart_done and thread_ts:
+    _is_bart_user_early = user_id == BART_USER_ID or (BART_USER_ID and event.get("bot_id") and _bart_done)
+    if not job and _is_bart_user_early and _bart_done and thread_ts:
         logger.info("Job not in memory — attempting reconstruction from thread %s", thread_ts)
         try:
             bart_channel = SEM_LP_REQUESTS_CHANNEL or SLACK_DEFAULT_CHANNEL
@@ -2483,8 +2487,10 @@ async def slack_events(request: Request):
     if not job:
         return JSONResponse({"ok": True})
 
-    bart_finished = "BART_DONE" in text or (":moneybag:" in text and "Session:" in text)
-    if job.get("awaiting") == "bart" and user_id == BART_USER_ID and bart_finished:
+    _is_cost_summary = "Session:" in text and "$" in text
+    bart_finished = "BART_DONE" in text or _is_cost_summary
+    _is_bart_user = user_id == BART_USER_ID or (BART_USER_ID and event.get("bot_id") and _is_cost_summary)
+    if job.get("awaiting") == "bart" and _is_bart_user and bart_finished:
         job["bart_output"] = text
         job["awaiting"] = "generating"
         JOBS[thread_ts] = job
