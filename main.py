@@ -2171,15 +2171,14 @@ async def slack_events(request: Request):
     user_id = event.get("user") or ""
     text = (event.get("text") or "").strip()
 
-    _bart_done = "BART_DONE" in text or (":moneybag:" in text and "Session:" in text)
     logger.info("EVENT user=%s thread_ts=%s jobs_loaded=%s bart_done=%s text_preview=%s",
-                user_id, thread_ts, list(JOBS.keys()), _bart_done, text[:80])
+                user_id, thread_ts, list(JOBS.keys()), "BART_DONE" in text, text[:80])
 
     job = JOBS.get(thread_ts)
 
     # If job not in memory (e.g. Render restarted) but Bart posted BART_DONE,
     # reconstruct the job from the thread's starter message
-    if not job and user_id == BART_USER_ID and _bart_done and thread_ts:
+    if not job and user_id == BART_USER_ID and "BART_DONE" in text and thread_ts:
         logger.info("Job not in memory — attempting reconstruction from thread %s", thread_ts)
         try:
             bart_channel = SEM_LP_REQUESTS_CHANNEL or SLACK_DEFAULT_CHANNEL
@@ -2318,8 +2317,7 @@ async def slack_events(request: Request):
     if not job:
         return JSONResponse({"ok": True})
 
-    bart_finished = "BART_DONE" in text or (":moneybag:" in text and "Session:" in text)
-    if job.get("awaiting") == "bart" and user_id == BART_USER_ID and bart_finished:
+    if job.get("awaiting") == "bart" and user_id == BART_USER_ID and "BART_DONE" in text:
         job["bart_output"] = text
         job["awaiting"] = "generating"
         JOBS[thread_ts] = job
