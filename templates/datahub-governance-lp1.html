@@ -203,38 +203,30 @@ blockquote{font-family:var(--font-headline);font-size:clamp(1.1rem,2vw,1.4rem);c
 
 /* ─── FAQ ────────────────────────────────────────────────── */
 .faq-section{padding:0}
-.faq-ring{background:var(--color-blue-05);border-radius:2.5px;padding:2px;display:grid;grid-template-columns:1fr;gap:2px}
-@media(min-width:1024px){.faq-ring{grid-template-columns:1fr 1fr}}
-.faq-ring__heading{background:var(--color-blue-06);border-radius:10px;padding:36px;display:flex;align-items:flex-start;align-self:stretch}
-.faq-ring__heading h2{font-family:var(--font-headline);font-weight:400;font-size:60px;line-height:60px;letter-spacing:-0.6px;color:var(--color-text-primary);margin:0}
-.faq-ring__heading--long h2{font-size:42px;line-height:44px;letter-spacing:-0.4px}
-.faq-ring__list{display:flex;flex-direction:column;gap:2px}
-.faq-tile{background:var(--color-basic-white);border-radius:10px;overflow:hidden}
-.faq-header{width:100%;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:var(--font-body);font-weight:300;font-size:16px;line-height:24px;color:var(--color-blue-02);background:none;border:none;cursor:pointer;text-align:left}
-.faq-icon{width:16px;height:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform 200ms ease-out}
-.faq-tile.open .faq-icon{transform:rotate(180deg)}
-.faq-icon svg{width:16px;height:16px;color:var(--color-blue-02)}
+.faq-tile-list{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.faq-tile{background:var(--color-surface-white);border:1.5px solid var(--color-border-default);border-radius:var(--radius-tile);overflow:hidden;transition:border-color 100ms ease-out}
+.faq-tile.open{border-color:var(--color-blue-04)}
+.faq-header{width:100%;padding:20px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;font-family:var(--font-body);font-size:15px;font-weight:500;color:var(--color-text-primary);background:none;border:none;cursor:pointer;text-align:left}
+.faq-icon{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--color-neutral-04);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 100ms ease-out}
+.faq-tile.open .faq-icon{background:var(--color-blue-03);border-color:var(--color-blue-03);transform:rotate(180deg)}
+.faq-icon svg{width:12px;height:12px;color:var(--color-text-muted);transition:color 100ms ease-out}
+.faq-tile.open .faq-icon svg{color:var(--color-basic-white)}
 .faq-answer{max-height:0;overflow:hidden;transition:max-height 300ms cubic-bezier(0.75,0,0.25,1)}
 .faq-tile.open .faq-answer{max-height:400px}
-.faq-answer-inner{padding:0 24px 16px;font-family:var(--font-body);font-weight:300;font-size:16px;line-height:24px;color:var(--color-text-secondary)}
+.faq-answer-inner{padding:0 22px 22px;font-size:14px;color:var(--color-text-secondary);line-height:1.7}
 
-/* ─── CTA RING ──────────────────────────────────────────── */
-.cta-ring{background:var(--color-blue-03);border-radius:2.5px;padding:2px;display:flex}
-.cta-ring__tile{background-color:var(--color-surface-dark);border-radius:10px;min-height:360px;padding:36px;display:flex;flex-direction:column;justify-content:flex-end;position:relative;overflow:hidden;flex:1}
-.cta-ring__content{display:flex;flex-direction:column;gap:36px;max-width:600px;position:relative;z-index:1}
-.cta-ring__text{display:flex;flex-direction:column;gap:0}
-.cta-ring__tile h2{font-family:var(--font-headline);font-weight:400;font-size:48px;line-height:48px;letter-spacing:-0.48px;color:var(--color-basic-white);margin:0}
-.cta-ring__tile p{font-family:var(--font-body);font-weight:300;font-size:20px;line-height:24px;color:var(--color-blue-05);margin:0}
-.cta-trust{display:flex;gap:24px;flex-wrap:wrap}
-.cta-trust-item{display:flex;align-items:center;gap:7px;font-family:var(--font-body);font-weight:300;font-size:13px;line-height:18px;color:var(--color-blue-05)}
-.cta-trust-item svg{color:var(--color-blue-04);flex-shrink:0}
-.cta-ring .button-primary{background:var(--color-blue-04)}
-.cta-ring .button-primary::after{background:var(--color-blue-03)}
-.cta-ring .button-primary::before{background:var(--color-blue-04)}
-.cta-ring .button-secondary{background:var(--color-blue-04);color:var(--color-blue-05)}
-.cta-ring .button-secondary::after{background:var(--color-blue-02)}
-.cta-ring .button-secondary::before{background:var(--color-blue-04)}
-.cta-ring .button-secondary:hover{color:var(--color-basic-white)}
+/* ─── FRAME CTA ──────────────────────────────────────────── */
+.frame-cta{background:var(--color-blue-01);border-radius:var(--radius-card);padding:72px 48px;text-align:center}
+.frame-cta h2{font-family:var(--font-headline);font-size:clamp(1.9rem,3.5vw,2.7rem);color:var(--color-basic-white);margin-bottom:16px;line-height:1.2}
+.frame-cta p{font-size:16px;color:var(--color-blue-05);margin-bottom:36px;line-height:1.65;max-width:580px;margin-left:auto;margin-right:auto}
+.frame-cta .btn-row{justify-content:center;margin-bottom:36px}
+.cta-trust{display:flex;justify-content:center;gap:24px;flex-wrap:wrap}
+.cta-trust-item{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--color-blue-05)}
+.cta-trust-item svg{color:var(--color-blue-04)}
+.demo-chip{margin-top:32px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-tile);padding:16px 22px;display:inline-flex;align-items:center;gap:12px}
+.demo-chip svg{color:var(--color-blue-04);flex-shrink:0}
+.demo-chip p{font-size:13px;color:var(--color-blue-05);text-align:left}
+.demo-chip strong{color:var(--color-basic-white)}
 
 /* ─── PRODUCT BADGE ──────────────────────────────────────── */
 .product-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;background:var(--color-blue-05);border-radius:var(--radius-pill);font-size:12px;font-weight:600;color:var(--color-blue-02);margin-bottom:20px}
@@ -318,25 +310,111 @@ blockquote{font-family:var(--font-headline);font-size:clamp(1.1rem,2vw,1.4rem);c
           <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Extend via GraphQL &amp; OpenAPI — 12K+ GitHub stars</li>
         </ul>
         <div class="btn-row">
-          <a href="#hero-form" class="button button-primary button-lg"><span>Request a Demo</span></a>
+          <a href="#product-tour" class="button button-primary button-lg"><span>See it in action →</span></a>
+          <a href="https://docs.datahub.com" class="button button-ghost">Read the docs</a>
         </div>
       </div>
 
-      <div class="hero-visual animate-in" id="hero-form">
-        <div class="hs-form-ring">
-          <div class="hs-form-ring__header">
-            <h3>See DataHub govern your data</h3>
-            <p>A DataHub engineer will walk through your specific environment.</p>
-          </div>
-          <div class="hs-form-ring__body" id="hs-form-target-1"></div>
-          <script>(function(){var w=document.getElementById("hs-form-target-1");if(!w)return;new IntersectionObserver(function(e,o){if(!e[0].isIntersecting)return;o.disconnect();var s=document.createElement("script");s.src="//js.hsforms.net/forms/embed/v2.js";s.onload=function(){hbspt.forms.create({
-              portalId: "14552909",
-              formId: "ed2447d6-e6f9-4771-8f77-825b114a9421",
-              region: "na1",
-              css: "",
-              target: "#hs-form-target-1"
-            })};document.head.appendChild(s)},{"rootMargin":"400px"}).observe(w)})();</script>
-        </div>
+      <div class="hero-visual animate-in" style="transition-delay:120ms">
+        <figure class="framed-image">
+          <img src="https://datahub.com/wp-content/uploads/2024/03/datahub-platform-architecture.png"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='block'"
+               alt="Technical architecture diagram of DataHub platform showing four quadrants — Discovery, Governance, Quality, Lineage — with 80+ data source connectors and API layer">
+          <!-- SVG fallback — brand-compliant explainer diagram -->
+          <svg style="display:none;width:100%;height:auto" viewBox="0 0 560 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DataHub platform architecture showing four capability quadrants and data source integrations">
+            <title>DataHub Platform Architecture</title>
+            <defs>
+              <style>@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;600&display=swap');</style>
+              <marker id="arr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#3CBBEB"/></marker>
+            </defs>
+            <!-- Outer frame -->
+            <rect x="8" y="8" width="544" height="364" rx="10" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1.5"/>
+            <!-- API tile -->
+            <rect x="170" y="18" width="220" height="52" rx="6" fill="#B0EAFC" stroke="#006DCD" stroke-width="1.2"/>
+            <text x="280" y="38" text-anchor="middle" font-family="Geist,sans-serif" font-size="9" font-weight="600" letter-spacing=".08em" fill="#0A4170" text-transform="uppercase">API LAYER</text>
+            <text x="230" y="54" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#0A4170">GraphQL</text>
+            <text x="330" y="54" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" fill="#0A4170">OpenAPI / REST</text>
+            <!-- Center hex -->
+            <polygon points="280,120 310,138 310,173 280,191 250,173 250,138" fill="#006DCD" stroke="#3CBBEB" stroke-width="1.5"/>
+            <text x="280" y="152" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" font-weight="600" fill="#FFFFFF">DATAHUB</text>
+            <text x="280" y="164" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" font-weight="600" fill="#FFFFFF">PLATFORM</text>
+            <text x="280" y="178" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#B0EAFC">Core Metadata Engine</text>
+            <!-- Q1: Discovery -->
+            <rect x="18" y="88" width="218" height="100" rx="6" fill="#F2F1EE" stroke="#3CBBEB" stroke-width="1.2"/>
+            <text x="30" y="104" font-family="Geist,sans-serif" font-size="8" font-weight="600" letter-spacing=".07em" fill="#0A4170">DISCOVERY &amp; CATALOG</text>
+            <circle cx="60" cy="148" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="60" y="144" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Meta</text>
+            <text x="60" y="154" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Search</text>
+            <line x1="82" y1="148" x2="105" y2="148" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="127" cy="148" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="127" y="144" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Data</text>
+            <text x="127" y="154" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Catalog</text>
+            <line x1="149" y1="148" x2="172" y2="148" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="194" cy="148" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="194" y="144" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Asset</text>
+            <text x="194" y="154" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Discovery</text>
+            <!-- Q2: Governance -->
+            <rect x="324" y="88" width="218" height="100" rx="6" fill="#F2F1EE" stroke="#3CBBEB" stroke-width="1.2"/>
+            <text x="336" y="104" font-family="Geist,sans-serif" font-size="8" font-weight="600" letter-spacing=".07em" fill="#0A4170">GOVERNANCE &amp; COMPLIANCE</text>
+            <circle cx="360" cy="148" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="360" y="148" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Policies</text>
+            <line x1="382" y1="148" x2="405" y2="148" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="427" cy="148" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="427" y="148" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Access</text>
+            <line x1="449" y1="148" x2="472" y2="148" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="494" cy="148" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="494" y="144" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Audit</text>
+            <text x="494" y="154" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Trails</text>
+            <!-- Q3: Quality -->
+            <rect x="18" y="202" width="218" height="100" rx="6" fill="#F2F1EE" stroke="#3CBBEB" stroke-width="1.2"/>
+            <text x="30" y="218" font-family="Geist,sans-serif" font-size="8" font-weight="600" letter-spacing=".07em" fill="#0A4170">QUALITY &amp; OBSERVABILITY</text>
+            <circle cx="60" cy="260" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="60" y="256" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Quality</text>
+            <text x="60" y="266" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Checks</text>
+            <line x1="82" y1="260" x2="105" y2="260" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="127" cy="260" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="127" y="256" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Monitors</text>
+            <text x="127" y="266" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">&amp; Alerts</text>
+            <line x1="149" y1="260" x2="172" y2="260" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="194" cy="260" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="194" y="256" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">SLA</text>
+            <text x="194" y="266" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Tracking</text>
+            <!-- Q4: Lineage -->
+            <rect x="324" y="202" width="218" height="100" rx="6" fill="#F2F1EE" stroke="#3CBBEB" stroke-width="1.2"/>
+            <text x="336" y="218" font-family="Geist,sans-serif" font-size="8" font-weight="600" letter-spacing=".07em" fill="#0A4170">LINEAGE &amp; IMPACT</text>
+            <circle cx="370" cy="260" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="370" y="256" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Lineage</text>
+            <text x="370" y="266" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Graph</text>
+            <line x1="392" y1="260" x2="422" y2="260" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="444" cy="260" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="444" y="256" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Impact</text>
+            <text x="444" y="266" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Analysis</text>
+            <line x1="466" y1="260" x2="496" y2="260" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <circle cx="518" cy="260" r="20" fill="#FFFFFF" stroke="#3CBBEB" stroke-width="1"/>
+            <text x="518" y="256" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Depend.</text>
+            <text x="518" y="266" text-anchor="middle" font-family="Geist,sans-serif" font-size="6" fill="#006DCD">Tracking</text>
+            <!-- Data Sources bottom -->
+            <rect x="18" y="316" width="524" height="48" rx="6" fill="#B0EAFC" stroke="#006DCD" stroke-width="1.2" stroke-dasharray="5 3"/>
+            <text x="280" y="332" text-anchor="middle" font-family="Geist,sans-serif" font-size="8" font-weight="600" letter-spacing=".07em" fill="#0A4170">DATA SOURCES &amp; INTEGRATIONS — 80+ CONNECTORS</text>
+            <text x="90" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">RELATIONAL</text>
+            <text x="170" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">WAREHOUSE</text>
+            <text x="240" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">LAKE</text>
+            <text x="300" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">BI</text>
+            <text x="355" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">STREAMING</text>
+            <text x="420" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">APPS</text>
+            <text x="480" y="352" text-anchor="middle" font-family="Geist,sans-serif" font-size="7" fill="#0A4170">SaaS</text>
+            <!-- Connectors from API down to center -->
+            <line x1="280" y1="70" x2="280" y2="120" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arr)"/>
+            <!-- From quadrants to center -->
+            <line x1="236" y1="148" x2="250" y2="155" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <line x1="324" y1="148" x2="310" y2="155" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <line x1="236" y1="260" x2="252" y2="178" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <line x1="324" y1="260" x2="308" y2="178" stroke="#3CBBEB" stroke-width="1.2" marker-end="url(#arr)"/>
+            <!-- Sources to center -->
+            <line x1="280" y1="316" x2="280" y2="191" stroke="#3CBBEB" stroke-width="1.5" marker-end="url(#arr)"/>
+          </svg>
+          <figcaption>DataHub platform architecture — four core governance capabilities with 80+ connectors</figcaption>
+        </figure>
       </div>
     </div>
   </div>
@@ -660,57 +738,59 @@ blockquote{font-family:var(--font-headline);font-size:clamp(1.1rem,2vw,1.4rem);c
 
 <!-- ── FAQ ──────────────────────────────────────────────────── -->
 <section class="faq-section" aria-labelledby="faq-h2">
-  <div class="container animate-in">
-    <div class="faq-ring">
-      <div class="faq-ring__heading faq-ring__heading--long">
-        <h2 id="faq-h2">Frequently asked questions about data governance software</h2>
+  <div class="container">
+    <div class="sec-header centered animate-in">
+      <span class="sec-label">FAQ</span>
+      <h2 id="faq-h2">Frequently asked questions about data governance software</h2>
+    </div>
+    <div class="faq-tile-list animate-in" role="list">
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false">What makes DataHub different from proprietary data governance software?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-answer" role="region"><div class="faq-answer-inner">DataHub is fully open source (Apache 2.0), giving you complete control over your governance infrastructure. Unlike proprietary tools, you can deploy on your own infrastructure, customize the platform, contribute features, and avoid vendor lock-in. With 80+ pre-built connectors and active community support, you get enterprise features without enterprise licensing costs.</div></div>
       </div>
-      <div class="faq-ring__list" role="list">
-        <div class="faq-tile" role="listitem">
-          <button class="faq-header" id="faq-q1" aria-expanded="false" aria-controls="faq-a1">What makes DataHub different from proprietary data governance software?<span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
-          <div class="faq-answer" id="faq-a1" role="region" aria-labelledby="faq-q1"><div class="faq-answer-inner">DataHub is fully open source (Apache 2.0), giving you complete control over your governance infrastructure. Unlike proprietary tools, you can deploy on your own infrastructure, customize the platform, contribute features, and avoid vendor lock-in. With 80+ pre-built connectors and active community support, you get enterprise features without enterprise licensing costs.</div></div>
-        </div>
-        <div class="faq-tile" role="listitem">
-          <button class="faq-header" id="faq-q2" aria-expanded="false" aria-controls="faq-a2">Can DataHub integrate with our existing data stack?<span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
-          <div class="faq-answer" id="faq-a2" role="region" aria-labelledby="faq-q2"><div class="faq-answer-inner">Yes. DataHub supports 80+ data sources including Snowflake, BigQuery, Databricks, Redshift, dbt, Airflow, Tableau, Looker, and more. The platform uses automated metadata ingestion pipelines and provides a custom connector SDK for proprietary systems. APIs (GraphQL and OpenAPI) enable seamless integration with existing tools.</div></div>
-        </div>
-        <div class="faq-tile" role="listitem">
-          <button class="faq-header" id="faq-q3" aria-expanded="false" aria-controls="faq-a3">How does DataHub handle data lineage across different platforms?<span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
-          <div class="faq-answer" id="faq-a3" role="region" aria-labelledby="faq-q3"><div class="faq-answer-inner">DataHub automatically tracks end-to-end lineage across your entire data stack, from source databases through transformation pipelines to BI dashboards. It supports column-level lineage, cross-platform tracking, and provides impact analysis to show downstream dependencies before making changes.</div></div>
-        </div>
-        <div class="faq-tile" role="listitem">
-          <button class="faq-header" id="faq-q4" aria-expanded="false" aria-controls="faq-a4">Is DataHub suitable for compliance requirements (GDPR, SOC2)?<span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
-          <div class="faq-answer" id="faq-a4" role="region" aria-labelledby="faq-q4"><div class="faq-answer-inner">Yes. DataHub provides audit trails, PII detection and classification, fine-grained access controls (RBAC), and comprehensive metadata tracking. These features support compliance frameworks including GDPR, CCPA, and HIPAA. The open source nature also enables custom compliance workflows specific to your requirements.</div></div>
-        </div>
-        <div class="faq-tile" role="listitem">
-          <button class="faq-header" id="faq-q5" aria-expanded="false" aria-controls="faq-a5">What is the difference between DataHub OSS and DataHub Cloud?<span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
-          <div class="faq-answer" id="faq-a5" role="region" aria-labelledby="faq-q5"><div class="faq-answer-inner">DataHub OSS is the fully-featured open source platform you can self-host. DataHub Cloud is a managed service that includes additional enterprise features like advanced RBAC, SSO integration, 24/7 support, and SLA guarantees. Both share the same core governance capabilities.</div></div>
-        </div>
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false">Can DataHub integrate with our existing data stack?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-answer" role="region"><div class="faq-answer-inner">Yes. DataHub supports 80+ data sources including Snowflake, BigQuery, Databricks, Redshift, dbt, Airflow, Tableau, Looker, and more. The platform uses automated metadata ingestion pipelines and provides a custom connector SDK for proprietary systems. APIs (GraphQL &amp; OpenAPI) enable seamless integration with existing tools.</div></div>
+      </div>
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false">How does DataHub handle data lineage across different platforms?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-answer" role="region"><div class="faq-answer-inner">DataHub automatically tracks end-to-end lineage across your entire data stack — from source databases through transformation pipelines to BI dashboards. It supports column-level lineage, cross-platform tracking, and provides impact analysis to show downstream dependencies before making changes.</div></div>
+      </div>
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false">Is DataHub suitable for compliance requirements (GDPR, SOC2, etc.)?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-answer" role="region"><div class="faq-answer-inner">Yes. DataHub provides audit trails, PII detection and classification, fine-grained access controls (RBAC), and comprehensive metadata tracking. These features support compliance frameworks including GDPR, CCPA, and HIPAA. The open source nature also enables custom compliance workflows specific to your requirements.</div></div>
+      </div>
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false">What's the difference between DataHub OSS and DataHub Cloud?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-answer" role="region"><div class="faq-answer-inner">DataHub OSS is the fully-featured open source platform you can self-host. DataHub Cloud is a managed service that includes additional enterprise features like advanced RBAC, SSO integration, 24/7 support, and SLA guarantees. Both share the same core governance capabilities.</div></div>
+      </div>
+      <div class="faq-tile" role="listitem">
+        <button class="faq-header" aria-expanded="false">How scalable is DataHub for large enterprises?<span class="faq-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+        <div class="faq-answer" role="region"><div class="faq-answer-inner">DataHub is built for scale with a microservices architecture, Elasticsearch-backed search, and Kafka event streaming. It powers data governance at companies managing petabytes of data across thousands of datasets. The platform scales horizontally and integrates with enterprise Kubernetes infrastructure.</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── CTA RING ──────────────────────────────────────────────── -->
+<!-- ── FRAME CTA ─────────────────────────────────────────────── -->
 <section aria-labelledby="cta-h2">
-  <div class="container animate-in">
-    <div class="cta-ring">
-      <div class="cta-ring__tile">
-        <div class="cta-ring__content">
-          <div class="cta-ring__text">
-            <h2 id="cta-h2">Ready to govern your data with confidence?</h2>
-            <p>Book a demo and a DataHub engineer will scope governance to your actual environment. No slides, no generic walkthrough.</p>
-          </div>
-          <div class="btn-row">
-            <a class="button button-primary button-lg" href="#hero-form"><span>Request a demo</span></a>
-            <a class="button button-secondary button-lg" href="https://datahub.com/products/"><span>Explore the product</span></a>
-          </div>
-          <div class="cta-trust">
-            <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Apache 2.0 open source</div>
-            <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>60+ pre-built connectors</div>
-            <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Self-hosted or managed deployment</div>
-          </div>
-        </div>
+  <div class="container">
+    <div class="frame-cta animate-in">
+      <span class="sec-label" style="color:var(--color-blue-04)">Ready to govern with confidence</span>
+      <h2 id="cta-h2">Deploy data governance software your platform engineers will actually use</h2>
+      <p>Open source, API-first, and built for the way modern data platforms are built. Join 3,000+ data teams who've moved from spreadsheet governance to production-grade control with DataHub.</p>
+      <div class="btn-row" style="justify-content:center;margin-bottom:32px">
+        <a href="#product-tour" class="button button-primary button-lg"><span>See it in action →</span></a>
+        <a href="https://datahub.com/demos/bi-weekly-demo/" class="button-inverse button button-lg">Join a live demo</a>
+      </div>
+      <div class="cta-trust">
+        <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Apache 2.0 — no vendor lock-in</div>
+        <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Deploy on your infrastructure</div>
+        <div class="cta-trust-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Technical onboarding included</div>
+      </div>
+      <div class="demo-chip">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <p><strong>Live group demo every Thursday</strong> — See DataHub data governance in action with open Q&amp;A from the engineering team</p>
       </div>
     </div>
   </div>

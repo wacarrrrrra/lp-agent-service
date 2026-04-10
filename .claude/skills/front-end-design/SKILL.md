@@ -30,133 +30,11 @@ Before coding, understand the context and commit to a brand-aligned aesthetic di
 These rules prevent the most common generation failures. They are non-negotiable and take precedence over creative decisions.
 
 ### Hero balance rule
-The hero uses `display: flex` with two equal `flex: 1` columns. The LEFT column (`hero-text`) and RIGHT column (`hero-visual` with `.hs-form-ring`) must be visually balanced at approximately 500px height each. This means:
+The hero uses `display: flex` with two equal `flex: 1` columns. The LEFT column (`hero-text`) and RIGHT column (`hero-visual` form card) must be visually balanced at approximately 500px height each. This means:
 
 - `hero-sub` paragraph: **≤180 characters** — strictly enforced. If copy is longer, the left column grows and the form card floats awkwardly in the middle.
 - `hero-bullets`: exactly 3 items, each **≤80 characters** — no line wrapping.
 - When in doubt, cut the `hero-sub` — the bullets carry the specifics.
-
-### Hero form ring
-The hero right column MUST use the `.hs-form-ring` component, NOT `.framed-image`. Structure:
-- `<div class="hero-visual animate-in" id="hero-form">` wraps the ring
-- `<div class="hs-form-ring">` contains the header tile and form body
-- `<div class="hs-form-ring__header">` has an `<h3>` (6-8 words, max 45 chars) and `<p>` (max 90 chars)
-- `<div class="hs-form-ring__body" id="hs-form-target-1">` holds the HubSpot form
-- Do NOT add inline styles to any hero element — the shared stylesheet handles all styling
-- Do NOT use `.framed-image` or `<figure>` in the hero — those are for feature sections only
-
-### Hero button row
-- Primary CTA: `<a href="#hero-form" class="button button-primary button-lg"><span>CTA text</span></a>`
-- Optional secondary link: use `.button-text` (text-only with arrow), NOT `.button-ghost`:
-  `<a class="button-text" href="URL">Text <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></a>`
-
-### Challenge tiles (dark theme, 4-column)
-The challenge section always uses the dark blue hover-tile-grid — no modifiers, no inline styles. Structure:
-```html
-<div class="hover-tile-grid">
-  <div class="hover-tile animate-in">
-    <div class="hover-tile-content">
-      <div class="hover-tile-icon" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3CBBEB" stroke-width="1.8">...</svg>
-      </div>
-      <h3>Tile title (max 35 chars)</h3>
-      <p>Tile body (max 120 chars)</p>
-    </div>
-  </div>
-  <!-- exactly 4 tiles -->
-</div>
-```
-- Always exactly 4 tiles. Dark surface background, white h3 headings, blue-05 body text, blue-03 ring border.
-- Do NOT use `--light` or `--3col` modifiers on the challenge grid.
-- Do NOT use h4/h5 tags or `<ul>` checklists inside challenge tiles.
-
-### Solution tiles (light theme, 2-column)
-The solution section always uses `hover-tile-grid--light` — white card tiles on a neutral-05 ring, 2-column on desktop. Structure:
-```html
-<div class="hover-tile-grid hover-tile-grid--light">
-  <div class="hover-tile animate-in">
-    <div class="hover-tile-content">
-      <div class="hover-tile-icon" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#006DCD" stroke-width="1.8">...</svg>
-      </div>
-      <h3>Tile heading (5-7 words)</h3>
-      <p>Body text (2-3 sentences, max 200 chars)</p>
-      <ul class="hover-tile-checklist">
-        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Bullet text</li>
-      </ul>
-    </div>
-  </div>
-  <!-- exactly 4 tiles -->
-</div>
-```
-- Always exactly 4 tiles with 3 checklist bullets each.
-- Icon stroke: `#006DCD` (blue-03) — NOT `#3CBBEB` (that's for dark tiles).
-- Checklist SVGs use `stroke="currentColor"`.
-- Do NOT use the bare `.hover-tile-grid` (dark variant) for the solution section.
-- Do NOT add inline styles to tiles or child elements.
-
-### How It Works tiles (light theme, 3-column)
-The How It Works section uses `hover-tile-grid--light hover-tile-grid--3col` — 3 white cards in a row. Same tile markup as solution tiles but with `--3col` modifier added.
-- Always exactly 3 cards (Connect → Contextualize → Activate pattern).
-- Icon stroke: `#006DCD`, checklist SVGs use `stroke="currentColor"`.
-- Centered sec-header above the grid.
-- Do NOT use `list-title-section` or `list-title-grid` — those are deprecated.
-
-### Enterprise tiles (light theme, 2-column or 3-column)
-The Enterprise section uses `hover-tile-grid--light` — same white card component as Solution and How It Works. Column count adapts to content:
-- **3 groups** (e.g. Integrations + Deployment + Security): add `hover-tile-grid--3col`
-- **2 groups** (e.g. Deployment + Integrations): default 2-col, no `--3col`
-
-```html
-<div class="hover-tile-grid hover-tile-grid--light hover-tile-grid--3col">
-  <div class="hover-tile animate-in">
-    <div class="hover-tile-content">
-      <div class="hover-tile-icon" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#006DCD" stroke-width="1.8">...</svg>
-      </div>
-      <h3>Group heading</h3>
-      <ul class="hover-tile-checklist">
-        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Bullet</li>
-      </ul>
-    </div>
-  </div>
-</div>
-```
-- Icon stroke: `#006DCD`, checklist SVGs use `stroke="currentColor"`.
-- Do NOT use `ring-split`, `list-title-section`, `list-title-grid`, or `list-item-group` — all deprecated.
-- No inline styles on the grid, tiles, or child elements.
-
-### Social proof / quote section (.quote-ring)
-The social proof section uses the `.quote-ring` component — a two-panel card with a dark source panel (left) and white quote panel (right).
-
-```html
-<div class="quote-ring">
-  <div class="quote-ring__source">
-    <div class="quote-ring__source-name">Gartner Peer Insights</div>
-    <div class="quote-ring__source-label">Verified review</div>
-    <div class="quote-ring__source-result">
-      <div class="quote-ring__source-result-lbl">Key outcome</div>
-      <div class="quote-ring__source-result-val">Short outcome</div>
-    </div>
-  </div>
-  <div class="quote-ring__quote">
-    <blockquote>"Quote text."</blockquote>
-    <div class="quote-author">
-      <div class="quote-avatar">AB</div>
-      <div>
-        <div class="quote-name">Reviewer title</div>
-        <div class="quote-role">Department, Industry</div>
-      </div>
-    </div>
-  </div>
-</div>
-```
-- Multiple quotes: use a **separate** `.quote-ring` for each — never multiple blockquotes in one ring.
-- Heading ID: `social-h2` (not `proof-h2`). Centered sec-header, no intro paragraph needed.
-- Use `<div>` tags inside quote-ring, not `<p>`.
-- Use full BEM names: `quote-ring__source-result-lbl` / `quote-ring__source-result-val`.
-- Do NOT use `quote-inner`, `quote-co-role`, or `grid-2` — all deprecated.
-- No inline styles on any quote-ring element.
 
 ### Feature items must always be 2-column (text + image)
 Each `.content-highlight-inner` must have exactly 2 children: `.ch-text` (flex: 1) and `.ch-visual` (flex: 1). Rules:
@@ -171,20 +49,6 @@ Even-indexed feature items (0-indexed: items 1 and 3) must get `class="content-h
 - Item 1: `content-highlight-inner reverse`
 - Item 2: `content-highlight-inner` (no reverse)
 - Item 3: `content-highlight-inner reverse`
-
-### Section headers (.sec-header) — strict structure
-Every section (except hero and logo-scroller) opens with a `.sec-header`:
-```html
-<div class="sec-header">
-  <span class="sec-label">Label</span>
-  <h2 id="section-id">Heading (max 55 chars)</h2>
-  <p>Intro paragraph (1-2 sentences, max 160 chars)</p>
-</div>
-```
-- Heading is always `<h2>` — never h3 or h4.
-- Intro is always `<p>` — never h3 or h4.
-- No inline styles on any sec-header element. The shared stylesheet handles all typography.
-- Add `.centered` for centered layouts (how-it-works, closing CTA).
 
 ### Section gaps come from `main { gap: 120px }` — do not add margin to sections
 Sections themselves have zero padding and zero margin. Vertical rhythm comes entirely from the `main` flex gap. Never add `margin-top` or `margin-bottom` to `<section>` elements or their `.container` wrappers. Adding extra margin is the primary cause of irregular vertical spacing.
@@ -431,25 +295,11 @@ Three layout modes — choose the one that fits the content:
 - Prefer quotes that name a specific problem solved — not general praise
 - Pair with company logo or avatar initials
 
-### FAQ Ring (Two-Column Grid)
+### FAQ Accordion
 
-- Uses `.faq-ring` grid layout: heading tile left, accordion tiles right (stacks on mobile)
-- Heading lives in `.faq-ring__heading` (not a `.sec-header`) — large serif font
-- Add `.faq-ring__heading--long` when h2 text exceeds 40 characters (drops font from 60px to 42px)
 - Question visible, answer collapsed by default
 - Expand on click with smooth max-height transition
-- Each tile has sequential `id="faq-q1"` / `id="faq-a1"` pairs with `aria-controls` / `aria-labelledby`
 - No CTA inside FAQ answers
-
-### CTA Ring (Final CTA Section)
-
-- Uses `.cta-ring` component (NOT `.frame-cta`) — dark tile with left-aligned content
-- Structure: `.cta-ring` > `.cta-ring__tile` > `.cta-ring__content` > `.cta-ring__text` + `.btn-row` + `.cta-trust`
-- H2 restates the core outcome from the hero; p provides a 1-2 sentence risk-reduction message
-- Primary button links to `#hero-form`; secondary button links to `https://datahub.com/products/`
-- Use `button-secondary` for the secondary button (NOT `button-inverse` or `button-ghost`)
-- Include exactly 3 `.cta-trust-item` elements with checkmark SVGs — short factual phrases
-- No `.sec-label`, no `.demo-chip`, no inline styles, no embedded forms
 
 ---
 
