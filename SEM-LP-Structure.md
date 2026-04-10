@@ -142,9 +142,9 @@ If `additional_keywords` are provided in the request, distribute them across H2s
 
 **Supporting bullets:** Exactly 3. Each max 80 characters. Outcome-driven. Quantifiable where possible. No fluff.
 
-**Primary CTA:** `button-primary button-lg`, anchor-links to `#hero-form`. Optional secondary link uses `button-text` (text-only with arrow icon), NOT `button-ghost`.
+**Primary CTA:** High contrast. Anchor-links to the embedded form below.
 
-**Embedded HubSpot form:** Use `formId` from the CTA mapping table above. The form MUST use the `.hs-form-ring` component in the hero right column (`.hero-visual`). Do NOT use `.framed-image` or inline-styled containers for the form.
+**Embedded HubSpot form:** Use `formId` from the CTA mapping table above.
 
 **Trust strip (directly below hero):**
 - 3–6 enterprise logos
@@ -275,13 +275,9 @@ Apply **peer specificity**: give the reader permission to move forward by showin
 
 ### 8. FAQ SECTION — *Emotional trigger: Trust*
 
-**Layout:** Two-column `faq-ring` grid — heading tile on the left, accordion tiles on the right. No `.sec-header` or `.sec-label` — the heading lives inside `.faq-ring__heading`.
+**H2:** "Frequently Asked Questions About [Primary Search Term]"
 
-**H2:** "Frequently asked questions about [Primary Search Term]"
-- If the h2 text exceeds 40 characters, add `.faq-ring__heading--long` to the heading div (reduces font from 60px to 42px to prevent the heading tile from outgrowing the FAQ list).
-- If the search term is generic enough that "Frequently asked questions" alone works (26 chars), omit the "about [term]" suffix.
-
-Include 4–6 questions covering: implementation complexity, security concerns, integration, ROI, timeline.
+Include 3–6 questions covering: implementation complexity, security concerns, integration, ROI, timeline.
 
 Each answer: 3–5 sentences max. Clear. Not bloated.
 
@@ -300,26 +296,19 @@ Apply **objection respect**: write answers as if the question was asked by someo
 
 ### 9. FINAL CTA SECTION — *Emotional trigger: Confidence + Low Risk*
 
-**Layout:** `.cta-ring` component — dark tile with left-aligned content, two buttons, and 3 trust items. No `.frame-cta`, no `.sec-label`, no `.demo-chip`.
-
 **H2:** "Ready to [Primary Outcome]?"
 
-**Structure:**
-- `.cta-ring` > `.cta-ring__tile` > `.cta-ring__content`
-- `.cta-ring__text` contains h2 + p (1-2 sentences, risk-reduction message)
-- `.btn-row` with primary button (`#hero-form`) + secondary button (`datahub.com/products/`)
-- `.cta-trust` with exactly 3 checkmark trust items — short risk-reduction phrases
-- Do NOT embed a second form — primary CTA anchors back to the hero form
+Restate: core benefit, risk reduction. Repeat primary CTA. Embed form again. Reinforce credibility.
 
 #### 🎯 Emotional Engagement Rules — Final CTA
 
 Apply **friction reduction through clarity**: the reader's hesitation is almost never "I don't want this." It's "I'm not sure what happens next." Resolve that.
 
-- Name what happens after the click: "You'll speak with a DataHub engineer, not a sales script, about your specific environment."
+- Name what happens after the click: *"You'll speak with a DataHub engineer — not a sales script — about your specific environment."*
+- **For Product Tour CTAs:** emphasize self-directed, no-pressure exploration
 - **For Demo CTAs:** emphasize that it's scoped to their environment, not a generic walkthrough
 - Restate the core outcome (not the feature) in one sentence before the CTA button
 - **Remove any language implying urgency, scarcity, or pressure** — this audience will distrust it
-- Trust items should be short, factual phrases (e.g. "Apache 2.0 open source", "60+ pre-built connectors", "Self-hosted or managed deployment")
 
 ---
 
