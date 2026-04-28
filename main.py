@@ -44,7 +44,7 @@ SLACK_API_BASE = "https://slack.com/api"
 # ----------------------------
 SEM_LP_REQUESTS_CHANNEL = os.getenv("SEM_LP_REQUESTS_CHANNEL", "")   # private channel with BartBot
 SEM_LP_BUILD_KITS_CHANNEL = os.getenv("SEM_LP_BUILD_KITS_CHANNEL", "")  # agency-facing results channel
-BLOG_PUBLISHER_CHANNEL = os.getenv("BLOG_PUBLISHER_CHANNEL", "")        # #blog-publisher channel
+BLOG_PUBLISHER_CHANNEL = os.getenv("TECHNICAL_BLOG_PUBLISHER_CHANNEL", "")  # #technical-blog-publisher channel
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "")
 GITHUB_BRANCH = os.getenv("GITHUB_BRANCH", "main")
@@ -1322,10 +1322,10 @@ async def slack_commands(request: Request):
         ))
         return PlainTextResponse("", status_code=200)
 
-    if command == "/run-blog":
+    if command == "/run-technical-blog":
         if not text:
             return PlainTextResponse(
-                "Usage: `/run-blog <slack-thread-link>` — paste the link to the Bart thread in #sem-lp-requests",
+                "Usage: `/run-technical-blog <slack-thread-link>` — paste the link to the Bart thread in #sem-lp-requests",
                 status_code=200,
             )
         thread_link = text.split()[0]
@@ -2164,21 +2164,37 @@ async def slack_events(request: Request):
     event = body.get("event", {}) or {}
     if event.get("type") != "message":
         return JSONResponse({"ok": True})
-    if event.get("subtype") and "[LP-REQUEST]" not in (event.get("text") or ""):
+
+    # For message_changed events, the updated message is nested under event.message
+    subtype = event.get("subtype") or ""
+    if subtype == "message_changed":
+        inner = event.get("message") or {}
+        event_user = inner.get("user") or inner.get("bot_id") or ""
+        event_bot_id = inner.get("bot_id") or ""
+        text = (inner.get("text") or "").strip()
+        thread_ts = event.get("thread_ts") or inner.get("thread_ts") or event.get("ts")
+    else:
+        event_user = event.get("user") or ""
+        event_bot_id = event.get("bot_id") or ""
+        text = (event.get("text") or "").strip()
+        thread_ts = event.get("thread_ts") or event.get("ts")
+
+    is_bart = event_user == BART_USER_ID or (BART_USER_ID and event_bot_id == BART_USER_ID)
+    if subtype and subtype != "message_changed" and "[LP-REQUEST]" not in text and not is_bart:
         return JSONResponse({"ok": True})
 
-    thread_ts = event.get("thread_ts") or event.get("ts")
-    user_id = event.get("user") or ""
-    text = (event.get("text") or "").strip()
+    # Bot messages may have bot_id instead of user — if we identified this as Bart, use BART_USER_ID
+    user_id = event_user or (BART_USER_ID if is_bart else "")
 
+    bart_done = "BART_DONE" in text or "BART DONE" in text
     logger.info("EVENT user=%s thread_ts=%s jobs_loaded=%s bart_done=%s text_preview=%s",
-                user_id, thread_ts, list(JOBS.keys()), "BART_DONE" in text, text[:80])
+                user_id, thread_ts, list(JOBS.keys()), bart_done, text[:80])
 
     job = JOBS.get(thread_ts)
 
     # If job not in memory (e.g. Render restarted) but Bart posted BART_DONE,
     # reconstruct the job from the thread's starter message
-    if not job and user_id == BART_USER_ID and "BART_DONE" in text and thread_ts:
+    if not job and user_id == BART_USER_ID and bart_done and thread_ts:
         logger.info("Job not in memory — attempting reconstruction from thread %s", thread_ts)
         try:
             bart_channel = SEM_LP_REQUESTS_CHANNEL or SLACK_DEFAULT_CHANNEL
@@ -2199,7 +2215,7 @@ async def slack_events(request: Request):
                     return m.group(1).strip() if m else ""
                 topic = _parse_tech_field("Topic")
                 job_id = _parse_tech_field("Job ID") or generate_request_id()
-                blog_channel = BLOG_PUBLISHER_CHANNEL or SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL
+                blog_channel = BLOG_PUBLISHER_CHANNEL or SLACK_DEFAULT_CHANNEL
                 job = {
                     "pipeline": "tech_blog",
                     "job_id": job_id,
@@ -2317,7 +2333,7 @@ async def slack_events(request: Request):
     if not job:
         return JSONResponse({"ok": True})
 
-    if job.get("awaiting") == "bart" and user_id == BART_USER_ID and "BART_DONE" in text:
+    if job.get("awaiting") == "bart" and user_id == BART_USER_ID and bart_done:
         job["bart_output"] = text
         job["awaiting"] = "generating"
         JOBS[thread_ts] = job
