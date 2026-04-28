@@ -109,6 +109,12 @@ async def run_tech_blog_generation(
     job_id = job.get("job_id", "")
 
     try:
+        # Notify the publisher channel that generation has started
+        await post_message(
+            requester_channel,
+            f"🚀 Engineering blog pipeline started _(Job ID: {job_id})_ — *{topic}*\nI'll post the draft here when ready.",
+        )
+
         # Step 1 — Collect full Bart brief from thread
         await post_message(bart_channel, "📖 Collecting brief from thread…", thread_ts=thread_ts)
         messages = await fetch_thread_messages(bart_channel, thread_ts)
