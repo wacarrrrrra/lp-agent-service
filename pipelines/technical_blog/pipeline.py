@@ -22,7 +22,7 @@ logger = logging.getLogger("uvicorn.error")
 
 BART_USER_ID = os.getenv("BART_USER_ID", "")
 SEM_LP_REQUESTS_CHANNEL = os.getenv("SEM_LP_REQUESTS_CHANNEL", "")
-BLOG_PUBLISHER_CHANNEL = os.getenv("BLOG_PUBLISHER_CHANNEL", "")
+BLOG_PUBLISHER_CHANNEL = os.getenv("TECHNICAL_BLOG_PUBLISHER_CHANNEL", "")
 
 
 def _generate_job_id() -> str:
