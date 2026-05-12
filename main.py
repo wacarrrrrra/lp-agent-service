@@ -12,6 +12,8 @@ from typing import Optional, Dict, Any, List, Tuple
 
 from pipelines.technical_blog.pipeline import start_tech_blog_job, run_tech_blog_generation
 from pipelines.technical_blog.gdoc_sync import run_sync_pipeline
+from pipelines.technical_lp.pipeline import run_technical_lp_generation
+from pipelines.technical_lp.modal import build_technical_lp_modal_view
 from pathlib import Path
 
 import httpx
@@ -1388,6 +1390,11 @@ async def slack_commands(request: Request):
         asyncio.create_task(run_manual_blog())
         return PlainTextResponse("", status_code=200)
 
+    if command == "/technical-lp":
+        view = build_technical_lp_modal_view(channel_id=channel_id)
+        await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
+        return PlainTextResponse("", status_code=200)
+
     if command == "/sync-to-wordpress":
         if not text:
             return PlainTextResponse(
@@ -1565,6 +1572,42 @@ async def _handle_build_modal(payload: dict, view: dict) -> JSONResponse:
     return JSONResponse({"response_action": "clear"})
 
 
+async def _handle_technical_lp_modal(payload: dict, view: dict) -> JSONResponse:
+    """Handle /technical-lp modal submission — kicks off the Technical LP pipeline."""
+    fields = extract_modal_values(view.get("state", {}))
+
+    errors: Dict[str, str] = {}
+    if not fields.get("search_term"):
+        errors["search_term_block"] = "Search term is required."
+    if not fields.get("primary_cta"):
+        errors["primary_cta_block"] = "Primary CTA is required."
+    if not fields.get("intent"):
+        errors["intent_block"] = "Intent is required."
+    if not fields.get("primary_audience"):
+        errors["primary_audience_block"] = "Primary Audience is required."
+    if errors:
+        return JSONResponse({"response_action": "errors", "errors": errors})
+
+    request_id = generate_request_id()
+    user_id = (payload.get("user") or {}).get("id") or "unknown"
+    requester_channel = (view.get("private_metadata") or "").strip() or SLACK_DEFAULT_CHANNEL or ""
+    if not requester_channel:
+        return JSONResponse({"response_action": "clear"})
+
+    secondary_keywords = parse_secondary_keywords(fields.get("secondary_keywords"))
+    inputs = dict(fields)
+    inputs["secondary_keywords"] = secondary_keywords
+
+    asyncio.create_task(run_technical_lp_generation(
+        inputs=inputs,
+        request_id=request_id,
+        requester_channel=requester_channel,
+        user_id=user_id,
+        post_message=post_message,
+    ))
+    return JSONResponse({"response_action": "clear"})
+
+
 async def _handle_interactivity(request: Request):
     raw_body = await request.body()
     logger.info("INTERACTIVITY hit bytes=%s path=%s", len(raw_body), request.url.path)
@@ -1590,6 +1633,9 @@ async def _handle_interactivity(request: Request):
 
         if callback_id == "lp_build_modal":
             return await _handle_build_modal(payload, view)
+
+        if callback_id == "technical_lp_modal":
+            return await _handle_technical_lp_modal(payload, view)
 
         if callback_id != "lp_request_modal":
             return JSONResponse({"response_action": "clear"})
