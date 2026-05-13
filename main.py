@@ -1590,7 +1590,12 @@ async def _handle_technical_lp_modal(payload: dict, view: dict) -> JSONResponse:
 
     request_id = generate_request_id()
     user_id = (payload.get("user") or {}).get("id") or "unknown"
-    requester_channel = (view.get("private_metadata") or "").strip() or SLACK_DEFAULT_CHANNEL or ""
+    requester_channel = (
+        (view.get("private_metadata") or "").strip()
+        or SEM_LP_BUILD_KITS_CHANNEL
+        or SLACK_DEFAULT_CHANNEL
+        or ""
+    )
     if not requester_channel:
         return JSONResponse({"response_action": "clear"})
 
