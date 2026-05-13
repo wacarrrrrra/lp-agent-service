@@ -12,7 +12,7 @@ from typing import Optional, Dict, Any, List, Tuple
 
 from pipelines.technical_blog.pipeline import start_tech_blog_job, run_tech_blog_generation
 from pipelines.technical_blog.gdoc_sync import run_sync_pipeline
-from pipelines.technical_lp.pipeline import run_technical_lp_generation
+from pipelines.technical_lp.pipeline import run_technical_lp_generation, run_technical_lp_post_bart
 from pipelines.technical_lp.modal import build_technical_lp_modal_view
 from pathlib import Path
 
@@ -1604,6 +1604,9 @@ async def _handle_technical_lp_modal(payload: dict, view: dict) -> JSONResponse:
         requester_channel=requester_channel,
         user_id=user_id,
         post_message=post_message,
+        bart_channel=SEM_LP_REQUESTS_CHANNEL or requester_channel,
+        jobs=JOBS,
+        save_jobs=_save_jobs,
     ))
     return JSONResponse({"response_action": "clear"})
 
@@ -2377,6 +2380,25 @@ async def slack_events(request: Request):
     # ───────────────────────────────────────────────────────────────────────
 
     if not job:
+        return JSONResponse({"ok": True})
+
+    # Route technical_lp validation jobs (phase 2 — apply Bart's fixes and create the doc)
+    if job.get("awaiting") == "bart_validation_technical_lp" and user_id == BART_USER_ID and bart_done:
+        job["bart_output"] = text
+        job["awaiting"] = "generating_doc"
+        JOBS[thread_ts] = job
+        _save_jobs()
+
+        asyncio.create_task(run_technical_lp_post_bart(
+            job=job,
+            thread_ts=thread_ts,
+            post_message=post_message,
+            fetch_thread_messages=fetch_thread_messages,
+            accumulate_bart_brief=accumulate_bart_brief,
+            bart_user_id=BART_USER_ID,
+            jobs=JOBS,
+            save_jobs=_save_jobs,
+        ))
         return JSONResponse({"ok": True})
 
     if job.get("awaiting") == "bart" and user_id == BART_USER_ID and bart_done:

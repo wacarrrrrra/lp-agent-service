@@ -1,20 +1,26 @@
 """
 Claude API stages for the /technical-lp pipeline.
 
-Three stages:
-  1. run_outline    — produces a structured outline of the 10-section LP arc,
-                      letting Claude drop/reshape sections based on the brief.
-  2. run_full_copy  — writes the full 2,500–3,500 word LP copy as clean markdown.
-  3. run_qa_pass    — checks LP-specific rules and auto-applies fixes.
+Four stages:
+  1. run_outline        — produces a structured outline of the 10-section LP arc.
+  2. run_full_copy      — writes the full 2,500–3,500 word LP copy as clean markdown.
+  3. run_qa_pass        — checks LP-specific rules and auto-applies fixes.
+  4. run_bart_fix_pass  — applies Bart's technical-validation feedback.
 
-Style rules ported from ~/lp-agent/.claude/commands/technical-lp.md, which is the
-human-readable source of truth (used by the local CLI dev/testing flow).
+Reference docs (SEM-LP-Structure.md, datahub-editorial-style.md, brand-guidelines.md,
+SEO-Best-Practices.md) are loaded at module init and injected into the outline + full-copy
+prompts with Anthropic prompt caching, so repeat runs amortize the ~12K-token cost.
+
+The technical-LP-specific structural rules below (_LP_STYLE_RULES) supplement the reference
+docs with rules unique to this pipeline: the 10-section arc, depth markers, output format,
+and brief-specific constraints.
 """
 import asyncio
 import json
 import logging
 import os
 import re
+from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from anthropic import Anthropic
@@ -24,33 +30,71 @@ logger = logging.getLogger("uvicorn.error")
 _ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 _CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 
+# Resolve to lp-agent-service/ from stages.py → technical_lp → pipelines → lp-agent-service
+_SERVICE_DIR = Path(__file__).resolve().parent.parent.parent
+
+_REFERENCE_DOC_FILES = [
+    (
+        "SEM-LP-Structure.md",
+        "DataHub SEM Landing Page Structure Template "
+        "(NOTE: this doc is written for HTML SEM landing pages. Apply ONLY the copy constraints, "
+        "primary-search-term placement rules, intent/CTA mapping, and section structure principles. "
+        "IGNORE HubSpot form embedding, CSS class names, and HTML markup — this pipeline outputs a "
+        "Google Doc, not HTML.)",
+    ),
+    ("datahub-editorial-style.md", "DataHub Editorial Style Guide (voice, tone, grammar, capitalization)"),
+    ("brand-guidelines.md", "DataHub Brand Guidelines (voice + SEO/AEO writing rules)"),
+    ("SEO-Best-Practices.md", "Writing in 2026: SEO/AEO Best Practices"),
+]
+
+
+def _load_reference_docs() -> str:
+    """Concatenate the 4 reference docs into one prompt block. Done once at module init."""
+    parts: List[str] = []
+    for filename, header in _REFERENCE_DOC_FILES:
+        path = _SERVICE_DIR / filename
+        if not path.exists():
+            logger.warning("technical_lp reference doc not found: %s", path)
+            continue
+        try:
+            content = path.read_text()
+        except Exception as e:
+            logger.warning("Failed reading reference doc %s: %s", path, e)
+            continue
+        parts.append(f"# === {header} ===\n\n{content}\n")
+    return "\n".join(parts)
+
+
+_REFERENCE_DOCS = _load_reference_docs()
+
+
 _SYSTEM_PROMPT = (
     "You are a senior technical writer at DataHub. You write deep technical landing pages "
     "for data engineers, platform engineers, and technical buyers. Your writing is concrete, "
     "specific, and opinionated — never generic. You name actual integrations, APIs, SQL constructs, "
-    "and architecture components. You quantify claims or omit them. You write in sentence case for "
-    "all headings except the page title. You never use exclamation marks. You write in active voice."
+    "and architecture components. You quantify claims or omit them. You follow DataHub's editorial "
+    "style guide and brand guidelines (provided in the cached reference block). You write in active "
+    "voice. You never use exclamation marks."
 )
 
+
 _LP_STYLE_RULES = """
-## Technical landing page rules — follow strictly
+## Technical landing page rules (supplement the reference docs)
 
-### Structure (10-section starting template)
+### Section structure (10-section starting template)
 Default to this section arc, in order. Allow the brief to drop or reshape sections when
-the campaign clearly doesn't need one (e.g. drop Deployment & Architecture for a non-infra
-topic; expand Solution into more sub-features when the brief is feature-heavy). Do not invent
-sections the brief doesn't support.
+the campaign clearly doesn't need one. Do not invent sections the brief doesn't support.
 
-1. Hero — H1 + a 2–3 sentence subhead naming concrete capabilities, not generic value props.
-2. Social proof — one short paragraph naming 5–10 customer brands from the brief (skip if none provided).
-3. Problem section — 3–4 named failure modes as H3 + 1 paragraph each. Concrete failure scenarios with named tools, not abstract pain.
-4. Solution — 3–5 H3 sub-features. Each names the APIs, SDKs, SQL constructs, file formats, or protocols involved.
+1. Hero — H1 + a 2–3 sentence subhead naming concrete capabilities.
+2. Social proof — one paragraph naming 5–10 customer brands from the brief (skip if none provided).
+3. Problem section — 3–4 named failure modes as H3 + 1 paragraph each.
+4. Solution — 3–5 H3 sub-features, each naming the APIs, SDKs, SQL constructs, or protocols involved.
 5. Implementation process — typically 3 steps, each naming specific tools and protocols.
-6. Deployment & architecture — name internal components, deployment options (Kubernetes/Helm, Docker, managed cloud), security/compliance (SSO, SOC 2, VPC, SLA). Drop if brief is strictly feature-focused.
-7. Customer testimonial — one Gartner Peer Insights-style quote (named role + industry + segment), only if brief supplies one.
-8. FAQ — 4–6 engineering-grade questions, ~120–180 words per answer. Include architecture specifics, integration mechanisms, and honest gap-acknowledgment.
+6. Deployment & architecture — name internal components, deployment options, security/compliance specifics. Drop if brief is strictly feature-focused.
+7. Customer testimonial — one Gartner Peer Insights-style quote (only if brief supplies one).
+8. FAQ — 4–6 engineering-grade questions, ~120–180 words per answer, honest gap-acknowledgment.
 9. CTA — restate the value, promise a consultation scoped to the prospect's stack.
-10. Footer note — single short paragraph: copyright + final CTA reference.
+10. Footer note — single short paragraph.
 
 ### Depth markers (required wherever the brief supports them)
 - Named integrations by product (Snowflake, BigQuery, dbt, Airflow, Looker, Tableau, etc.)
@@ -61,19 +105,16 @@ sections the brief doesn't support.
 - Compliance / operational specifics (SOC 2 Type II, SSO standards, SLA percentages, VPC posture)
 - Honest acknowledgment of day-one gaps and how they're filled
 
-### Copy rules
-- Word count: 2,500–3,500 words total (body only, excludes the H1 title)
+### Output format
+- Word count: 2,500–3,500 words in the body (excludes the H1 title)
+- Single `# ` H1 at the top, `## ` H2 for sections, `### ` H3 for sub-sections
+- No HTML, no shortcodes, no YAML front matter, no code blocks — clean markdown only
+
+### Brief-specific rules
 - Primary search term appears verbatim in: H1, first 100 words, at least one H2, and the FAQ section
-- Sentence case for all H2 and H3 headings (H1 may be Title Case)
-- No exclamation marks anywhere
-- No em dashes (—) or en dashes (–). Use commas, parentheses, or " - " for clarity.
-- Active voice throughout
-- Numbers one through nine spelled out in body text; numerals for 10+
-- Use "and" not "&"
-- No weasel words — quantify or omit ("many organizations", "significantly", "increasingly", "growing number of", "in today's", "as organizations scale", "it's no secret", "as teams grow")
-- No invented metrics, customer logos, certifications, or technical claims not in the brief
 - Honor the "Must include" inputs verbatim where they fit naturally
 - Avoid anything in the "Must not say" inputs
+- No invented metrics, customer logos, certifications, or technical claims not in the brief
 """.strip()
 
 
@@ -122,6 +163,39 @@ async def _claude(system: str, user: str, max_tokens: int = 8000) -> str:
     return await asyncio.to_thread(_claude_sync, system, user, max_tokens)
 
 
+def _claude_sync_with_docs(user: str, max_tokens: int = 8000) -> str:
+    """Like _claude_sync but injects the reference docs into the system as a cached block.
+
+    Falls back to plain _claude_sync if the reference docs failed to load (so the pipeline
+    doesn't break in environments where the reference files aren't present).
+    """
+    if not _REFERENCE_DOCS:
+        return _claude_sync(_SYSTEM_PROMPT, user, max_tokens)
+
+    client = Anthropic(api_key=_ANTHROPIC_KEY)
+    msg = client.messages.create(
+        model=_CLAUDE_MODEL,
+        max_tokens=max_tokens,
+        temperature=0.2,
+        system=[
+            {"type": "text", "text": _SYSTEM_PROMPT},
+            {
+                "type": "text",
+                "text": "## DataHub reference documents (apply when writing)\n\n" + _REFERENCE_DOCS,
+                "cache_control": {"type": "ephemeral"},
+            },
+        ],
+        messages=[{"role": "user", "content": user}],
+    )
+    return "".join(
+        block.text for block in msg.content if getattr(block, "type", None) == "text"
+    ).strip()
+
+
+async def _claude_with_docs(user: str, max_tokens: int = 8000) -> str:
+    return await asyncio.to_thread(_claude_sync_with_docs, user, max_tokens)
+
+
 def _strip_fences(raw: str) -> str:
     raw = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.IGNORECASE)
     return re.sub(r"\s*```$", "", raw.strip())
@@ -135,12 +209,10 @@ def _strip_markdown_fence(raw: str) -> str:
 
 
 def _normalize_dashes(text: str) -> str:
-    """Strip em/en dashes Claude may slip past the rule."""
     return text.replace("—", " ").replace("–", "-")
 
 
 def _format_inputs(inputs: Dict[str, Any]) -> str:
-    """Render the modal inputs as a structured brief for the prompts."""
     parts = [
         f"Primary search term: {inputs.get('search_term', '')}",
         f"Primary CTA: {inputs.get('primary_cta', '')}",
@@ -185,12 +257,12 @@ If a section needs to be expanded, add the additional H3s.
 
 Return the outline only — no preamble, no explanation."""
 
-    return await _claude(_SYSTEM_PROMPT, user_prompt, max_tokens=4000)
+    return await _claude_with_docs(user_prompt, max_tokens=4000)
 
 
 async def run_full_copy(outline: str, inputs: Dict[str, Any]) -> str:
     """Stage 2: write the full LP copy from the outline. Returns markdown."""
-    user_prompt = f"""Write the full technical landing page copy from the outline below. Follow ALL style rules carefully.
+    user_prompt = f"""Write the full technical landing page copy from the outline below. Follow ALL rules in the reference docs AND the technical-LP rules below.
 
 {_LP_STYLE_RULES}
 
@@ -212,7 +284,7 @@ Clean markdown:
 
 Return only the markdown — no preamble, no explanation."""
 
-    draft = await _claude(_SYSTEM_PROMPT, user_prompt, max_tokens=12000)
+    draft = await _claude_with_docs(user_prompt, max_tokens=12000)
     draft = _strip_markdown_fence(draft)
     draft = _normalize_dashes(draft)
     return draft
@@ -253,3 +325,33 @@ COPY:
     corrected = _strip_markdown_fence(corrected)
     corrected = _normalize_dashes(corrected)
     return corrected, issues
+
+
+async def run_bart_fix_pass(copy: str, bart_feedback: str, inputs: Dict[str, Any]) -> str:
+    """Stage 4: apply Bart's technical-validation feedback. Bart has DataHub codebase access,
+    so treat its corrections as authoritative on product claims."""
+    feedback = (bart_feedback or "").strip()
+    if not feedback or "all claims validated" in feedback.lower():
+        return copy
+
+    user_prompt = f"""Apply Bart's technical validation fixes to the landing page copy below.
+
+Bart has direct access to the DataHub codebase and has flagged any inaccurate claims,
+invented details, or misrepresentations. Treat Bart's feedback as authoritative on product
+claims. Keep the rest of the copy intact — only change what Bart identified.
+
+Return the COMPLETE corrected copy in markdown. Return only the corrected copy — no preamble.
+
+BART'S FEEDBACK:
+{feedback}
+
+ORIGINAL BRIEF (for context):
+{_format_inputs(inputs)}
+
+COPY TO FIX:
+{copy}"""
+
+    corrected = await _claude(_SYSTEM_PROMPT, user_prompt, max_tokens=12000)
+    corrected = _strip_markdown_fence(corrected)
+    corrected = _normalize_dashes(corrected)
+    return corrected
