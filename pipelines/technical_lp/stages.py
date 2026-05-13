@@ -1,15 +1,20 @@
 """
-Claude API stages for the /technical-lp pipeline.
+Claude API stages for the /technical-lp pipeline (v3 — grounding-first).
 
-Four stages:
-  1. run_outline        — produces a structured outline of the 10-section LP arc.
-  2. run_full_copy      — writes the full 2,500–3,500 word LP copy as clean markdown.
-  3. run_qa_pass        — checks LP-specific rules and auto-applies fixes.
-  4. run_bart_fix_pass  — applies Bart's technical-validation feedback.
+Three stages:
+  1. run_outline    — produces a structured outline of the 10-section LP arc,
+                      grounded in the Bart technical research brief.
+  2. run_full_copy  — writes the full 2,500–3,500 word LP copy from outline +
+                      Bart's grounding. Claude is told to use ONLY the technical
+                      claims, integrations, capabilities, and customer references
+                      that Bart provided. No invention.
+  3. run_qa_pass    — checks LP-specific style/structure rules and auto-applies fixes.
 
 Reference docs (SEM-LP-Structure.md, datahub-editorial-style.md, brand-guidelines.md,
 SEO-Best-Practices.md) are loaded at module init and injected into the outline + full-copy
-prompts with Anthropic prompt caching, so repeat runs amortize the ~12K-token cost.
+prompts with Anthropic prompt caching, so repeat runs amortize the ~15K-token cost. The
+reference docs cover style/voice/structure; Bart's grounding is the source of truth for
+product facts.
 
 The technical-LP-specific structural rules below (_LP_STYLE_RULES) supplement the reference
 docs with rules unique to this pipeline: the 10-section arc, depth markers, output format,
@@ -70,11 +75,19 @@ _REFERENCE_DOCS = _load_reference_docs()
 
 _SYSTEM_PROMPT = (
     "You are a senior technical writer at DataHub. You write deep technical landing pages "
-    "for data engineers, platform engineers, and technical buyers. Your writing is concrete, "
-    "specific, and opinionated — never generic. You name actual integrations, APIs, SQL constructs, "
-    "and architecture components. You quantify claims or omit them. You follow DataHub's editorial "
-    "style guide and brand guidelines (provided in the cached reference block). You write in active "
-    "voice. You never use exclamation marks."
+    "for data engineers, platform engineers, and technical buyers.\n\n"
+    "CRITICAL RULE — TECHNICAL ACCURACY:\n"
+    "You write ONLY from the Bart Bot technical grounding brief supplied in each user message. "
+    "Bart has direct access to the DataHub codebase and is the authoritative source for product "
+    "facts. You may rephrase Bart's grounding into compelling copy, but you may NOT introduce "
+    "integrations, capabilities, customer brands, certifications, benchmarks, architecture "
+    "components, or features that Bart did not explicitly verify. If Bart did not mention "
+    "something, you do not write about it. If Bart flagged a limitation, you acknowledge it "
+    "honestly.\n\n"
+    "STYLE:\n"
+    "Your writing is concrete, specific, and opinionated — never generic. You quantify claims "
+    "or omit them. You follow DataHub's editorial style guide and brand guidelines (provided "
+    "in the cached reference block). You write in active voice. You never use exclamation marks."
 )
 
 
@@ -236,23 +249,31 @@ def _format_inputs(inputs: Dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
-async def run_outline(inputs: Dict[str, Any]) -> str:
-    """Stage 1: produce a detailed outline of the technical LP."""
-    user_prompt = f"""Produce a detailed outline for a technical landing page.
+async def run_outline(inputs: Dict[str, Any], grounding: str) -> str:
+    """Stage 1: produce a detailed outline of the technical LP, grounded in Bart's research."""
+    user_prompt = f"""Produce a detailed outline for a DataHub technical landing page.
 
+## AUTHORITATIVE TECHNICAL GROUNDING (from Bart Bot — codebase-verified)
+You may use ONLY the integrations, capabilities, customer references, certifications, and
+technical claims that Bart documented below. Do not introduce anything Bart did not name.
+If Bart flagged a gap or limitation, the outline must respect it (do not promise something
+Bart said doesn't work).
+
+{grounding}
+
+## TECHNICAL-LP STRUCTURE RULES
 {_LP_STYLE_RULES}
 
 ## Your task
 Build the outline as a markdown document. For each section in the 10-section template:
 - The H2 heading (sentence case — primary search term should appear in at least one H2)
-- 3–6 bullet points outlining what the section will say
-- Any H3 sub-headings within the section (e.g. named failure modes under Problem, sub-features under Solution, FAQ questions under FAQ)
-- Notes on which specific integrations, APIs, technical constructs, or benchmarks to name (drawing only from the brief)
+- 3–6 bullet points outlining what the section will say (drawn from Bart's grounding)
+- H3 sub-headings within the section (named failure modes under Problem, sub-features under Solution, FAQ questions under FAQ)
+- Notes on which specific integrations, APIs, technical constructs, or benchmarks to name (only from Bart's grounding)
 
-If a section doesn't fit the brief, drop it and note why.
-If a section needs to be expanded, add the additional H3s.
+If a section can't be supported by Bart's grounding, drop it and note why.
 
-## Brief
+## Modal inputs (for tone/audience/CTA)
 {_format_inputs(inputs)}
 
 Return the outline only — no preamble, no explanation."""
@@ -260,11 +281,22 @@ Return the outline only — no preamble, no explanation."""
     return await _claude_with_docs(user_prompt, max_tokens=4000)
 
 
-async def run_full_copy(outline: str, inputs: Dict[str, Any]) -> str:
-    """Stage 2: write the full LP copy from the outline. Returns markdown."""
-    user_prompt = f"""Write the full technical landing page copy from the outline below. Follow ALL rules in the reference docs AND the technical-LP rules below.
+async def run_full_copy(outline: str, inputs: Dict[str, Any], grounding: str) -> str:
+    """Stage 2: write the full LP copy from the outline + Bart's grounding."""
+    user_prompt = f"""Write the full DataHub technical landing page copy from the outline and grounding below.
 
+## AUTHORITATIVE TECHNICAL GROUNDING (from Bart Bot — codebase-verified)
+This is your ONLY source for product facts. You may NOT introduce integrations, capabilities,
+customer brands, certifications, benchmarks, architecture components, or quantified claims
+beyond what Bart documented. If Bart flagged a limitation, write the copy honestly around it.
+
+{grounding}
+
+## TECHNICAL-LP STRUCTURE RULES
 {_LP_STYLE_RULES}
+
+## OUTLINE (follow this structure)
+{outline}
 
 ## Output format
 Clean markdown:
@@ -276,10 +308,7 @@ Clean markdown:
 - No shortcodes, no YAML front matter, no code blocks
 - Aim for 2,500–3,500 words in the body
 
-## Outline
-{outline}
-
-## Brief
+## Modal inputs (for tone/audience/CTA)
 {_format_inputs(inputs)}
 
 Return only the markdown — no preamble, no explanation."""
@@ -327,31 +356,3 @@ COPY:
     return corrected, issues
 
 
-async def run_bart_fix_pass(copy: str, bart_feedback: str, inputs: Dict[str, Any]) -> str:
-    """Stage 4: apply Bart's technical-validation feedback. Bart has DataHub codebase access,
-    so treat its corrections as authoritative on product claims."""
-    feedback = (bart_feedback or "").strip()
-    if not feedback or "all claims validated" in feedback.lower():
-        return copy
-
-    user_prompt = f"""Apply Bart's technical validation fixes to the landing page copy below.
-
-Bart has direct access to the DataHub codebase and has flagged any inaccurate claims,
-invented details, or misrepresentations. Treat Bart's feedback as authoritative on product
-claims. Keep the rest of the copy intact — only change what Bart identified.
-
-Return the COMPLETE corrected copy in markdown. Return only the corrected copy — no preamble.
-
-BART'S FEEDBACK:
-{feedback}
-
-ORIGINAL BRIEF (for context):
-{_format_inputs(inputs)}
-
-COPY TO FIX:
-{copy}"""
-
-    corrected = await _claude(_SYSTEM_PROMPT, user_prompt, max_tokens=12000)
-    corrected = _strip_markdown_fence(corrected)
-    corrected = _normalize_dashes(corrected)
-    return corrected

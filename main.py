@@ -12,7 +12,7 @@ from typing import Optional, Dict, Any, List, Tuple
 
 from pipelines.technical_blog.pipeline import start_tech_blog_job, run_tech_blog_generation
 from pipelines.technical_blog.gdoc_sync import run_sync_pipeline
-from pipelines.technical_lp.pipeline import run_technical_lp_generation, run_technical_lp_post_bart
+from pipelines.technical_lp.pipeline import run_technical_lp_generation, run_technical_lp_from_grounding
 from pipelines.technical_lp.modal import build_technical_lp_modal_view
 from pathlib import Path
 
@@ -2387,14 +2387,14 @@ async def slack_events(request: Request):
     if not job:
         return JSONResponse({"ok": True})
 
-    # Route technical_lp validation jobs (phase 2 — apply Bart's fixes and create the doc)
-    if job.get("awaiting") == "bart_validation_technical_lp" and user_id == BART_USER_ID and bart_done:
+    # Route technical_lp grounding jobs (phase 2 — generate copy from Bart's grounding)
+    if job.get("awaiting") == "bart_grounding_technical_lp" and user_id == BART_USER_ID and bart_done:
         job["bart_output"] = text
-        job["awaiting"] = "generating_doc"
+        job["awaiting"] = "generating_from_grounding"
         JOBS[thread_ts] = job
         _save_jobs()
 
-        asyncio.create_task(run_technical_lp_post_bart(
+        asyncio.create_task(run_technical_lp_from_grounding(
             job=job,
             thread_ts=thread_ts,
             post_message=post_message,
