@@ -70,7 +70,7 @@ def build_bart_validate_modal_view(channel_id: str = "") -> Dict[str, Any]:
                 },
                 "hint": {
                     "type": "plain_text",
-                    "text": "Share the Sheet/Doc with blog-agent@robust-limiter-488800-g5.iam.gserviceaccount.com (Viewer is enough).",
+                    "text": "Share the Sheet/Doc with bart-validate@robust-limiter-488800-g5.iam.gserviceaccount.com (Viewer is enough).",
                 },
             },
             {

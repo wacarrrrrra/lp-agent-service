@@ -14,7 +14,8 @@ from typing import List, Optional, Tuple
 
 logger = logging.getLogger("uvicorn.error")
 
-GOOGLE_SERVICE_ACCOUNT_JSON = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+BART_VALIDATE_SERVICE_ACCOUNT_JSON = os.getenv("BART_VALIDATE_SERVICE_ACCOUNT_JSON", "")
+_DEFAULT_SECRET_FILE = "/etc/secrets/bart-validate-sa.json"
 
 _READ_SCOPES = [
     "https://www.googleapis.com/auth/documents.readonly",
@@ -26,7 +27,7 @@ _READ_SCOPES = [
 def _get_credentials():
     from google.oauth2 import service_account
 
-    val = GOOGLE_SERVICE_ACCOUNT_JSON or "/etc/secrets/google-service-account.json"
+    val = BART_VALIDATE_SERVICE_ACCOUNT_JSON or _DEFAULT_SECRET_FILE
     if val.strip().startswith("{"):
         return service_account.Credentials.from_service_account_info(
             json.loads(val), scopes=_READ_SCOPES

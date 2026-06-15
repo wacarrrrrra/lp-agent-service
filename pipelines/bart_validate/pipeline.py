@@ -78,7 +78,7 @@ async def run_bart_validate_generation(
                 requester_channel,
                 f"❌ Could not read the source URL _(Request ID: {request_id})_: `{e}`\n"
                 f"_Make sure the file is shared with the service account "
-                f"`blog-agent@robust-limiter-488800-g5.iam.gserviceaccount.com` (Viewer is enough)._",
+                f"`bart-validate@robust-limiter-488800-g5.iam.gserviceaccount.com` (Viewer is enough)._",
             )
             return
 
