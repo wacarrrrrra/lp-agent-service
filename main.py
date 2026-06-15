@@ -14,6 +14,8 @@ from pipelines.technical_blog.pipeline import start_tech_blog_job, run_tech_blog
 from pipelines.technical_blog.gdoc_sync import run_sync_pipeline
 from pipelines.technical_lp.pipeline import run_technical_lp_generation, run_technical_lp_from_grounding
 from pipelines.technical_lp.modal import build_technical_lp_modal_view
+from pipelines.bart_validate.pipeline import run_bart_validate_generation, run_bart_validate_from_response
+from pipelines.bart_validate.modal import build_bart_validate_modal_view
 from pathlib import Path
 
 import httpx
@@ -1395,6 +1397,11 @@ async def slack_commands(request: Request):
         await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
         return PlainTextResponse("", status_code=200)
 
+    if command == "/bart-validate":
+        view = build_bart_validate_modal_view(channel_id=channel_id)
+        await slack_api("views.open", {"trigger_id": trigger_id, "view": view})
+        return PlainTextResponse("", status_code=200)
+
     if command == "/sync-to-wordpress":
         if not text:
             return PlainTextResponse(
@@ -1616,6 +1623,45 @@ async def _handle_technical_lp_modal(payload: dict, view: dict) -> JSONResponse:
     return JSONResponse({"response_action": "clear"})
 
 
+async def _handle_bart_validate_modal(payload: dict, view: dict) -> JSONResponse:
+    """Handle /bart-validate modal submission — kicks off the Bart validation pipeline."""
+    fields = extract_modal_values(view.get("state", {}))
+
+    errors: Dict[str, str] = {}
+    if not fields.get("source_type"):
+        errors["source_type_block"] = "Pick what you're validating."
+    if not (fields.get("source_url") or "").strip():
+        errors["source_url_block"] = "Source URL is required."
+    if not (fields.get("context") or "").strip():
+        errors["context_block"] = "Context is required."
+    if errors:
+        return JSONResponse({"response_action": "errors", "errors": errors})
+
+    request_id = datetime.now().strftime("validate_%Y%m%d-%H%M")
+    user_id = (payload.get("user") or {}).get("id") or "unknown"
+    requester_channel = (
+        (view.get("private_metadata") or "").strip()
+        or SEM_LP_BUILD_KITS_CHANNEL
+        or SLACK_DEFAULT_CHANNEL
+        or ""
+    )
+    if not requester_channel:
+        return JSONResponse({"response_action": "clear"})
+
+    asyncio.create_task(run_bart_validate_generation(
+        inputs=dict(fields),
+        request_id=request_id,
+        requester_channel=requester_channel,
+        user_id=user_id,
+        post_message=post_message,
+        bart_channel=SEM_LP_REQUESTS_CHANNEL or requester_channel,
+        build_kits_channel=SEM_LP_BUILD_KITS_CHANNEL or requester_channel,
+        jobs=JOBS,
+        save_jobs=_save_jobs,
+    ))
+    return JSONResponse({"response_action": "clear"})
+
+
 async def _handle_interactivity(request: Request):
     raw_body = await request.body()
     logger.info("INTERACTIVITY hit bytes=%s path=%s", len(raw_body), request.url.path)
@@ -1644,6 +1690,9 @@ async def _handle_interactivity(request: Request):
 
         if callback_id == "technical_lp_modal":
             return await _handle_technical_lp_modal(payload, view)
+
+        if callback_id == "bart_validate_modal":
+            return await _handle_bart_validate_modal(payload, view)
 
         if callback_id != "lp_request_modal":
             return JSONResponse({"response_action": "clear"})
@@ -2395,6 +2444,25 @@ async def slack_events(request: Request):
         _save_jobs()
 
         asyncio.create_task(run_technical_lp_from_grounding(
+            job=job,
+            thread_ts=thread_ts,
+            post_message=post_message,
+            fetch_thread_messages=fetch_thread_messages,
+            accumulate_bart_brief=accumulate_bart_brief,
+            bart_user_id=BART_USER_ID,
+            jobs=JOBS,
+            save_jobs=_save_jobs,
+        ))
+        return JSONResponse({"ok": True})
+
+    # Route bart_validate jobs (phase 2 — write validation doc from Bart's reply)
+    if job.get("awaiting") == "bart_grounding_bart_validate" and user_id == BART_USER_ID and bart_done:
+        job["bart_output"] = text
+        job["awaiting"] = "writing_validation_doc"
+        JOBS[thread_ts] = job
+        _save_jobs()
+
+        asyncio.create_task(run_bart_validate_from_response(
             job=job,
             thread_ts=thread_ts,
             post_message=post_message,
