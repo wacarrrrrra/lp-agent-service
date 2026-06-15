@@ -15,7 +15,7 @@ from pipelines.technical_blog.gdoc_sync import run_sync_pipeline
 from pipelines.technical_lp.pipeline import run_technical_lp_generation, run_technical_lp_from_grounding
 from pipelines.technical_lp.modal import build_technical_lp_modal_view
 from pipelines.bart_validate.pipeline import run_bart_validate_generation, run_bart_validate_from_response
-from pipelines.bart_validate.modal import build_bart_validate_modal_view
+from pipelines.bart_validate.modal import build_bart_validate_modal_view, extract_bart_validate_fields
 from pathlib import Path
 
 import httpx
@@ -1625,7 +1625,8 @@ async def _handle_technical_lp_modal(payload: dict, view: dict) -> JSONResponse:
 
 async def _handle_bart_validate_modal(payload: dict, view: dict) -> JSONResponse:
     """Handle /bart-validate modal submission — kicks off the Bart validation pipeline."""
-    fields = extract_modal_values(view.get("state", {}))
+    fields = extract_bart_validate_fields(view.get("state", {}))
+    logger.info("bart_validate_modal submission fields=%s", {k: bool(v) for k, v in fields.items()})
 
     errors: Dict[str, str] = {}
     if not fields.get("source_type"):
