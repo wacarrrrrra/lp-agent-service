@@ -2303,15 +2303,52 @@ async def slack_events(request: Request):
         try:
             bart_channel = SEM_LP_REQUESTS_CHANNEL or SLACK_DEFAULT_CHANNEL
             thread_messages = await fetch_thread_messages(bart_channel, thread_ts)
-            starter = next(
-                (m for m in thread_messages if "Search term:" in (m.get("text") or "")),
+            # Check for bart_validate starter first (most specific pattern)
+            bv_starter = next(
+                (m for m in thread_messages if "Bart validation request" in (m.get("text") or "")),
                 None
             )
-            # Check for tech_blog starter first (has "*Topic:*")
-            tech_starter = next(
-                (m for m in thread_messages if "*Topic:*" in (m.get("text") or "")),
-                None
-            )
+            tech_starter = None
+            starter = None
+            if bv_starter:
+                bv_text = bv_starter.get("text", "")
+                def _bv_field(label: str) -> str:
+                    m = re.search(rf'\*{label}:\*\s*(.+)', bv_text)
+                    return m.group(1).strip() if m else ""
+                bv_request_id = _bv_field("Request ID") or datetime.now().strftime("validate_%Y%m%d-%H%M")
+                bv_context = _bv_field("Context")
+                bv_source = _bv_field("Source")
+                # Heuristic: infer source_type from the URL shape
+                bv_source_type = "keywords" if "/spreadsheets/" in bv_source else "lp_content"
+                job = {
+                    "pipeline": "bart_validate",
+                    "request_id": bv_request_id,
+                    "user_id": _bv_field("Requester").strip("<@>") or "",
+                    "requester_channel": SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL,
+                    "bart_channel": bart_channel,
+                    "build_kits_channel": SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL,
+                    "inputs": {
+                        "source_type": bv_source_type,
+                        "source_url": bv_source,
+                        "sheet_tab": "",
+                        "context": bv_context,
+                    },
+                    "content_block": "_(original content not available — job was reconstructed after a Render restart)_",
+                    "awaiting": "bart_grounding_bart_validate",
+                }
+                JOBS[thread_ts] = job
+                _save_jobs()
+                logger.info("bart_validate job reconstructed for thread %s request_id=%s", thread_ts, bv_request_id)
+            else:
+                starter = next(
+                    (m for m in thread_messages if "Search term:" in (m.get("text") or "")),
+                    None
+                )
+                # Check for tech_blog starter first (has "*Topic:*")
+                tech_starter = next(
+                    (m for m in thread_messages if "*Topic:*" in (m.get("text") or "")),
+                    None
+                )
             if tech_starter:
                 tech_text = tech_starter.get("text", "")
                 def _parse_tech_field(label: str) -> str:
