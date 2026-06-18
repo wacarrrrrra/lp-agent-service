@@ -1428,6 +1428,73 @@ async def slack_interactions(request: Request):
 async def slack_interactivity(request: Request):
     return await _handle_interactivity(request)
 
+
+BART_VALIDATE_API_TOKEN = os.getenv("BART_VALIDATE_API_TOKEN", "")
+
+
+@app.post("/api/bart-validate")
+async def api_bart_validate(request: Request):
+    """Web-form intake for /bart-validate.
+
+    The Cloudflare Worker at /submit/bart-validate forwards form submissions
+    here as JSON, authenticated via the X-Api-Token header (shared secret).
+    No Slack signature involved.
+    """
+    if not BART_VALIDATE_API_TOKEN:
+        return JSONResponse({"ok": False, "error": "Server misconfigured"}, status_code=500)
+
+    token = request.headers.get("X-Api-Token", "")
+    if not hmac.compare_digest(token, BART_VALIDATE_API_TOKEN):
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Invalid JSON"}, status_code=400)
+
+    source_type  = (payload.get("source_type") or "").strip()
+    source_url   = (payload.get("source_url") or "").strip()
+    sheet_tab    = (payload.get("sheet_tab") or "").strip()
+    context      = (payload.get("context") or "").strip()
+    slack_handle = (payload.get("slack_handle") or "").strip().lstrip("@")
+
+    if source_type not in ("keywords", "lp_content", "html_url"):
+        return JSONResponse({"ok": False, "error": "Invalid source_type"}, status_code=400)
+    if not source_url:
+        return JSONResponse({"ok": False, "error": "source_url is required"}, status_code=400)
+    if not context:
+        return JSONResponse({"ok": False, "error": "context is required"}, status_code=400)
+    if not slack_handle:
+        return JSONResponse({"ok": False, "error": "slack_handle is required"}, status_code=400)
+
+    request_id = datetime.now().strftime("validate_%Y%m%d-%H%M")
+    inputs = {
+        "source_type": source_type,
+        "source_url":  source_url,
+        "sheet_tab":   sheet_tab,
+        "context":     context,
+    }
+    requester_channel = SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL or ""
+    if not requester_channel:
+        return JSONResponse(
+            {"ok": False, "error": "Server has no requester channel configured"},
+            status_code=500,
+        )
+
+    asyncio.create_task(run_bart_validate_generation(
+        inputs=inputs,
+        request_id=request_id,
+        requester_channel=requester_channel,
+        user_id=slack_handle,
+        post_message=post_message,
+        bart_channel=SEM_LP_REQUESTS_CHANNEL or requester_channel,
+        build_kits_channel=SEM_LP_BUILD_KITS_CHANNEL or requester_channel,
+        jobs=JOBS,
+        save_jobs=_save_jobs,
+    ))
+    return JSONResponse({"ok": True, "request_id": request_id}, status_code=200)
+
+
 async def _handle_build_modal(payload: dict, view: dict) -> JSONResponse:
     """Handle /sem-lp-build modal submission — manual pipeline trigger from a Bart thread."""
     values = view.get("state", {}).get("values", {})
