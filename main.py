@@ -2319,7 +2319,12 @@ async def slack_events(request: Request):
                 bv_context = _bv_field("Context")
                 bv_source = _bv_field("Source")
                 # Heuristic: infer source_type from the URL shape
-                bv_source_type = "keywords" if "/spreadsheets/" in bv_source else "lp_content"
+                if "/spreadsheets/" in bv_source:
+                    bv_source_type = "keywords"
+                elif "/document/d/" in bv_source:
+                    bv_source_type = "lp_content"
+                else:
+                    bv_source_type = "html_url"
                 job = {
                     "pipeline": "bart_validate",
                     "request_id": bv_request_id,

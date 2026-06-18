@@ -1,9 +1,11 @@
 """
-Read content from a Google Sheet or Google Doc by URL using the service account.
+Read source content for /bart-validate from one of:
+  - Google Sheet  → read_sheet(url, tab_name) → (resolved_tab, rows)
+  - Google Doc    → read_doc(url) → plain text
+  - Hosted HTML   → read_html_url(url) → plain text (tags stripped)
 
-The Sheets API needs its own read scope (the Drive scope alone is not enough for
-cell values). The Docs API read scope is covered by the existing `documents`
-write scope already in use by gdoc_create.py.
+Google APIs use the bart-validate service account (`spreadsheets.readonly` +
+`documents.readonly`). HTML URLs are fetched anonymously over public HTTP.
 """
 import asyncio
 import json
@@ -11,6 +13,8 @@ import logging
 import os
 import re
 from typing import List, Optional, Tuple
+
+import httpx
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -137,3 +141,35 @@ async def read_sheet(url: str, tab_name: str = "") -> Tuple[str, List[List[str]]
 
 async def read_doc(url: str) -> str:
     return await asyncio.to_thread(_read_doc_sync, url)
+
+
+_HTML_ENTITIES = {
+    "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">",
+    "&quot;": '"', "&#39;": "'", "&apos;": "'",
+}
+
+
+async def read_html_url(url: str) -> str:
+    """Fetch a public HTML URL and return a text-only rendering suitable for Bart to read."""
+    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+        resp = await client.get(
+            url,
+            headers={"User-Agent": "bart-validate/1.0 (DataHub SEM validation)"},
+        )
+        resp.raise_for_status()
+        html = resp.text
+
+    # Drop script/style blocks entirely
+    html = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+    # Block-level closes become newlines so structure survives the strip
+    html = re.sub(r"</(h[1-6]|p|li|div|section|article|tr|br)\s*/?>", "\n", html, flags=re.IGNORECASE)
+    html = re.sub(r"<br\s*/?>", "\n", html, flags=re.IGNORECASE)
+    # Strip remaining tags
+    text = re.sub(r"<[^>]+>", " ", html)
+    # Decode common entities
+    for entity, repl in _HTML_ENTITIES.items():
+        text = text.replace(entity, repl)
+    text = re.sub(r"&#(\d+);", lambda m: chr(int(m.group(1))), text)
+    # Collapse whitespace within each line, drop empty lines
+    lines = [re.sub(r"\s+", " ", ln).strip() for ln in text.split("\n")]
+    return "\n".join(ln for ln in lines if ln)

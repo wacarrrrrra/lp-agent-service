@@ -53,24 +53,28 @@ def build_bart_validate_modal_view(channel_id: str = "") -> Dict[str, Any]:
                             "text": {"type": "plain_text", "text": "Landing page draft to validate"},
                             "value": "lp_content",
                         },
+                        {
+                            "text": {"type": "plain_text", "text": "Hosted HTML page to validate"},
+                            "value": "html_url",
+                        },
                     ],
                 },
             },
             {
                 "type": "input",
                 "block_id": "source_url_block",
-                "label": {"type": "plain_text", "text": "Source URL (Google Sheet or Google Doc)"},
+                "label": {"type": "plain_text", "text": "Source URL (Google Sheet, Google Doc, or hosted HTML page)"},
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "source_url",
                     "placeholder": {
                         "type": "plain_text",
-                        "text": "https://docs.google.com/...",
+                        "text": "https://docs.google.com/... or https://your-domain.com/page",
                     },
                 },
                 "hint": {
                     "type": "plain_text",
-                    "text": "Share the Sheet/Doc with bart-validate@robust-limiter-488800-g5.iam.gserviceaccount.com (Viewer is enough).",
+                    "text": "Google files must be shared with bart-validate@robust-limiter-488800-g5.iam.gserviceaccount.com (Viewer). HTML URLs must be publicly accessible.",
                 },
             },
             {
