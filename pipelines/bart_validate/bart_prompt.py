@@ -18,33 +18,91 @@ BART_USER_ID = os.getenv("BART_USER_ID", "")
 
 # ── content-block formatters ──────────────────────────────────────────────────
 
+_HEADER_KEYWORD_TERMS = ("keyword", "term", "query")
+_VOLUME_TERMS = ("volume", "searches", "impressions", "impr", "clicks")
+
+
+def _find_header_and_keyword_cols(rows: Sequence[Sequence[str]]) -> tuple:
+    """Scan the first 5 rows for the row containing keyword-column headers.
+
+    Returns (header_row_index, [keyword_column_indices]). Handles sheets where
+    the top row is a merged group label ("Data Governance") and the actual
+    column headers live one row below.
+    """
+    for i, row in enumerate(rows[:5]):
+        cols: List[int] = []
+        for j, cell in enumerate(row):
+            low = (cell or "").strip().lower()
+            if not low:
+                continue
+            if any(t in low for t in _HEADER_KEYWORD_TERMS):
+                cols.append(j)
+        if cols:
+            return i, cols
+    # Fallback: assume row 0 is the header and col 0 holds keywords
+    return 0, [0]
+
+
 def _format_keywords_block(sheet_rows: Sequence[Sequence[str]]) -> str:
-    """Render sheet rows as a numbered list. Skips fully-empty rows."""
+    """Render sheet rows as a numbered list. Handles single-block AND multi-block
+    layouts (e.g., two side-by-side keyword groups with a merged group label row above).
+    Preserves group labels as context for Bart.
+    """
     if not sheet_rows:
         return "_(no rows found in the sheet)_"
 
-    header = [c.strip() for c in (sheet_rows[0] if sheet_rows else [])]
-    keyword_idx = 0
-    volume_idx: Optional[int] = None
-    for i, h in enumerate(header):
-        low = h.lower()
-        if any(t in low for t in ("keyword", "term", "query")) and keyword_idx == 0:
-            keyword_idx = i
-        if "volume" in low or "searches" in low:
-            volume_idx = i
+    header_idx, keyword_cols = _find_header_and_keyword_cols(sheet_rows)
+    header = sheet_rows[header_idx] if header_idx < len(sheet_rows) else []
 
-    data_rows = sheet_rows[1:] if header else sheet_rows
+    # Pick out a "volume-ish" column just to the right of each keyword col
+    volume_cols: dict = {}
+    for kw_col in keyword_cols:
+        for j in range(kw_col + 1, len(header)):
+            low = (header[j] or "").strip().lower()
+            if not low:
+                # Blank cell = block boundary; stop looking
+                break
+            if any(t in low for t in _VOLUME_TERMS):
+                volume_cols[kw_col] = j
+                break
+
+    # If a row exists above the header, grab group labels (handles merged cells
+    # by scanning leftward from each keyword column to the nearest non-empty cell)
+    group_labels: dict = {}
+    if header_idx > 0:
+        prev_row = sheet_rows[header_idx - 1]
+        for kw_col in keyword_cols:
+            for j in range(kw_col, -1, -1):
+                if j < len(prev_row):
+                    label = (prev_row[j] or "").strip()
+                    if label:
+                        group_labels[kw_col] = label
+                        break
+
+    data_rows = sheet_rows[header_idx + 1:]
+
     lines: List[str] = []
     n = 0
-    for row in data_rows:
-        kw = (row[keyword_idx] if keyword_idx < len(row) else "").strip()
-        if not kw:
-            continue
-        n += 1
-        if volume_idx is not None and volume_idx < len(row) and row[volume_idx]:
-            lines.append(f"{n}. {kw} — {row[volume_idx]}")
-        else:
-            lines.append(f"{n}. {kw}")
+    current_group = None
+    for kw_col in keyword_cols:
+        group = group_labels.get(kw_col, "")
+        if group and group != current_group:
+            if lines:
+                lines.append("")  # blank line between groups
+            lines.append(f"**Group: {group}**")
+            current_group = group
+        for row in data_rows:
+            kw = (row[kw_col] if kw_col < len(row) else "").strip()
+            if not kw:
+                continue
+            n += 1
+            vol_col = volume_cols.get(kw_col)
+            vol = (row[vol_col] if vol_col is not None and vol_col < len(row) else "").strip()
+            if vol:
+                lines.append(f"{n}. {kw} — {vol}")
+            else:
+                lines.append(f"{n}. {kw}")
+
     return "\n".join(lines) if lines else "_(no keywords parsed)_"
 
 
