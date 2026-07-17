@@ -10,11 +10,13 @@ and posts TWO Slack digests:
 This is a triage pipeline. High-priority findings should be re-submitted to
 /bart-validate for authoritative fit-checks (Bart has codebase access that Claude lacks).
 """
+import asyncio
 import logging
 import os
 from datetime import date
 from typing import Callable, Dict, List, Optional
 
+from pipelines.signal_radar.ads_coverage import load_ads_coverage, lookup_coverage
 from pipelines.signal_radar.classifier import classify_queries
 from pipelines.signal_radar.gsc_client import fetch_query_deltas
 
@@ -43,6 +45,17 @@ def _fmt_velocity(delta: int, velocity: Optional[float]) -> str:
     return f"+{delta} ({velocity * 100:+.0f}%)"
 
 
+def _fmt_coverage(cov: Optional[Dict]) -> str:
+    """Short one-cell coverage summary for the table view."""
+    if not cov:
+        return "✗ none"
+    ag = (cov.get("ad_group") or "?")[:22]
+    kind = cov.get("match_kind", "")
+    if kind == "exact":
+        return f"✓ {ag}"
+    return f"~ {ag}"  # fuzzy match: contains/within
+
+
 def _format_internal_digest(scored: List[Dict], recent_window: str, prior_window: str) -> str:
     lines = [
         f"🛰️ *Signal Radar — weekly digest*",
@@ -51,33 +64,61 @@ def _format_internal_digest(scored: List[Dict], recent_window: str, prior_window
         f"Top {len(scored)} rising queries on datahub.com. Triage below — for authoritative fit-check on the interesting ones, use `/bart-validate`.",
         "",
         "```",
-        f"{'Tier':<15} {'Δ impressions':<18} {'Query'}",
+        f"{'Tier':<15} {'Δ impressions':<18} {'Coverage':<26} {'Query'}",
+        "-" * 100,
     ]
-    lines.append("-" * 80)
     for s in scored:
         tier = s["tier"]
         vel = _fmt_velocity(s["delta"], s["velocity"])
-        q = s["query"][:60]
-        lines.append(f"{tier:<15} {vel:<18} {q}")
+        cov = _fmt_coverage(s.get("coverage"))
+        q = s["query"][:40]
+        lines.append(f"{tier:<15} {vel:<18} {cov:<26} {q}")
     lines.append("```")
     lines.append("")
     lines.append("*Reasoning per query:*")
     for s in scored:
-        lines.append(f"• {s['tier']} — `{s['query']}` — {s['reason']}")
+        cov_note = ""
+        c = s.get("coverage")
+        if c:
+            ag = c.get("ad_group", "?")
+            kind = c.get("match_kind", "")
+            mt = c.get("match_type", "")
+            matched = c.get("matched_kw")
+            cov_note = f" · covered by ad group `{ag}`" + (f" ({mt})" if mt else "")
+            if kind in ("contains", "within") and matched:
+                cov_note += f" — fuzzy match on `{matched}`"
+        else:
+            cov_note = " · *no ad coverage*"
+        lines.append(f"• {s['tier']} — `{s['query']}` — {s['reason']}{cov_note}")
     return "\n".join(lines)
 
 
 def _format_agency_digest(strategic: List[Dict], recent_window: str) -> str:
+    gaps      = [s for s in strategic if not s.get("coverage")]
+    covered   = [s for s in strategic if s.get("coverage")]
+
     lines = [
         f"🎯 *Weekly rising queries — DataHub is a strong fit*",
         f"_Signal window: {recent_window}. Suggestions for LP + SEM prioritization._",
         "",
     ]
-    for s in strategic:
-        lines.append(f"• *{s['query']}* — {_fmt_velocity(s['delta'], s['velocity'])} impressions")
-        lines.append(f"    _{s['reason']}_")
-    lines.append("")
-    lines.append(f"_These are triaged as 🔥 Strategic (DataHub-confirmed coverage + rising traffic). {len(strategic)} of this week's rising queries fit the criteria._")
+
+    if gaps:
+        lines.append("*🚨 Gap opportunities* — DataHub-confirmed coverage, rising traffic, and NO current ad targeting:")
+        for s in gaps:
+            lines.append(f"• *{s['query']}* — {_fmt_velocity(s['delta'], s['velocity'])} impressions")
+            lines.append(f"    _{s['reason']}_")
+        lines.append("")
+
+    if covered:
+        lines.append("*📈 Already targeted, rising fast* — consider bid/creative review:")
+        for s in covered:
+            ag = s["coverage"].get("ad_group", "?")
+            lines.append(f"• *{s['query']}* — {_fmt_velocity(s['delta'], s['velocity'])} impressions · in `{ag}`")
+            lines.append(f"    _{s['reason']}_")
+        lines.append("")
+
+    lines.append(f"_Triaged as 🔥 Strategic: {len(strategic)} queries. {len(gaps)} gaps, {len(covered)} already targeted._")
     lines.append("_Deeper fit-check on any of these? Use `/bart-validate` with the query as context._")
     return "\n".join(lines)
 
@@ -120,17 +161,25 @@ async def run_signal_radar(
         logger.info("Signal Radar: no rising queries this week")
         return {"ok": True, "rising_count": 0}
 
-    classifications = await classify_queries([d["query"] for d in top])
+    # Kick off Claude classification and Ads-coverage load in parallel
+    classifications, ads_coverage = await asyncio.gather(
+        classify_queries([d["query"] for d in top]),
+        load_ads_coverage(),
+    )
+    logger.info("Signal Radar: %d rising queries, %d ads keywords loaded",
+                len(top), len(ads_coverage))
 
     scored: List[Dict] = []
     for d, c in zip(top, classifications):
         verdict = c["verdict"]
         tier = _score(verdict, d["delta"], d["velocity"])
+        coverage = lookup_coverage(d["query"], ads_coverage) if ads_coverage else None
         scored.append({
             **d,
             "verdict": verdict,
             "reason": c["reason"],
             "tier": tier,
+            "coverage": coverage,
         })
 
     # Window strings for the digest header
