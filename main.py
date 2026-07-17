@@ -16,6 +16,7 @@ from pipelines.technical_lp.pipeline import run_technical_lp_generation, run_tec
 from pipelines.technical_lp.modal import build_technical_lp_modal_view
 from pipelines.bart_validate.pipeline import run_bart_validate_generation, run_bart_validate_from_response
 from pipelines.bart_validate.modal import build_bart_validate_modal_view, extract_bart_validate_fields
+from pipelines.signal_radar.pipeline import run_signal_radar
 from pathlib import Path
 
 import httpx
@@ -1493,6 +1494,36 @@ async def api_bart_validate(request: Request):
         save_jobs=_save_jobs,
     ))
     return JSONResponse({"ok": True, "request_id": request_id}, status_code=200)
+
+
+SIGNAL_RADAR_INTERNAL_CHANNEL = os.getenv("SIGNAL_RADAR_INTERNAL_CHANNEL", "")
+SIGNAL_RADAR_AGENCY_CHANNEL = os.getenv("SIGNAL_RADAR_AGENCY_CHANNEL", "")
+
+
+@app.post("/api/signal-radar/run")
+async def api_signal_radar_run(request: Request):
+    """Signal Radar weekly trigger.
+
+    Reuses BART_VALIDATE_API_TOKEN because both are internal-only endpoints called
+    by the same Cloudflare Worker. Kicks off the pipeline as a background task
+    so the caller (cron) gets an immediate 200 and doesn't hold connections open
+    for the ~20s Claude classify step.
+    """
+    if not BART_VALIDATE_API_TOKEN:
+        return JSONResponse({"ok": False, "error": "Server misconfigured"}, status_code=500)
+    token = request.headers.get("X-Api-Token", "")
+    if not hmac.compare_digest(token, BART_VALIDATE_API_TOKEN):
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+
+    internal_channel = SIGNAL_RADAR_INTERNAL_CHANNEL or SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL
+    agency_channel = SIGNAL_RADAR_AGENCY_CHANNEL or SEM_LP_BUILD_KITS_CHANNEL
+
+    asyncio.create_task(run_signal_radar(
+        post_message=post_message,
+        internal_channel=internal_channel,
+        agency_channel=agency_channel,
+    ))
+    return JSONResponse({"ok": True, "started": True}, status_code=200)
 
 
 async def _handle_build_modal(payload: dict, view: dict) -> JSONResponse:
