@@ -96,9 +96,9 @@ def _format_internal_digest(scored: List[Dict], recent_window: str, prior_window
     return "\n".join(lines)
 
 
-def _format_agency_digest(strategic: List[Dict], recent_window: str) -> str:
-    gaps      = [s for s in strategic if not s.get("coverage")]
-    covered   = [s for s in strategic if s.get("coverage")]
+def _format_agency_digest(strategic: List[Dict], watch: List[Dict], recent_window: str) -> str:
+    gaps    = [s for s in strategic if not s.get("coverage")]
+    covered = [s for s in strategic if s.get("coverage")]
 
     lines = [
         f"🎯 *Weekly rising queries — DataHub is a strong fit*",
@@ -121,26 +121,43 @@ def _format_agency_digest(strategic: List[Dict], recent_window: str) -> str:
             lines.append(f"    _{s['reason']}_")
         lines.append("")
 
-    lines.append(f"_Triaged as 🔥 Strategic: {len(strategic)} queries. {len(gaps)} gaps, {len(covered)} already targeted._")
+    if watch:
+        lines.append("*⚠️ Also worth watching* — rising queries where DataHub coverage needs SME confirmation:")
+        for s in watch:
+            cov_note = ""
+            if s.get("coverage"):
+                cov_note = f" · in `{s['coverage'].get('ad_group', '?')}`"
+            else:
+                cov_note = " · no ad coverage"
+            lines.append(f"• *{s['query']}* — {_fmt_velocity(s['delta'], s['velocity'])} impressions{cov_note}")
+            lines.append(f"    _{s['reason']}_")
+        lines.append("")
+
+    lines.append(f"_🔥 Strategic: {len(strategic)} ({len(gaps)} gaps, {len(covered)} targeted) · ⚠️ Watch: {len(watch)}_")
     lines.append("_Deeper fit-check on any of these? Use `/bart-validate` with the query as context._")
     return "\n".join(lines)
 
 
 async def run_signal_radar(
     post_message: Callable,
-    internal_channel: str,
-    agency_channel: str,
+    channel: str,
 ) -> Dict:
-    """Fetch → classify → score → post. Returns a summary dict for the caller."""
+    """Fetch → classify → score → post. Returns a summary dict for the caller.
+
+    Posts a single agency-style digest (Strategic + Gap Opportunities + Already
+    Targeted) to `channel`. Previously posted a separate internal digest with
+    the full 15-row triage; that was removed 2026-07-18 in favor of one channel,
+    one message per run.
+    """
     logger.info("Signal Radar run starting")
     try:
         deltas = await fetch_query_deltas()
     except Exception as e:
         logger.exception("GSC fetch failed: %s", e)
-        if internal_channel:
+        if channel:
             try:
                 await post_message(
-                    internal_channel,
+                    channel,
                     f"❌ Signal Radar run failed at GSC fetch: `{e}`",
                 )
             except Exception:
@@ -155,12 +172,12 @@ async def run_signal_radar(
 
     if not top:
         msg = (
-            f"🛰️ *Signal Radar — weekly digest*\n"
+            f"🎯 *Weekly rising queries — DataHub*\n"
             f"_No rising queries this week (min {MIN_IMPRESSIONS_RECENT} impressions filter). "
             f"Nothing to triage._"
         )
-        if internal_channel:
-            await post_message(internal_channel, msg)
+        if channel:
+            await post_message(channel, msg)
         logger.info("Signal Radar: no rising queries this week")
         return {"ok": True, "rising_count": 0}
 
@@ -172,16 +189,7 @@ async def run_signal_radar(
     logger.info("Signal Radar: %d rising queries, %d ads keywords loaded",
                 len(top), len(ads_coverage))
 
-    # Diagnostic: surface coverage-load stats in the digest header so failures are
-    # visible without needing to open Render logs.
-    ads_sheet_url = os.getenv("SIGNAL_RADAR_ADS_SHEET_URL", "").strip()
-    if not ads_sheet_url:
-        coverage_stats = "⚠️ Ads coverage: SIGNAL_RADAR_ADS_SHEET_URL not set"
-    elif not ads_coverage:
-        coverage_stats = "⚠️ Ads coverage: sheet fetched but 0 keywords parsed — check sharing + header row"
-    else:
-        sample = ", ".join(list(ads_coverage.keys())[:3])
-        coverage_stats = f"Ads coverage: {len(ads_coverage)} keywords loaded (sample: {sample})"
+    logger.info("Signal Radar: %d ads keywords available for coverage lookup", len(ads_coverage))
 
     scored: List[Dict] = []
     for d, c in zip(top, classifications):
@@ -199,17 +207,11 @@ async def run_signal_radar(
     # Window strings for the digest header
     today = date.today()
     recent_window = f"last 7 days ending {today.isoformat()}"
-    prior_window  = "prior 7 days"
-
-    if internal_channel:
-        await post_message(
-            internal_channel,
-            _format_internal_digest(scored, recent_window, prior_window, coverage_stats),
-        )
 
     strategic = [s for s in scored if s["tier"] == "🔥 Strategic"]
-    if strategic and agency_channel:
-        await post_message(agency_channel, _format_agency_digest(strategic, recent_window))
+    watch     = [s for s in scored if s["tier"] == "⚠️ Watch"]
+    if channel:
+        await post_message(channel, _format_agency_digest(strategic, watch, recent_window))
 
     counts = {
         "strategic": sum(1 for s in scored if s["tier"] == "🔥 Strategic"),

@@ -1496,8 +1496,7 @@ async def api_bart_validate(request: Request):
     return JSONResponse({"ok": True, "request_id": request_id}, status_code=200)
 
 
-SIGNAL_RADAR_INTERNAL_CHANNEL = os.getenv("SIGNAL_RADAR_INTERNAL_CHANNEL", "")
-SIGNAL_RADAR_AGENCY_CHANNEL = os.getenv("SIGNAL_RADAR_AGENCY_CHANNEL", "")
+SIGNAL_RADAR_CHANNEL = os.getenv("SIGNAL_RADAR_CHANNEL", "") or os.getenv("SIGNAL_RADAR_AGENCY_CHANNEL", "")
 
 
 @app.post("/api/signal-radar/run")
@@ -1515,13 +1514,11 @@ async def api_signal_radar_run(request: Request):
     if not hmac.compare_digest(token, BART_VALIDATE_API_TOKEN):
         return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
 
-    internal_channel = SIGNAL_RADAR_INTERNAL_CHANNEL or SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL
-    agency_channel = SIGNAL_RADAR_AGENCY_CHANNEL or SEM_LP_BUILD_KITS_CHANNEL
+    channel = SIGNAL_RADAR_CHANNEL or SEM_LP_BUILD_KITS_CHANNEL or SLACK_DEFAULT_CHANNEL
 
     asyncio.create_task(run_signal_radar(
         post_message=post_message,
-        internal_channel=internal_channel,
-        agency_channel=agency_channel,
+        channel=channel,
     ))
     return JSONResponse({"ok": True, "started": True}, status_code=200)
 
