@@ -56,10 +56,13 @@ def _fmt_coverage(cov: Optional[Dict]) -> str:
     return f"~ {ag}"  # fuzzy match: contains/within
 
 
-def _format_internal_digest(scored: List[Dict], recent_window: str, prior_window: str) -> str:
+def _format_internal_digest(scored: List[Dict], recent_window: str, prior_window: str, coverage_stats: str = "") -> str:
+    header_line = f"_Recent: {recent_window} · Prior: {prior_window}_"
+    if coverage_stats:
+        header_line += f"\n_{coverage_stats}_"
     lines = [
         f"🛰️ *Signal Radar — weekly digest*",
-        f"_Recent: {recent_window} · Prior: {prior_window}_",
+        header_line,
         "",
         f"Top {len(scored)} rising queries on datahub.com. Triage below — for authoritative fit-check on the interesting ones, use `/bart-validate`.",
         "",
@@ -169,6 +172,17 @@ async def run_signal_radar(
     logger.info("Signal Radar: %d rising queries, %d ads keywords loaded",
                 len(top), len(ads_coverage))
 
+    # Diagnostic: surface coverage-load stats in the digest header so failures are
+    # visible without needing to open Render logs.
+    ads_sheet_url = os.getenv("SIGNAL_RADAR_ADS_SHEET_URL", "").strip()
+    if not ads_sheet_url:
+        coverage_stats = "⚠️ Ads coverage: SIGNAL_RADAR_ADS_SHEET_URL not set"
+    elif not ads_coverage:
+        coverage_stats = "⚠️ Ads coverage: sheet fetched but 0 keywords parsed — check sharing + header row"
+    else:
+        sample = ", ".join(list(ads_coverage.keys())[:3])
+        coverage_stats = f"Ads coverage: {len(ads_coverage)} keywords loaded (sample: {sample})"
+
     scored: List[Dict] = []
     for d, c in zip(top, classifications):
         verdict = c["verdict"]
@@ -188,7 +202,10 @@ async def run_signal_radar(
     prior_window  = "prior 7 days"
 
     if internal_channel:
-        await post_message(internal_channel, _format_internal_digest(scored, recent_window, prior_window))
+        await post_message(
+            internal_channel,
+            _format_internal_digest(scored, recent_window, prior_window, coverage_stats),
+        )
 
     strategic = [s for s in scored if s["tier"] == "🔥 Strategic"]
     if strategic and agency_channel:
